@@ -1,5 +1,4 @@
 package com.ombhrum.fabushi;
 
-import com.getcapacitor.BridgeActivity;
-
-public class MainActivity extends BridgeActivity {}
+/** Retired Capacitor activity placeholder. The canonical Android UI is MainActivity.kt. */
+final class LegacyCapacitorActivityRetired {}
