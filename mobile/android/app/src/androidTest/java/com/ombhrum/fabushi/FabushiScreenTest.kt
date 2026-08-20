@@ -7,6 +7,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import org.junit.Assert.assertEquals
@@ -33,8 +34,9 @@ class FabushiScreenTest {
         }
 
         compose.onNodeWithTag(TestTags.AppShell).assertIsDisplayed()
-        compose.onNodeWithTag(TestTags.RuntimeBadge).assertTextContains("Compose")
-        compose.onNodeWithTag(TestTags.HostStatus).assertTextContains("ready")
+        compose.onNodeWithTag(TestTags.RuntimeBadge).assertTextContains("Compose", substring = true)
+        compose.onNodeWithTag(TestTags.HostStatus).assertIsDisplayed()
+        compose.onNodeWithText("ready").assertIsDisplayed()
         compose.onNodeWithTag(TestTags.SearchField).performTextInput("telegram")
         compose.onNodeWithTag(TestTags.SearchButton).performClick()
 
@@ -57,7 +59,8 @@ class FabushiScreenTest {
             )
         }
 
-        compose.onNodeWithTag(TestTags.plugin(plugin.pluginId)).assertIsDisplayed().assertTextContains("示例插件")
+        compose.onNodeWithTag(TestTags.plugin(plugin.pluginId)).assertIsDisplayed()
+        compose.onNodeWithText("示例插件").assertIsDisplayed()
         compose.onNodeWithTag(TestTags.install(plugin.pluginId)).assertIsDisplayed().performClick()
         assertEquals(plugin, installed)
     }

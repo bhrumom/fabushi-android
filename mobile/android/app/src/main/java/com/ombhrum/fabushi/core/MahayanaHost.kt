@@ -5,12 +5,16 @@ import org.json.JSONObject
 import java.io.Closeable
 import java.util.concurrent.atomic.AtomicLong
 
-class MahayanaHost(context: Context) : Closeable {
+class MahayanaHost(context: Context, featureHostTest: Boolean = false) : Closeable {
     private val handle: AtomicLong
 
     init {
         System.loadLibrary("mahayana_app_host")
-        val value = nativeCreate(context.filesDir.absolutePath)
+        val value = if (featureHostTest) {
+            nativeCreateTest(context.filesDir.absolutePath)
+        } else {
+            nativeCreate(context.filesDir.absolutePath)
+        }
         check(value != 0L) { "Failed to initialize Mahayana Rust host" }
         handle = AtomicLong(value)
     }
@@ -43,6 +47,7 @@ class MahayanaHost(context: Context) : Closeable {
     }
 
     private external fun nativeCreate(appDataDir: String): Long
+    private external fun nativeCreateTest(appDataDir: String): Long
     private external fun nativeDispatch(handle: Long, requestJson: String): String
     private external fun nativeDestroy(handle: Long)
 }
