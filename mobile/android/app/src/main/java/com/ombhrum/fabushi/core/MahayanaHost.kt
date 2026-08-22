@@ -3,10 +3,10 @@ package com.ombhrum.fabushi.core
 import android.content.Context
 import org.json.JSONObject
 import java.io.Closeable
-import java.util.concurrent.atomic.AtomicLong
 
 class MahayanaHost(context: Context, featureHostTest: Boolean = false) : Closeable {
-    private val handle: AtomicLong
+    private val lifecycleLock = Any()
+    @Volatile private var handle: Long
 
     init {
         System.loadLibrary("mahayana_app_host")
@@ -16,34 +16,38 @@ class MahayanaHost(context: Context, featureHostTest: Boolean = false) : Closeab
             nativeCreate(context.filesDir.absolutePath)
         }
         check(value != 0L) { "Failed to initialize Mahayana Rust host" }
-        handle = AtomicLong(value)
+        handle = value
     }
 
-    fun request(method: String, params: JSONObject = JSONObject()): JSONObject {
-        val active = handle.get()
+    fun request(method: String, params: JSONObject = JSONObject()): JSONObject = synchronized(lifecycleLock) {
+        val active = handle
         check(active != 0L) { "Mahayana host is closed" }
-        val request = JSONObject()
-            .put("method", method)
-            .put("params", params)
+        val request = JSONObject().put("method", method).put("params", params)
         val response = JSONObject(nativeDispatch(active, request.toString()))
         if (!response.optBoolean("ok", false)) {
             error(response.optString("error", "Mahayana host request failed"))
         }
-        return response.optJSONObject("result") ?: JSONObject().put("value", response.opt("result"))
+        response.optJSONObject("result") ?: JSONObject().put("value", response.opt("result"))
     }
 
-    fun requestValue(method: String, params: JSONObject = JSONObject()): Any? {
-        val active = handle.get()
+    fun requestValue(method: String, params: JSONObject = JSONObject()): Any? = synchronized(lifecycleLock) {
+        val active = handle
         check(active != 0L) { "Mahayana host is closed" }
         val request = JSONObject().put("method", method).put("params", params)
         val response = JSONObject(nativeDispatch(active, request.toString()))
         if (!response.optBoolean("ok", false)) error(response.optString("error", "Mahayana host request failed"))
-        return response.opt("result")
+        response.opt("result")
     }
 
     override fun close() {
-        val active = handle.getAndSet(0L)
-        if (active != 0L) nativeDestroy(active)
+        synchronized(lifecycleLock) {
+            val active = handle
+            if (active == 0L) return
+            // Holding the same lock used by every JNI dispatch guarantees no
+            // native call can still be dereferencing this pointer when it is freed.
+            handle = 0L
+            nativeDestroy(active)
+        }
     }
 
     private external fun nativeCreate(appDataDir: String): Long
