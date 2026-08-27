@@ -19,14 +19,12 @@ class FabushiScreenTest {
     val compose = createComposeRule()
 
     @Test
-    fun coreControlsExposeStableSemanticsAndSearchCallback() {
-        var query by mutableStateOf("")
-        var searches = 0
+    fun homeMatchesConversationReferenceAndSearchesMessages() {
         compose.setContent {
             FabushiScreen(
-                state = MarketplaceUiState(message = "ready", query = query),
-                onQueryChange = { query = it },
-                onSearch = { searches += 1 },
+                state = MarketplaceUiState(),
+                onQueryChange = {},
+                onSearch = {},
                 onInstall = {},
                 onOpen = {},
                 onApprovePermissions = {},
@@ -35,26 +33,30 @@ class FabushiScreenTest {
         }
 
         compose.onNodeWithTag(TestTags.AppShell).assertIsDisplayed()
-        compose.onNodeWithTag(TestTags.RuntimeBadge).assertTextContains("Compose", substring = true)
-        compose.onNodeWithTag(TestTags.HostStatus).assertIsDisplayed()
-        compose.onNodeWithText("ready").assertIsDisplayed()
-        compose.onNodeWithTag(TestTags.SearchField).performTextInput("telegram")
-        compose.onNodeWithTag(TestTags.SearchButton).performClick()
+        compose.onNodeWithTag(TestTags.ProfileAvatar).assertIsDisplayed()
+        compose.onNodeWithTag(TestTags.HomeSearchButton).assertIsDisplayed()
+        compose.onNodeWithTag(TestTags.AddButton).assertIsDisplayed()
+        compose.onNodeWithTag(TestTags.ConversationList).assertIsDisplayed()
+        compose.onNodeWithTag(TestTags.ConversationRow).assertIsDisplayed()
+        compose.onNodeWithText("Chief of Staff").assertIsDisplayed()
 
-        assertEquals("telegram", query)
-        assertEquals(1, searches)
+        compose.onNodeWithTag(TestTags.HomeSearchButton).performClick()
+        compose.onNodeWithTag(TestTags.HomeSearchField).performTextInput("Chief")
+        compose.onNodeWithText("Chief of Staff").assertIsDisplayed()
     }
 
     @Test
-    fun pluginCardsExposeInstallAndWebMcpOpenControls() {
+    fun addMenuOpensMarketplaceAndKeepsMarketplaceCallbacks() {
+        var query by mutableStateOf("")
+        var searches = 0
         var installed: MarketplacePlugin? = null
         var opened: MarketplacePlugin? = null
         val plugin = MarketplacePlugin("example-plugin", "示例插件", "描述", "1.0.0")
         compose.setContent {
             FabushiScreen(
-                state = MarketplaceUiState(plugins = listOf(plugin)),
-                onQueryChange = {},
-                onSearch = {},
+                state = MarketplaceUiState(message = "ready", query = query, plugins = listOf(plugin)),
+                onQueryChange = { query = it },
+                onSearch = { searches += 1 },
                 onInstall = { installed = it },
                 onOpen = { opened = it },
                 onApprovePermissions = {},
@@ -62,12 +64,49 @@ class FabushiScreenTest {
             )
         }
 
+        compose.onNodeWithTag(TestTags.AddButton).performClick()
+        compose.onNodeWithTag(TestTags.MarketplaceEntry).assertIsDisplayed().performClick()
+        compose.onNodeWithTag(TestTags.RuntimeBadge).assertTextContains("Compose", substring = true)
+        compose.onNodeWithTag(TestTags.HostStatus).assertIsDisplayed()
+        compose.onNodeWithText("ready").assertIsDisplayed()
+        compose.onNodeWithTag(TestTags.SearchField).performTextInput("telegram")
+        compose.onNodeWithTag(TestTags.SearchButton).performClick()
+        assertEquals("telegram", query)
+        assertEquals(1, searches)
+
         compose.onNodeWithTag(TestTags.plugin(plugin.pluginId)).assertIsDisplayed()
-        compose.onNodeWithText("示例插件").assertIsDisplayed()
         compose.onNodeWithTag(TestTags.open(plugin.pluginId)).assertIsDisplayed().performClick()
         assertEquals(plugin, opened)
         compose.onNodeWithTag(TestTags.install(plugin.pluginId)).assertIsDisplayed().performClick()
         assertEquals(plugin, installed)
+    }
+
+    @Test
+    fun availableUpdateAppearsOnHomeAndStartsInstall() {
+        var installRequests = 0
+        compose.setContent {
+            FabushiScreen(
+                state = MarketplaceUiState(),
+                onQueryChange = {},
+                onSearch = {},
+                onInstall = {},
+                onOpen = {},
+                onApprovePermissions = {},
+                onDenyPermissions = {},
+                updateState = AndroidUpdateUiState(
+                    phase = AndroidUpdatePhase.AVAILABLE,
+                    currentVersion = "1.0.4",
+                    availableVersion = "1.0.5",
+                    availableVersionCode = 3,
+                ),
+                onInstallUpdate = { installRequests += 1 },
+            )
+        }
+
+        compose.onNodeWithTag(TestTags.UpdateCard).assertIsDisplayed()
+        compose.onNodeWithText("发现新版本 1.0.5").assertIsDisplayed()
+        compose.onNodeWithTag(TestTags.UpdateAction).performClick()
+        assertEquals(1, installRequests)
     }
 
     @Test
