@@ -28,6 +28,7 @@ class FabushiScreenTest {
                 onQueryChange = { query = it },
                 onSearch = { searches += 1 },
                 onInstall = {},
+                onOpen = {},
                 onApprovePermissions = {},
                 onDenyPermissions = {},
             )
@@ -45,15 +46,17 @@ class FabushiScreenTest {
     }
 
     @Test
-    fun pluginCardsUseStableSemanticIdentifiers() {
+    fun pluginCardsExposeInstallAndWebMcpOpenControls() {
         var installed: MarketplacePlugin? = null
-        val plugin = MarketplacePlugin("example.plugin", "示例插件", "描述", "1.0.0")
+        var opened: MarketplacePlugin? = null
+        val plugin = MarketplacePlugin("example-plugin", "示例插件", "描述", "1.0.0")
         compose.setContent {
             FabushiScreen(
                 state = MarketplaceUiState(plugins = listOf(plugin)),
                 onQueryChange = {},
                 onSearch = {},
                 onInstall = { installed = it },
+                onOpen = { opened = it },
                 onApprovePermissions = {},
                 onDenyPermissions = {},
             )
@@ -61,6 +64,8 @@ class FabushiScreenTest {
 
         compose.onNodeWithTag(TestTags.plugin(plugin.pluginId)).assertIsDisplayed()
         compose.onNodeWithText("示例插件").assertIsDisplayed()
+        compose.onNodeWithTag(TestTags.open(plugin.pluginId)).assertIsDisplayed().performClick()
+        assertEquals(plugin, opened)
         compose.onNodeWithTag(TestTags.install(plugin.pluginId)).assertIsDisplayed().performClick()
         assertEquals(plugin, installed)
     }
@@ -71,7 +76,7 @@ class FabushiScreenTest {
             FabushiScreen(
                 state = MarketplaceUiState(
                     permissionRequest = PermissionRequest(
-                        pluginId = "example.plugin",
+                        pluginId = "example-plugin",
                         runtime = "deepseek-js",
                         permissions = listOf("network.request"),
                     ),
@@ -79,6 +84,7 @@ class FabushiScreenTest {
                 onQueryChange = {},
                 onSearch = {},
                 onInstall = {},
+                onOpen = {},
                 onApprovePermissions = {},
                 onDenyPermissions = {},
             )

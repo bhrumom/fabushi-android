@@ -39,6 +39,7 @@ object TestTags {
     const val PermissionDeny = "permission-deny"
     fun plugin(id: String) = "plugin-$id"
     fun install(id: String) = "install-$id"
+    fun open(id: String) = "open-$id"
 }
 
 @Composable
@@ -47,6 +48,7 @@ fun FabushiScreen(
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
     onInstall: (MarketplacePlugin) -> Unit,
+    onOpen: (MarketplacePlugin) -> Unit,
     onApprovePermissions: () -> Unit,
     onDenyPermissions: () -> Unit,
 ) {
@@ -104,7 +106,7 @@ fun FabushiScreen(
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("本地插件市场", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                        Text("Android UI 使用 Jetpack Compose；插件安装、权限与运行时由共享 Mahayana Rust Host 管理。")
+                        Text("Android 主壳使用 Jetpack Compose；MiniApp 使用受控 WebMCP Surface；插件安装、权限与后台运行由共享 Mahayana Rust Host 管理。")
                         OutlinedTextField(
                             value = state.query,
                             onValueChange = onQueryChange,
@@ -147,12 +149,20 @@ fun FabushiScreen(
                         Text(plugin.displayName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Text(plugin.description)
                         plugin.latestVersion?.let { Text(it, style = MaterialTheme.typography.labelMedium) }
-                        Button(
-                            onClick = { onInstall(plugin) },
-                            modifier = Modifier.fillMaxWidth().testTag(TestTags.install(plugin.pluginId)),
-                            enabled = plugin.latestVersion != null && state.installingPluginId == null,
-                        ) {
-                            Text(if (state.installingPluginId == plugin.pluginId) "处理中…" else "安装 / 更新")
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = { onOpen(plugin) },
+                                modifier = Modifier.weight(1f).testTag(TestTags.open(plugin.pluginId)),
+                            ) {
+                                Text("打开 WebMCP")
+                            }
+                            Button(
+                                onClick = { onInstall(plugin) },
+                                modifier = Modifier.weight(1f).testTag(TestTags.install(plugin.pluginId)),
+                                enabled = plugin.latestVersion != null && state.installingPluginId == null,
+                            ) {
+                                Text(if (state.installingPluginId == plugin.pluginId) "处理中…" else "安装 / 更新")
+                            }
                         }
                     }
                 }

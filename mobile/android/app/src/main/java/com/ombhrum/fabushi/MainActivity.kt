@@ -10,6 +10,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 
@@ -23,17 +26,29 @@ class MainActivity : ComponentActivity() {
             MaterialTheme {
                 val model: MarketplaceViewModel = viewModel()
                 val state by model.state.collectAsState()
+                var openedMiniApp by remember { mutableStateOf<MarketplacePlugin?>(null) }
                 LaunchedEffect(model) {
                     deepLinks.collect { uri -> model.handleDeepLink(uri) }
                 }
-                FabushiScreen(
-                    state = state,
-                    onQueryChange = model::setQuery,
-                    onSearch = model::refresh,
-                    onInstall = model::install,
-                    onApprovePermissions = model::approvePermissions,
-                    onDenyPermissions = model::denyPermissions,
-                )
+                val active = openedMiniApp
+                if (active != null) {
+                    MiniAppWebMcpSurface(
+                        plugin = active,
+                        loadLocalHtml = model::loadLocalMiniAppHtml,
+                        callRuntimeToolJson = model::callRuntimeToolJson,
+                        onClose = { openedMiniApp = null },
+                    )
+                } else {
+                    FabushiScreen(
+                        state = state,
+                        onQueryChange = model::setQuery,
+                        onSearch = model::refresh,
+                        onInstall = model::install,
+                        onOpen = { openedMiniApp = it },
+                        onApprovePermissions = model::approvePermissions,
+                        onDenyPermissions = model::denyPermissions,
+                    )
+                }
             }
         }
         intent?.data?.let(::enqueueDeepLink)

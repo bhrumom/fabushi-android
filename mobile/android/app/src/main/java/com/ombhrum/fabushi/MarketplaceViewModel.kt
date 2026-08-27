@@ -14,11 +14,18 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
+data class MiniAppToolContract(
+    val name: String,
+    val description: String,
+    val approval: String,
+)
+
 data class MarketplacePlugin(
     val pluginId: String,
     val displayName: String,
     val description: String,
     val latestVersion: String?,
+    val tools: List<MiniAppToolContract> = emptyList(),
 )
 
 data class PermissionRequest(
@@ -72,9 +79,6 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
                         else -> "登录授权失败"
                     },
                 )
-                // The deep link is a wake/focus hint only. The credential/session
-                // result stays in the Rust browser-login state machine and is
-                // claimed using the attempt id through the FeatureHost.
                 if (status == "completed") completeBrowserLogin(attemptId)
             }
             "agent" -> {
@@ -123,7 +127,7 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
             runCatching {
                 withContext(Dispatchers.IO) {
                     host.request(
-                        "marketplace.browse",
+                        "feature.marketplace.browse",
                         JSONObject().put("query", query.ifBlank { JSONObject.NULL }).put("platform", "android"),
                     )
                 }
@@ -135,12 +139,15 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
                             val item = plugins.optJSONObject(index) ?: continue
                             val pluginId = item.optString("pluginId")
                             if (pluginId.isBlank()) continue
+                            val commands = item.optJSONObject("source")?.optJSONArray("commands")
+                                ?: item.optJSONArray("commands")
                             add(
                                 MarketplacePlugin(
                                     pluginId = pluginId,
                                     displayName = item.optString("displayName", pluginId),
                                     description = item.optString("description", "无描述"),
                                     latestVersion = item.optString("latestVersion").takeIf(String::isNotBlank),
+                                    tools = commands.toToolContracts(),
                                 ),
                             )
                         }
@@ -174,13 +181,13 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
             runCatching {
                 withContext(Dispatchers.IO) {
                     val metadata = host.request(
-                        "marketplace.release",
+                        "feature.marketplace.release",
                         JSONObject().put("pluginId", plugin.pluginId).put("version", version),
                     )
                     val release = metadata.optJSONObject("releaseManifest")
                         ?: error("marketplace release has no releaseManifest")
                     host.request(
-                        "plugin.install",
+                        "feature.plugin.install",
                         JSONObject().put("release", release).put("platform", "android"),
                     )
                 }
@@ -280,6 +287,28 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    suspend fun loadLocalMiniAppHtml(pluginId: String): String? = withContext(Dispatchers.IO) {
+        runCatching {
+            host.request(
+                "feature.plugin.uiDocument",
+                JSONObject().put("pluginId", pluginId),
+            ).optString("html").takeIf { it.isNotBlank() }
+        }.getOrNull()
+    }
+
+    fun callRuntimeToolJson(pluginId: String, name: String, argumentsJson: String): String {
+        require(Regex("^[A-Za-z0-9_.-]{1,128}$").matches(name)) { "Invalid WebMCP tool name" }
+        val arguments = JSONObject(argumentsJson.ifBlank { "{}" })
+        val result = host.requestValue(
+            "runtime.call",
+            JSONObject()
+                .put("pluginId", pluginId)
+                .put("name", name)
+                .put("arguments", arguments),
+        )
+        return result.toJsonString()
+    }
+
     override fun onCleared() {
         host.close()
         super.onCleared()
@@ -292,4 +321,28 @@ private fun JSONArray?.toStringList(): List<String> = buildList {
         val value = array.optString(index).trim()
         if (value.isNotEmpty()) add(value)
     }
+}
+
+private fun JSONArray?.toToolContracts(): List<MiniAppToolContract> = buildList {
+    val array = this@toToolContracts ?: return@buildList
+    for (index in 0 until array.length()) {
+        val command = array.optJSONObject(index) ?: continue
+        val name = command.optString("tool", command.optString("name")).trim()
+        if (!Regex("^[A-Za-z0-9_.-]{1,128}$").matches(name)) continue
+        add(
+            MiniAppToolContract(
+                name = name,
+                description = command.optString("description", name).ifBlank { name },
+                approval = command.optString("approval", "none"),
+            ),
+        )
+    }
+}
+
+private fun Any?.toJsonString(): String = when (this) {
+    null, JSONObject.NULL -> "null"
+    is JSONObject, is JSONArray -> toString()
+    is Number, is Boolean -> toString()
+    is String -> JSONObject.quote(this)
+    else -> JSONObject.quote(toString())
 }
