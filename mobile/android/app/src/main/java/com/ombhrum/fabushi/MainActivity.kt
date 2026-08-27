@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 
 class MainActivity : ComponentActivity() {
     private val deepLinks = MutableSharedFlow<Uri>(replay = 1, extraBufferCapacity = 31)
+    private val updateModel: AndroidUpdateViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,6 +28,7 @@ class MainActivity : ComponentActivity() {
             MaterialTheme {
                 val model: MarketplaceViewModel = viewModel()
                 val state by model.state.collectAsState()
+                val updateState by updateModel.state.collectAsState()
                 var openedMiniApp by remember { mutableStateOf<MarketplacePlugin?>(null) }
                 LaunchedEffect(model) {
                     deepLinks.collect { uri -> model.handleDeepLink(uri) }
@@ -47,11 +50,24 @@ class MainActivity : ComponentActivity() {
                         onOpen = { openedMiniApp = it },
                         onApprovePermissions = model::approvePermissions,
                         onDenyPermissions = model::denyPermissions,
+                        updateState = updateState,
+                        onCheckUpdate = { updateModel.checkForUpdates(force = true) },
+                        onInstallUpdate = updateModel::downloadAndInstall,
                     )
                 }
             }
         }
         intent?.data?.let(::enqueueDeepLink)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        updateModel.setForeground(true)
+    }
+
+    override fun onStop() {
+        updateModel.setForeground(false)
+        super.onStop()
     }
 
     override fun onNewIntent(intent: Intent) {

@@ -14,6 +14,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -37,6 +38,8 @@ object TestTags {
     const val PermissionDialog = "permission-dialog"
     const val PermissionApprove = "permission-approve"
     const val PermissionDeny = "permission-deny"
+    const val UpdateCard = "android-update-card"
+    const val UpdateAction = "android-update-action"
     fun plugin(id: String) = "plugin-$id"
     fun install(id: String) = "install-$id"
     fun open(id: String) = "open-$id"
@@ -51,6 +54,12 @@ fun FabushiScreen(
     onOpen: (MarketplacePlugin) -> Unit,
     onApprovePermissions: () -> Unit,
     onDenyPermissions: () -> Unit,
+    updateState: AndroidUpdateUiState = AndroidUpdateUiState(
+        phase = AndroidUpdatePhase.DISABLED,
+        currentVersion = BuildConfig.VERSION_NAME,
+    ),
+    onCheckUpdate: () -> Unit = {},
+    onInstallUpdate: () -> Unit = {},
 ) {
     state.permissionRequest?.let { request ->
         AlertDialog(
@@ -99,6 +108,54 @@ fun FabushiScreen(
                         modifier = Modifier.testTag(TestTags.RuntimeBadge).semantics { contentDescription = "Android native runtime" },
                         style = MaterialTheme.typography.labelMedium,
                     )
+                }
+            }
+
+            if (updateState.phase != AndroidUpdatePhase.DISABLED) {
+                item {
+                    Card(modifier = Modifier.fillMaxWidth().testTag(TestTags.UpdateCard)) {
+                        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("应用更新", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                "当前版本 ${updateState.currentVersion} (${updateState.currentVersionCode})",
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                            val statusText = when (updateState.phase) {
+                                AndroidUpdatePhase.CHECKING -> "正在检查 GitHub Release…"
+                                AndroidUpdatePhase.UP_TO_DATE -> "已是最新版本"
+                                AndroidUpdatePhase.AVAILABLE -> "发现新版本 ${updateState.availableVersion} (${updateState.availableVersionCode})"
+                                AndroidUpdatePhase.DOWNLOADING -> "正在下载 ${updateState.progressPercent ?: 0}%"
+                                AndroidUpdatePhase.WAITING_FOR_PERMISSION -> "安装包已下载，等待安装权限"
+                                AndroidUpdatePhase.INSTALLING -> "系统安装器已打开"
+                                AndroidUpdatePhase.ERROR -> "更新检查或安装失败"
+                                AndroidUpdatePhase.DISABLED -> ""
+                            }
+                            if (statusText.isNotEmpty()) Text(statusText)
+                            updateState.message?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                            if (updateState.phase == AndroidUpdatePhase.DOWNLOADING) {
+                                val progress = (updateState.progressPercent ?: 0).coerceIn(0, 100) / 100f
+                                LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+                            }
+                            when (updateState.phase) {
+                                AndroidUpdatePhase.AVAILABLE,
+                                AndroidUpdatePhase.WAITING_FOR_PERMISSION,
+                                AndroidUpdatePhase.INSTALLING,
+                                -> Button(
+                                    onClick = onInstallUpdate,
+                                    modifier = Modifier.fillMaxWidth().testTag(TestTags.UpdateAction),
+                                ) {
+                                    Text(if (updateState.phase == AndroidUpdatePhase.AVAILABLE) "下载并安装" else "继续安装")
+                                }
+                                AndroidUpdatePhase.UP_TO_DATE,
+                                AndroidUpdatePhase.ERROR,
+                                -> OutlinedButton(
+                                    onClick = onCheckUpdate,
+                                    modifier = Modifier.fillMaxWidth().testTag(TestTags.UpdateAction),
+                                ) { Text("检查更新") }
+                                else -> Unit
+                            }
+                        }
+                    }
                 }
             }
 
