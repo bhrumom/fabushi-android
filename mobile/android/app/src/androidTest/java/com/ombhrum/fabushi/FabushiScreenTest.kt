@@ -154,4 +154,39 @@ class FabushiScreenTest {
         compose.onNodeWithTag(TestTags.PermissionApprove).assertIsDisplayed()
         compose.onNodeWithTag(TestTags.PermissionDeny).assertIsDisplayed()
     }
+    @Test
+    fun appAgentSurfaceNavigatesWithStableSemanticIdsWithoutScreenshotCoordinates() {
+        val surface = FabushiAppAgentSurface()
+        compose.setContent {
+            FabushiScreen(
+                state = MarketplaceUiState(message = "ready"),
+                onQueryChange = {},
+                onSearch = {},
+                onInstall = {},
+                onOpen = {},
+                onApprovePermissions = {},
+                onDenyPermissions = {},
+                appAgentSurface = surface,
+            )
+        }
+        compose.waitForIdle()
+        var snapshot = surface.snapshot()
+        assertEquals("home", snapshot.screen)
+        assertEquals(TestTags.AddButton, surface.find(agentId = TestTags.AddButton).single().agentId)
+
+        compose.runOnIdle {
+            surface.action(snapshot.generation, TestTags.AddButton, "invoke")
+        }
+        compose.waitForIdle()
+        snapshot = surface.snapshot()
+        assertEquals(TestTags.MarketplaceEntry, surface.find(agentId = TestTags.MarketplaceEntry).single().agentId)
+
+        compose.runOnIdle {
+            surface.action(snapshot.generation, TestTags.MarketplaceEntry, "invoke")
+        }
+        compose.onNodeWithTag(TestTags.RuntimeBadge).assertIsDisplayed()
+        compose.waitForIdle()
+        assertEquals("marketplace", surface.snapshot().screen)
+    }
+
 }

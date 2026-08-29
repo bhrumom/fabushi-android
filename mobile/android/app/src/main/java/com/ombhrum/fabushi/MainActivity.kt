@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 class MainActivity : ComponentActivity() {
     private val deepLinks = MutableSharedFlow<Uri>(replay = 1, extraBufferCapacity = 31)
     private val updateModel: AndroidUpdateViewModel by viewModels()
+    private val appAgentSurface = FabushiAppAgentSurface()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,6 +54,7 @@ class MainActivity : ComponentActivity() {
                         updateState = updateState,
                         onCheckUpdate = { updateModel.checkForUpdates(force = true) },
                         onInstallUpdate = updateModel::downloadAndInstall,
+                        appAgentSurface = appAgentSurface,
                     )
                 }
             }
@@ -75,6 +77,8 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         intent.data?.let(::enqueueDeepLink)
     }
+
+    internal fun appAgentSurfaceForTesting(): FabushiAppAgentSurface = appAgentSurface
 
     private fun enqueueDeepLink(uri: Uri) {
         if (uri.scheme != "fabushi") return

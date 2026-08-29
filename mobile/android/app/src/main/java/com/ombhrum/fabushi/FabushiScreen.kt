@@ -34,9 +34,12 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.onDispose
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -117,8 +120,134 @@ fun FabushiScreen(
     ),
     onCheckUpdate: () -> Unit = {},
     onInstallUpdate: () -> Unit = {},
+    appAgentSurface: FabushiAppAgentSurface? = null,
 ) {
     var destination by remember { mutableStateOf(MobileDestination.HOME) }
+    var showAddMenu by remember { mutableStateOf(false) }
+
+    LaunchedEffect(destination, showAddMenu, state, updateState.phase, appAgentSurface) {
+        val elements = mutableListOf<FabushiAppAgentSurface.Element>()
+        val actions = linkedMapOf<String, FabushiAppAgentSurface.Action>()
+        fun element(
+            id: String,
+            role: String,
+            name: String,
+            enabled: Boolean = true,
+            visible: Boolean = true,
+            action: FabushiAppAgentSurface.Action? = null,
+        ) {
+            val normalizedId = id
+                .replace(Regex("[^A-Za-z0-9._:/@-]"), "-")
+                .take(200)
+            elements += FabushiAppAgentSurface.Element(
+                agentId = normalizedId,
+                role = role.take(80),
+                name = name.take(240),
+                visible = visible,
+                enabled = enabled,
+            )
+            if (action != null) actions[normalizedId] = action
+        }
+        val screen = when (destination) {
+            MobileDestination.HOME -> {
+                element(TestTags.AppShell, "application", "Fabushi")
+                element(TestTags.HomeSearchButton, "button", "搜索对话")
+                element(
+                    TestTags.AddButton,
+                    "button",
+                    "添加",
+                    action = FabushiAppAgentSurface.Action(setOf("invoke")) { showAddMenu = true },
+                )
+                element(TestTags.ConversationRow, "button", "Chief of Staff")
+                if (showAddMenu) {
+                    element(
+                        TestTags.MarketplaceEntry,
+                        "menuitem",
+                        "插件市场",
+                        action = FabushiAppAgentSurface.Action(setOf("invoke")) {
+                            showAddMenu = false
+                            destination = MobileDestination.MARKETPLACE
+                        },
+                    )
+                    element(
+                        TestTags.RemoteComputerEntry,
+                        "menuitem",
+                        "我的电脑",
+                        action = FabushiAppAgentSurface.Action(setOf("invoke")) {
+                            showAddMenu = false
+                            destination = MobileDestination.REMOTE_COMPUTER
+                        },
+                    )
+                }
+                "home"
+            }
+            MobileDestination.MARKETPLACE -> {
+                element(
+                    TestTags.SearchField,
+                    "textbox",
+                    "搜索插件",
+                    action = FabushiAppAgentSurface.Action(setOf("setValue")) { onQueryChange(it.orEmpty()) },
+                )
+                element(
+                    TestTags.SearchButton,
+                    "button",
+                    "搜索",
+                    enabled = !state.loading,
+                    action = FabushiAppAgentSurface.Action(setOf("invoke")) { onSearch() },
+                )
+                element(TestTags.HostStatus, "status", state.message)
+                state.plugins.take(100).forEach { plugin ->
+                    element(TestTags.plugin(plugin.pluginId), "group", plugin.displayName)
+                    element(
+                        TestTags.open(plugin.pluginId),
+                        "button",
+                        "打开 ${plugin.displayName}",
+                        action = FabushiAppAgentSurface.Action(setOf("invoke")) { onOpen(plugin) },
+                    )
+                    element(
+                        TestTags.install(plugin.pluginId),
+                        "button",
+                        "安装 ${plugin.displayName}",
+                        enabled = plugin.latestVersion != null && state.installingPluginId == null,
+                        action = FabushiAppAgentSurface.Action(setOf("invoke")) { onInstall(plugin) },
+                    )
+                }
+                "marketplace"
+            }
+            MobileDestination.REMOTE_COMPUTER -> {
+                element(TestTags.RemoteComputerSurface, "application", "远程控制我的电脑")
+                element(
+                    TestTags.RemoteComputerClose,
+                    "button",
+                    "关闭远程控制",
+                    action = FabushiAppAgentSurface.Action(setOf("invoke")) { destination = MobileDestination.HOME },
+                )
+                "remote-computer"
+            }
+        }
+        if (state.permissionRequest != null) {
+            element(
+                TestTags.PermissionApprove,
+                "button",
+                "授权插件权限",
+                action = FabushiAppAgentSurface.Action(setOf("invoke")) { onApprovePermissions() },
+            )
+            element(
+                TestTags.PermissionDeny,
+                "button",
+                "拒绝插件权限",
+                action = FabushiAppAgentSurface.Action(setOf("invoke")) { onDenyPermissions() },
+            )
+        }
+        appAgentSurface?.publish(
+            screen = if (state.permissionRequest != null) "permission-dialog" else screen,
+            elements = elements,
+            actions = actions,
+        )
+    }
+    DisposableEffect(appAgentSurface) {
+        onDispose { appAgentSurface?.clear() }
+    }
 
     state.permissionRequest?.let { request ->
         AlertDialog(
@@ -153,6 +282,8 @@ fun FabushiScreen(
             onInstallUpdate = onInstallUpdate,
             onOpenMarketplace = { destination = MobileDestination.MARKETPLACE },
             onOpenRemoteComputer = { destination = MobileDestination.REMOTE_COMPUTER },
+            showAddMenu = showAddMenu,
+            onShowAddMenuChange = { showAddMenu = it },
         )
         MobileDestination.MARKETPLACE -> MarketplaceContent(
             state = state,
@@ -175,10 +306,11 @@ private fun ConversationHome(
     onInstallUpdate: () -> Unit,
     onOpenMarketplace: () -> Unit,
     onOpenRemoteComputer: () -> Unit,
+    showAddMenu: Boolean,
+    onShowAddMenuChange: (Boolean) -> Unit,
 ) {
     var showSearch by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
-    var showAddMenu by remember { mutableStateOf(false) }
     val conversations = remember {
         mutableStateListOf(
             ConversationSummary(
@@ -226,17 +358,17 @@ private fun ConversationHome(
                             CircularActionButton(
                                 tag = TestTags.AddButton,
                                 description = "添加",
-                                onClick = { showAddMenu = true },
+                                onClick = { onShowAddMenuChange(true) },
                             ) { PlusGlyph() }
                             DropdownMenu(
                                 expanded = showAddMenu,
-                                onDismissRequest = { showAddMenu = false },
+                                onDismissRequest = { onShowAddMenuChange(false) },
                                 containerColor = homeSurface,
                             ) {
                                 DropdownMenuItem(
                                     text = { Text("新建对话", color = homePrimaryText) },
                                     onClick = {
-                                        showAddMenu = false
+                                        onShowAddMenuChange(false)
                                         val next = conversations.size + 1
                                         conversations.add(
                                             0,
@@ -254,7 +386,7 @@ private fun ConversationHome(
                                     modifier = Modifier.testTag(TestTags.RemoteComputerEntry),
                                     text = { Text("我的电脑", color = homePrimaryText) },
                                     onClick = {
-                                        showAddMenu = false
+                                        onShowAddMenuChange(false)
                                         onOpenRemoteComputer()
                                     },
                                 )
@@ -262,7 +394,7 @@ private fun ConversationHome(
                                     modifier = Modifier.testTag(TestTags.MarketplaceEntry),
                                     text = { Text("插件市场", color = homePrimaryText) },
                                     onClick = {
-                                        showAddMenu = false
+                                        onShowAddMenuChange(false)
                                         onOpenMarketplace()
                                     },
                                 )
@@ -270,7 +402,7 @@ private fun ConversationHome(
                                     DropdownMenuItem(
                                         text = { Text("检查更新", color = homePrimaryText) },
                                         onClick = {
-                                            showAddMenu = false
+                                            onShowAddMenuChange(false)
                                             onCheckUpdate()
                                         },
                                     )
