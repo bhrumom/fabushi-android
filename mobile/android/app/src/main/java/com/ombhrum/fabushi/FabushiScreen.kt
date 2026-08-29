@@ -62,6 +62,14 @@ object TestTags {
     const val ConversationList = "conversation-list"
     const val ConversationRow = "conversation-chief-of-staff"
     const val MarketplaceEntry = "marketplace-entry"
+    const val RemoteComputerEntry = "remote-computer-entry"
+    const val RemoteComputerSurface = "remote-computer-surface"
+    const val RemoteComputerClose = "remote-computer-close"
+    const val RemoteComputerStatus = "remote-computer-status"
+    const val RemoteComputerLoading = "remote-computer-loading"
+    const val RemoteComputerError = "remote-computer-error"
+    const val RemoteComputerReload = "remote-computer-reload"
+    const val RemoteComputerWebView = "remote-computer-webview"
     const val RuntimeBadge = "runtime-badge"
     const val SearchField = "marketplace-search"
     const val SearchButton = "marketplace-search-submit"
@@ -76,7 +84,7 @@ object TestTags {
     fun open(id: String) = "open-$id"
 }
 
-private enum class MobileDestination { HOME, MARKETPLACE }
+private enum class MobileDestination { HOME, MARKETPLACE, REMOTE_COMPUTER }
 
 private data class ConversationSummary(
     val id: String,
@@ -144,6 +152,7 @@ fun FabushiScreen(
             onCheckUpdate = onCheckUpdate,
             onInstallUpdate = onInstallUpdate,
             onOpenMarketplace = { destination = MobileDestination.MARKETPLACE },
+            onOpenRemoteComputer = { destination = MobileDestination.REMOTE_COMPUTER },
         )
         MobileDestination.MARKETPLACE -> MarketplaceContent(
             state = state,
@@ -152,6 +161,9 @@ fun FabushiScreen(
             onInstall = onInstall,
             onOpen = onOpen,
             onBack = { destination = MobileDestination.HOME },
+        )
+        MobileDestination.REMOTE_COMPUTER -> RemoteComputerSurface(
+            onClose = { destination = MobileDestination.HOME },
         )
     }
 }
@@ -162,6 +174,7 @@ private fun ConversationHome(
     onCheckUpdate: () -> Unit,
     onInstallUpdate: () -> Unit,
     onOpenMarketplace: () -> Unit,
+    onOpenRemoteComputer: () -> Unit,
 ) {
     var showSearch by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -235,6 +248,14 @@ private fun ConversationHome(
                                                 badge = "+",
                                             ),
                                         )
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    modifier = Modifier.testTag(TestTags.RemoteComputerEntry),
+                                    text = { Text("我的电脑", color = homePrimaryText) },
+                                    onClick = {
+                                        showAddMenu = false
+                                        onOpenRemoteComputer()
                                     },
                                 )
                                 DropdownMenuItem(

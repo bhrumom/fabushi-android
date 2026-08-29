@@ -82,6 +82,27 @@ class FabushiScreenTest {
     }
 
     @Test
+    fun addMenuOpensAndClosesRestrictedRemoteComputerSurface() {
+        compose.setContent {
+            FabushiScreen(
+                state = MarketplaceUiState(),
+                onQueryChange = {},
+                onSearch = {},
+                onInstall = {},
+                onOpen = {},
+                onApprovePermissions = {},
+                onDenyPermissions = {},
+            )
+        }
+
+        compose.onNodeWithTag(TestTags.AddButton).performClick()
+        compose.onNodeWithTag(TestTags.RemoteComputerEntry).assertIsDisplayed().performClick()
+        compose.onNodeWithTag(TestTags.RemoteComputerSurface).assertIsDisplayed()
+        compose.onNodeWithTag(TestTags.RemoteComputerClose).assertIsDisplayed().performClick()
+        compose.onNodeWithTag(TestTags.AppShell).assertIsDisplayed()
+    }
+
+    @Test
     fun availableUpdateAppearsOnHomeAndStartsInstall() {
         var installRequests = 0
         compose.setContent {
