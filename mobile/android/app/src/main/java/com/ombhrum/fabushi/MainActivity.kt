@@ -62,6 +62,7 @@ class MainActivity : ComponentActivity() {
                         onCreateConversation = messagingModel::createConversation,
                         onSendText = { conversationId, text, replyTo -> messagingModel.sendText(conversationId, text, replyTo) },
                         onSendAttachment = messagingModel::sendAttachment,
+                        onSendVoice = messagingModel::sendVoice,
                         onSendContact = messagingModel::sendContact,
                         onSendPoll = messagingModel::sendPoll,
                         onSendLocation = { conversationId, latitude, longitude -> messagingModel.sendLocation(conversationId, latitude, longitude) },

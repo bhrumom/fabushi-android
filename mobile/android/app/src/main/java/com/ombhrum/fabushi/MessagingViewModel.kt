@@ -166,6 +166,26 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
             .put("replyToMessageId", JSONObject.NULL).put("threadRootMessageId", JSONObject.NULL).put("scheduledAtMs", JSONObject.NULL).put("silent", false).put("protectedContent", false))
     }
 
+    fun sendVoice(conversationId: String, fileName: String, mimeType: String, bytes: ByteArray, waveform: List<Int> = emptyList()) {
+        if (bytes.isEmpty()) return
+        viewModelScope.launch {
+            runCatching { withContext(Dispatchers.IO) {
+                ensureIdentity()
+                val blobId = "voice-${UUID.randomUUID()}"
+                val now = System.currentTimeMillis()
+                execute(JSONObject().put("type", "beginBlobUpload").put("metadata", JSONObject().put("id", blobId).put("fileName", fileName).put("mimeType", mimeType).put("sizeBytes", bytes.size).put("contentHash", JSONObject.NULL).put("createdAtMs", now)))
+                val chunkSize = 512 * 1024; var offset = 0
+                while (offset < bytes.size) { val end = minOf(bytes.size, offset + chunkSize); execute(JSONObject().put("type", "appendBlobChunk").put("blobId", blobId).put("offset", offset).put("dataBase64", Base64.encodeToString(bytes.copyOfRange(offset, end), Base64.NO_WRAP))); offset = end }
+                execute(JSONObject().put("type", "finishBlobUpload").put("blobId", blobId))
+                val media = JSONObject().put("id", blobId).put("fileName", fileName).put("mimeType", mimeType).put("sizeBytes", bytes.size).put("remoteUrl", "fabushi-blob://$blobId")
+                val waveformJson = JSONArray(); waveform.forEach { waveformJson.put(it.coerceIn(0, 255)) }
+                val content = JSONObject().put("type", "voice").put("data", JSONObject().put("media", media).put("caption", JSONObject().put("text", "").put("entities", JSONArray())).put("waveform", waveformJson))
+                execute(JSONObject().put("type", "sendMessage").put("conversationId", conversationId).put("clientMessageId", "android:${UUID.randomUUID()}").put("content", content)
+                    .put("replyToMessageId", JSONObject.NULL).put("threadRootMessageId", JSONObject.NULL).put("scheduledAtMs", JSONObject.NULL).put("silent", false).put("protectedContent", false))
+            }}.onFailure { mutableState.value = mutableState.value.copy(error = it.message) }
+        }
+    }
+
     fun sendAttachment(conversationId: String, fileName: String, mimeType: String, bytes: ByteArray) {
         if (bytes.isEmpty()) return
         viewModelScope.launch {
@@ -350,6 +370,8 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
             "photo" -> mediaFileName?.let { "🖼 $it" } ?: "🖼 图片"
             "video" -> mediaFileName?.let { "🎬 $it" } ?: "🎬 视频"
             "document" -> mediaFileName?.let { "📎 $it" } ?: "📎 文件"
+            "voice" -> "🎙 语音消息"
+            "audio" -> mediaFileName?.let { "🎵 $it" } ?: "🎵 音频"
             "location" -> "📍 位置"
             "contact" -> contactName?.let { "👤 $it" } ?: "👤 联系人"
             "invoice" -> "🧾 账单"

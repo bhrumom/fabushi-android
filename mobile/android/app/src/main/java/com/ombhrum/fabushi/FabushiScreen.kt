@@ -67,6 +67,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.delay
 
 object TestTags {
     const val AppShell = "app-shell"
@@ -133,6 +134,7 @@ fun FabushiScreen(
     onCreateConversation: (ConversationKind, String, String, List<String>) -> Unit = { _, _, _, _ -> },
     onSendText: (String, String, String?) -> Unit = { _, _, _ -> },
     onSendAttachment: (String, String, String, ByteArray) -> Unit = { _, _, _, _ -> },
+    onSendVoice: (String, String, String, ByteArray, List<Int>) -> Unit = { _, _, _, _, _ -> },
     onSendContact: (String, MessagingContact) -> Unit = { _, _ -> },
     onSendPoll: (String, String, List<String>, Boolean) -> Unit = { _, _, _, _ -> },
     onSendLocation: (String, Double, Double) -> Unit = { _, _, _ -> },
@@ -314,6 +316,7 @@ fun FabushiScreen(
             onCreateConversation = onCreateConversation,
             onSendText = onSendText,
             onSendAttachment = onSendAttachment,
+            onSendVoice = onSendVoice,
             onSendContact = onSendContact,
             onSendPoll = onSendPoll,
             onSendLocation = onSendLocation,
@@ -360,6 +363,7 @@ private fun ConversationHome(
     onCreateConversation: (ConversationKind, String, String, List<String>) -> Unit,
     onSendText: (String, String, String?) -> Unit,
     onSendAttachment: (String, String, String, ByteArray) -> Unit,
+    onSendVoice: (String, String, String, ByteArray, List<Int>) -> Unit,
     onSendContact: (String, MessagingContact) -> Unit,
     onSendPoll: (String, String, List<String>, Boolean) -> Unit,
     onSendLocation: (String, Double, Double) -> Unit,
@@ -431,6 +435,7 @@ private fun ConversationHome(
             onBack = { selectedConversation = null },
             onSend = { text, replyTo -> onSendText(conversation.id, text, replyTo) },
             onSendAttachment = { fileName, mimeType, bytes -> onSendAttachment(conversation.id, fileName, mimeType, bytes) },
+            onSendVoice = { fileName, mimeType, bytes, waveform -> onSendVoice(conversation.id, fileName, mimeType, bytes, waveform) },
             shareContacts = messagingState.contacts,
             onSendContact = { contact -> onSendContact(conversation.id, contact) },
             onSendPoll = { question, options, multiple -> onSendPoll(conversation.id, question, options, multiple) },
@@ -800,6 +805,7 @@ private fun ConversationDetail(
     onBack: () -> Unit,
     onSend: (String, String?) -> Unit,
     onSendAttachment: (String, String, ByteArray) -> Unit,
+    onSendVoice: (String, String, ByteArray, List<Int>) -> Unit,
     shareContacts: List<MessagingContact>,
     onSendContact: (MessagingContact) -> Unit,
     onSendPoll: (String, List<String>, Boolean) -> Unit,
@@ -833,6 +839,15 @@ private fun ConversationDetail(
     var pollOption3 by remember { mutableStateOf("") }
     var attachmentMime by remember { mutableStateOf("*/*") }
     val context = LocalContext.current
+    val voiceRecorder = remember { NativeVoiceRecorder(context) }
+    var isRecordingVoice by remember { mutableStateOf(false) }
+    var recordingSeconds by remember { mutableStateOf(0) }
+    var voiceError by remember { mutableStateOf<String?>(null) }
+    DisposableEffect(Unit) { onDispose { voiceRecorder.cancel() } }
+    LaunchedEffect(isRecordingVoice) {
+        recordingSeconds = 0
+        while (isRecordingVoice) { delay(1000); if (isRecordingVoice) recordingSeconds += 1 }
+    }
     var showLocationShare by remember { mutableStateOf(false) }
     var currentLocation by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var locationError by remember { mutableStateOf<String?>(null) }
@@ -844,6 +859,11 @@ private fun ConversationDetail(
     }
     val locationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
         if (grants.values.any { it }) resolveLocation() else locationError = "请允许位置权限后再分享位置"
+    }
+    val microphonePermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            voiceRecorder.start().onSuccess { isRecordingVoice = true; voiceError = null }.onFailure { voiceError = it.message }
+        } else voiceError = "请允许麦克风权限后再发送语音"
     }
     val attachmentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
@@ -1007,6 +1027,8 @@ private fun ConversationDetail(
                                     Text(message.pollQuestion ?: "投票", color = homePrimaryText, fontWeight = FontWeight.SemiBold)
                                     message.pollOptions.forEach { option -> Row(verticalAlignment = Alignment.CenterVertically) { Text("○", color = homeAccent); Text(option, color = homePrimaryText, modifier = Modifier.padding(start = 7.dp)) } }
                                 }
+                                "voice" -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Text("▶", color = homeAccent, fontSize = 24.sp); Column(Modifier.padding(start = 10.dp)) { Text("语音消息", color = homePrimaryText, fontWeight = FontWeight.Medium); Text(message.mediaFileName ?: "录音", color = homeSecondaryText, style = MaterialTheme.typography.bodySmall) } }
+                                "audio" -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Text("♫", color = homeAccent, fontSize = 24.sp); Text(message.mediaFileName ?: "音频", color = homePrimaryText, modifier = Modifier.padding(start = 10.dp)) }
                                 "photo", "video", "document" -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                     Text(if (message.contentType == "photo") "🖼" else if (message.contentType == "video") "🎬" else "📎", fontSize = 24.sp)
                                     Column(Modifier.padding(start = 10.dp)) { Text(message.mediaFileName ?: message.text, color = homePrimaryText, fontWeight = FontWeight.Medium); Text(if (message.contentType == "photo") "图片" else if (message.contentType == "video") "视频" else "文件", color = homeSecondaryText, style = MaterialTheme.typography.bodySmall) }
@@ -1040,6 +1062,15 @@ private fun ConversationDetail(
                     Text("×", color = homeSecondaryText, fontSize = 24.sp, modifier = Modifier.clickable { editingMessage = null; replyTarget = null; if (draft.isNotEmpty()) draft = "" }.padding(6.dp))
                 }
             }
+            if (isRecordingVoice) {
+                Row(Modifier.fillMaxWidth().background(homeSurface).padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("●", color = Color.Red, fontSize = 14.sp)
+                    Text("正在录音 ${recordingSeconds / 60}:${"%02d".format(recordingSeconds % 60)}", color = homePrimaryText, modifier = Modifier.weight(1f).padding(start = 8.dp))
+                    Text("取消", color = Color(0xFFFF6B6B), modifier = Modifier.clickable { voiceRecorder.cancel(); isRecordingVoice = false }.padding(6.dp))
+                }
+            } else if (voiceError != null) {
+                Text(voiceError.orEmpty(), color = Color(0xFFFF6B6B), style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp))
+            }
             Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.Bottom) {
                 Box {
                     Text("＋", color = homeSecondaryText, fontSize = 26.sp, modifier = Modifier.clickable { showAttachmentMenu = true }.padding(8.dp))
@@ -1061,13 +1092,18 @@ private fun ConversationDetail(
                     value = draft, onValueChange = { draft = it; onTypingChanged(it.isNotBlank()) }, modifier = Modifier.weight(1f), placeholder = { Text("消息", color = homeSecondaryText) }, maxLines = 5,
                     colors = OutlinedTextFieldDefaults.colors(focusedTextColor = homePrimaryText, unfocusedTextColor = homePrimaryText, focusedContainerColor = homeSurface, unfocusedContainerColor = homeSurface), shape = RoundedCornerShape(22.dp),
                 )
-                Text(if (draft.isBlank()) "●" else "➤", color = if (draft.isBlank()) homeSecondaryText else homeAccent, fontSize = 22.sp,
+                Text(if (draft.isBlank()) (if (isRecordingVoice) "■" else "●") else "➤", color = if (isRecordingVoice) Color.Red else if (draft.isBlank()) homeSecondaryText else homeAccent, fontSize = 22.sp,
                     modifier = Modifier.clickable {
                         val text = draft.trim()
                         if (text.isNotEmpty()) {
                             val edit = editingMessage
                             if (edit != null) onEdit(edit.id, text) else onSend(text, replyTarget?.id)
                             draft = ""; onTypingChanged(false); editingMessage = null; replyTarget = null
+                        } else if (isRecordingVoice) {
+                            voiceRecorder.stop().onSuccess { recording -> onSendVoice(recording.file.name, "audio/mp4", recording.bytes, emptyList()); isRecordingVoice = false; voiceError = null }.onFailure { voiceError = it.message; isRecordingVoice = false }
+                        } else {
+                            val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+                            if (granted) voiceRecorder.start().onSuccess { isRecordingVoice = true; voiceError = null }.onFailure { voiceError = it.message } else microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                         }
                     }.padding(10.dp))
             }
