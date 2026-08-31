@@ -67,6 +67,7 @@ class MainActivity : ComponentActivity() {
                         onSendLocation = { conversationId, latitude, longitude -> messagingModel.sendLocation(conversationId, latitude, longitude) },
                         onEditText = messagingModel::editText,
                         onDeleteMessage = { conversationId, messageId -> messagingModel.deleteMessage(conversationId, messageId) },
+                        onSetMessagePinned = messagingModel::setMessagePinned,
                         onSetReaction = messagingModel::setReaction,
                         onForwardMessage = messagingModel::forwardMessage,
                         onStartTyping = messagingModel::startTyping,
@@ -75,6 +76,8 @@ class MainActivity : ComponentActivity() {
                         onSetArchived = messagingModel::setArchived,
                         onSetMuted = messagingModel::setMuted,
                         onMarkRead = messagingModel::markRead,
+                        onUpsertFolder = messagingModel::upsertFolder,
+                        onDeleteFolder = messagingModel::deleteFolder,
                         appAgentSurface = appAgentSurface,
                     )
                 }

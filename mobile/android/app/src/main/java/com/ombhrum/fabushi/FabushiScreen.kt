@@ -138,6 +138,7 @@ fun FabushiScreen(
     onSendLocation: (String, Double, Double) -> Unit = { _, _, _ -> },
     onEditText: (String, String, String) -> Unit = { _, _, _ -> },
     onDeleteMessage: (String, String) -> Unit = { _, _ -> },
+    onSetMessagePinned: (String, String, Boolean) -> Unit = { _, _, _ -> },
     onSetReaction: (String, String, String, Boolean) -> Unit = { _, _, _, _ -> },
     onForwardMessage: (String, String, String) -> Unit = { _, _, _ -> },
     onStartTyping: (String) -> Unit = {},
@@ -146,6 +147,8 @@ fun FabushiScreen(
     onSetArchived: (ConversationSummary, Boolean) -> Unit = { _, _ -> },
     onSetMuted: (ConversationSummary, Boolean) -> Unit = { _, _ -> },
     onMarkRead: (ConversationSummary) -> Unit = {},
+    onUpsertFolder: (MessagingFolder) -> Unit = {},
+    onDeleteFolder: (String) -> Unit = {},
     appAgentSurface: FabushiAppAgentSurface? = null,
 ) {
     var destination by remember { mutableStateOf(MobileDestination.HOME) }
@@ -316,6 +319,7 @@ fun FabushiScreen(
             onSendLocation = onSendLocation,
             onEditText = onEditText,
             onDeleteMessage = onDeleteMessage,
+            onSetMessagePinned = onSetMessagePinned,
             onSetReaction = onSetReaction,
             onForwardMessage = onForwardMessage,
             onStartTyping = onStartTyping,
@@ -324,6 +328,8 @@ fun FabushiScreen(
             onSetArchived = onSetArchived,
             onSetMuted = onSetMuted,
             onMarkRead = onMarkRead,
+            onUpsertFolder = onUpsertFolder,
+            onDeleteFolder = onDeleteFolder,
         )
         MobileDestination.MARKETPLACE -> MarketplaceContent(
             state = state,
@@ -359,6 +365,7 @@ private fun ConversationHome(
     onSendLocation: (String, Double, Double) -> Unit,
     onEditText: (String, String, String) -> Unit,
     onDeleteMessage: (String, String) -> Unit,
+    onSetMessagePinned: (String, String, Boolean) -> Unit,
     onSetReaction: (String, String, String, Boolean) -> Unit,
     onForwardMessage: (String, String, String) -> Unit,
     onStartTyping: (String) -> Unit,
@@ -367,6 +374,8 @@ private fun ConversationHome(
     onSetArchived: (ConversationSummary, Boolean) -> Unit,
     onSetMuted: (ConversationSummary, Boolean) -> Unit,
     onMarkRead: (ConversationSummary) -> Unit,
+    onUpsertFolder: (MessagingFolder) -> Unit,
+    onDeleteFolder: (String) -> Unit,
 ) {
     var showSearch by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -408,6 +417,8 @@ private fun ConversationHome(
             onCreateDirect = { contact -> activeSection = null; onCreateDirect(contact) },
             onOpenConversation = { conversation -> activeSection = null; selectedConversation = conversation; onMarkRead(conversation) },
             onUnarchive = { conversation -> onSetArchived(conversation, false) },
+            onUpsertFolder = onUpsertFolder,
+            onDeleteFolder = onDeleteFolder,
         )
         return
     }
@@ -426,6 +437,7 @@ private fun ConversationHome(
             onSendLocation = { latitude, longitude -> onSendLocation(conversation.id, latitude, longitude) },
             onEdit = { messageId, text -> onEditText(conversation.id, messageId, text) },
             onDelete = { messageId -> onDeleteMessage(conversation.id, messageId) },
+            onSetMessagePinned = { messageId, pinned -> onSetMessagePinned(conversation.id, messageId, pinned) },
             onReact = { messageId, reaction -> onSetReaction(conversation.id, messageId, reaction, true) },
             onForward = { messageId, destinationId -> onForwardMessage(conversation.id, messageId, destinationId) },
             forwardDestinations = conversations.filter { it.id != conversation.id && !it.isArchived },
@@ -588,7 +600,63 @@ private fun AndroidSectionSurface(
     onCreateDirect: (MessagingContact) -> Unit,
     onOpenConversation: (ConversationSummary) -> Unit,
     onUnarchive: (ConversationSummary) -> Unit,
+    onUpsertFolder: (MessagingFolder) -> Unit,
+    onDeleteFolder: (String) -> Unit,
 ) {
+    var showFolderEditor by remember { mutableStateOf(false) }
+    var folderTitle by remember { mutableStateOf("") }
+    var folderConversationIds by remember { mutableStateOf(setOf<String>()) }
+    var folderIncludeGroups by remember { mutableStateOf(false) }
+    var folderIncludeChannels by remember { mutableStateOf(false) }
+    var openedFolder by remember { mutableStateOf<MessagingFolder?>(null) }
+
+    if (showFolderEditor) {
+        AlertDialog(
+            onDismissRequest = { showFolderEditor = false },
+            title = { Text("新建文件夹") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(folderTitle, { folderTitle = it }, label = { Text("文件夹名称") }, singleLine = true)
+                    Row(Modifier.fillMaxWidth().clickable { folderIncludeGroups = !folderIncludeGroups }.padding(vertical = 4.dp)) { Text(if (folderIncludeGroups) "●" else "○", color = homeAccent); Text("自动包含群组", color = homePrimaryText, modifier = Modifier.padding(start = 8.dp)) }
+                    Row(Modifier.fillMaxWidth().clickable { folderIncludeChannels = !folderIncludeChannels }.padding(vertical = 4.dp)) { Text(if (folderIncludeChannels) "●" else "○", color = homeAccent); Text("自动包含频道", color = homePrimaryText, modifier = Modifier.padding(start = 8.dp)) }
+                    Text("选择会话", color = homeSecondaryText, style = MaterialTheme.typography.bodySmall)
+                    messagingState.conversations.filter { !it.isArchived }.take(14).forEach { conversation ->
+                        val selected = conversation.id in folderConversationIds
+                        Row(Modifier.fillMaxWidth().clickable { folderConversationIds = if (selected) folderConversationIds - conversation.id else folderConversationIds + conversation.id }.padding(vertical = 4.dp)) {
+                            Text(if (selected) "●" else "○", color = if (selected) homeAccent else homeSecondaryText); Text(conversation.title, color = homePrimaryText, modifier = Modifier.padding(start = 8.dp))
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    onUpsertFolder(MessagingFolder(id = "folder-${System.nanoTime()}", title = folderTitle.trim(), icon = "folder", conversationIds = folderConversationIds.toList(), includeGroups = folderIncludeGroups, includeChannels = folderIncludeChannels, excludeArchived = true))
+                    showFolderEditor = false
+                }, enabled = folderTitle.isNotBlank()) { Text("创建") }
+            },
+            dismissButton = { OutlinedButton(onClick = { showFolderEditor = false }) { Text("取消") } },
+        )
+    }
+
+    openedFolder?.let { folder ->
+        val rows = messagingState.conversations.filter { conversation ->
+            (!conversation.isArchived || !folder.excludeArchived) && (!conversation.isMuted || !folder.excludeMuted) && (conversation.unreadCount > 0 || !folder.excludeRead) &&
+                (conversation.id in folder.conversationIds || (folder.includeGroups && conversation.kind == ConversationKind.GROUP) || (folder.includeChannels && conversation.kind == ConversationKind.CHANNEL))
+        }
+        Scaffold(containerColor = homeBackground) { padding ->
+            Column(Modifier.fillMaxSize().padding(padding)) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("‹", color = homePrimaryText, fontSize = 34.sp, modifier = Modifier.clickable { openedFolder = null }.padding(8.dp)); Text(folder.title, color = homePrimaryText, fontWeight = FontWeight.SemiBold, fontSize = 20.sp)
+                }
+                LazyColumn(Modifier.fillMaxSize()) {
+                    if (rows.isEmpty()) item { Text("暂无会话", color = homeSecondaryText, modifier = Modifier.fillMaxWidth().padding(48.dp)) }
+                    items(rows, key = { it.id }) { conversation -> ConversationRow(conversation, onClick = { onOpenConversation(conversation) }) }
+                }
+            }
+        }
+        return
+    }
+
     val conversations = when (section) {
         AndroidMobileSection.GROUPS -> messagingState.conversations.filter { it.kind == ConversationKind.GROUP && !it.isArchived }
         AndroidMobileSection.CHANNELS -> messagingState.conversations.filter { it.kind == ConversationKind.CHANNEL && !it.isArchived }
@@ -605,9 +673,17 @@ private fun AndroidSectionSurface(
         Column(Modifier.fillMaxSize().padding(padding)) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("‹", color = homePrimaryText, fontSize = 34.sp, modifier = Modifier.clickable(onClick = onBack).padding(8.dp))
-                Text(section.label, color = homePrimaryText, fontWeight = FontWeight.SemiBold, fontSize = 20.sp)
+                Text(section.label, color = homePrimaryText, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, modifier = Modifier.weight(1f))
+                if (section == AndroidMobileSection.FOLDERS) Text("＋", color = homeAccent, fontSize = 26.sp, modifier = Modifier.clickable { folderTitle = ""; folderConversationIds = emptySet(); folderIncludeGroups = false; folderIncludeChannels = false; showFolderEditor = true }.padding(8.dp))
             }
             LazyColumn(Modifier.fillMaxSize()) {
+                if (section == AndroidMobileSection.FOLDERS && messagingState.folders.isNotEmpty()) items(messagingState.folders, key = { it.id }) { folder ->
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("▣", color = homeAccent, fontSize = 22.sp)
+                        Text(folder.title, color = homePrimaryText, modifier = Modifier.weight(1f).clickable { openedFolder = folder }.padding(start = 12.dp, top = 8.dp, bottom = 8.dp))
+                        Text("删除", color = Color(0xFFFF6B6B), modifier = Modifier.clickable { onDeleteFolder(folder.id) }.padding(8.dp))
+                    }
+                }
                 if (contacts.isNotEmpty()) items(contacts, key = { it.id }) { contact ->
                     Row(Modifier.fillMaxWidth().clickable { onCreateDirect(contact) }.padding(horizontal = 18.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(46.dp).background(homeAccent, CircleShape), contentAlignment = Alignment.Center) { Text(contact.displayName.take(1).uppercase(), color = Color.Black, fontWeight = FontWeight.Bold) }
@@ -620,7 +696,7 @@ private fun AndroidSectionSurface(
                         if (section == AndroidMobileSection.ARCHIVE) Text("恢复", color = homeAccent, modifier = Modifier.clickable { onUnarchive(conversation) }.padding(14.dp))
                     }
                 }
-                if (contacts.isEmpty() && conversations.isEmpty()) item {
+                if (contacts.isEmpty() && conversations.isEmpty() && (section != AndroidMobileSection.FOLDERS || messagingState.folders.isEmpty())) item {
                     Column(Modifier.fillMaxWidth().padding(top = 96.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(section.label, color = homePrimaryText, fontWeight = FontWeight.SemiBold)
                         Text(
@@ -730,6 +806,7 @@ private fun ConversationDetail(
     onSendLocation: (Double, Double) -> Unit,
     onEdit: (String, String) -> Unit,
     onDelete: (String) -> Unit,
+    onSetMessagePinned: (String, Boolean) -> Unit,
     onReact: (String, String) -> Unit,
     onForward: (String, String) -> Unit,
     forwardDestinations: List<ConversationSummary>,
@@ -838,6 +915,7 @@ private fun ConversationDetail(
                     TextButton(onClick = { forwardingMessage = message; selectedMessage = null }) { Text("转发") }
                     TextButton(onClick = { onReact(message.id, "👍"); selectedMessage = null }) { Text("👍 赞") }
                     if (message.outgoing) TextButton(onClick = { editingMessage = message; replyTarget = null; draft = message.text; selectedMessage = null }) { Text("编辑") }
+                    TextButton(onClick = { onSetMessagePinned(message.id, !message.pinned); selectedMessage = null }) { Text(if (message.pinned) "取消置顶消息" else "置顶消息") }
                     TextButton(onClick = { onDelete(message.id); selectedMessage = null }) { Text("删除") }
                 }
             },
@@ -877,6 +955,14 @@ private fun ConversationDetail(
                         DropdownMenuItem(text = { Text(if (conversation.isPinned) "取消置顶" else "置顶", color = homePrimaryText) }, onClick = { showMenu = false; onTogglePin() })
                         DropdownMenuItem(text = { Text("归档", color = homePrimaryText) }, onClick = { showMenu = false; onArchive() })
                     }
+                }
+            }
+            val pinnedMessage = conversation.pinnedMessageIds.lastOrNull()?.let { pinnedId -> messages.firstOrNull { it.id == pinnedId } }
+            if (pinnedMessage != null) {
+                Row(Modifier.fillMaxWidth().background(homeSurface).padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(width = 3.dp, height = 34.dp).background(homeAccent))
+                    Column(Modifier.weight(1f).padding(start = 9.dp)) { Text("置顶消息", color = homeAccent, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold); Text(pinnedMessage.text, color = homePrimaryText, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    Text("×", color = homeSecondaryText, fontSize = 22.sp, modifier = Modifier.clickable { onSetMessagePinned(pinnedMessage.id, false) }.padding(6.dp))
                 }
             }
             if (showChatSearch) {

@@ -32,6 +32,14 @@ data class ConversationSummary(
     val isMuted: Boolean = false,
     val isArchived: Boolean = false,
     val lastMessageId: String? = null,
+    val pinnedMessageIds: List<String> = emptyList(),
+    val folderIds: List<String> = emptyList(),
+)
+
+data class MessagingFolder(
+    val id: String, val title: String, val icon: String? = null, val conversationIds: List<String> = emptyList(),
+    val includeContacts: Boolean = false, val includeBots: Boolean = false, val includeGroups: Boolean = false, val includeChannels: Boolean = false,
+    val excludeMuted: Boolean = false, val excludeRead: Boolean = false, val excludeArchived: Boolean = true,
 )
 
 data class MessagingContact(
@@ -68,6 +76,7 @@ data class MessagingUiState(
     val loading: Boolean = false,
     val conversations: List<ConversationSummary> = emptyList(),
     val contacts: List<MessagingContact> = emptyList(),
+    val folders: List<MessagingFolder> = emptyList(),
     val messagesByConversation: Map<String, List<ChatMessage>> = emptyMap(),
     val typingActorByConversation: Map<String, String> = emptyMap(),
     val error: String? = null,
@@ -187,6 +196,14 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
         }
     }
 
+    fun setMessagePinned(conversationId: String, messageId: String, pinned: Boolean) =
+        executeAsync(JSONObject().put("type", "pinMessage").put("conversationId", conversationId).put("messageId", messageId).put("pinned", pinned))
+    fun upsertFolder(folder: MessagingFolder) = executeAsync(JSONObject().put("type", "upsertFolder").put("folder", JSONObject()
+        .put("id", folder.id).put("title", folder.title).put("icon", folder.icon ?: JSONObject.NULL).put("conversationIds", JSONArray(folder.conversationIds))
+        .put("includeContacts", folder.includeContacts).put("includeBots", folder.includeBots).put("includeGroups", folder.includeGroups).put("includeChannels", folder.includeChannels)
+        .put("excludeMuted", folder.excludeMuted).put("excludeRead", folder.excludeRead).put("excludeArchived", folder.excludeArchived)))
+    fun deleteFolder(folderId: String) = executeAsync(JSONObject().put("type", "deleteFolder").put("folderId", folderId))
+
     fun setPinned(conversation: ConversationSummary, pinned: Boolean) = executeAsync(JSONObject().put("type", "pinConversation").put("conversationId", conversation.id).put("pinned", pinned))
     fun setArchived(conversation: ConversationSummary, archived: Boolean) = executeAsync(JSONObject().put("type", "archiveConversation").put("conversationId", conversation.id).put("archived", archived))
     fun setMuted(conversation: ConversationSummary, muted: Boolean) = executeAsync(JSONObject().put("type", "setConversationNotifications").put("conversationId", conversation.id).put("settings", JSONObject().put("mutedUntilMs", if (muted) Long.MAX_VALUE / 4 else JSONObject.NULL).put("sound", JSONObject.NULL).put("showPreview", true).put("notifyMentions", true)))
@@ -237,6 +254,7 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
     private fun apply(envelopes: JSONArray) {
         var conversations = mutableState.value.conversations.toMutableList()
         var contacts = mutableState.value.contacts
+        var folders = mutableState.value.folders
         val typingMap = mutableState.value.typingActorByConversation.toMutableMap()
         val messageMap = mutableState.value.messagesByConversation.mapValues { it.value.toMutableList() }.toMutableMap()
         for (i in 0 until envelopes.length()) {
@@ -245,12 +263,17 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
                 "syncBatch" -> {
                     conversations = parseConversations(event.optJSONArray("conversations") ?: JSONArray()).toMutableList()
                     contacts = parseContacts(event.optJSONArray("actors") ?: JSONArray())
+                    folders = parseFolders(event.optJSONArray("folders") ?: JSONArray())
                     messageMap.clear()
                     parseMessages(event.optJSONArray("messages") ?: JSONArray()).forEach { messageMap.getOrPut(it.conversationId) { mutableListOf() }.add(it) }
                 }
                 "conversationChanged" -> parseConversation(event.optJSONObject("conversation"))?.let { item ->
                     val index = conversations.indexOfFirst { it.id == item.id }; if (index >= 0) conversations[index] = item else conversations.add(item)
                 }
+                "folderChanged" -> parseFolder(event.optJSONObject("folder"))?.let { item ->
+                    val list = folders.toMutableList(); val index = list.indexOfFirst { it.id == item.id }; if (index >= 0) list[index] = item else list.add(item); folders = list
+                }
+                "folderDeleted" -> folders = folders.filterNot { it.id == event.optString("folderId") }
                 "messageAdded", "messageChanged" -> parseMessage(event.optJSONObject("message"))?.let { item ->
                     val list = messageMap.getOrPut(item.conversationId) { mutableListOf() }; val index = list.indexOfFirst { it.id == item.id }; if (index >= 0) list[index] = item else list.add(item)
                 }
@@ -268,9 +291,15 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
         conversations = conversations.map { conversation ->
             val last = messageMap[conversation.id]?.lastOrNull(); if (last == null) conversation else conversation.copy(preview = last.text, time = last.time)
         }.toMutableList()
-        mutableState.value = mutableState.value.copy(conversations = conversations, contacts = contacts, messagesByConversation = messageMap.mapValues { it.value.toList() }, typingActorByConversation = typingMap, error = null)
+        mutableState.value = mutableState.value.copy(conversations = conversations, contacts = contacts, folders = folders, messagesByConversation = messageMap.mapValues { it.value.toList() }, typingActorByConversation = typingMap, error = null)
     }
 
+    private fun parseFolders(array: JSONArray) = buildList { for (i in 0 until array.length()) parseFolder(array.optJSONObject(i))?.let(::add) }
+    private fun parseFolder(raw: JSONObject?): MessagingFolder? {
+        raw ?: return null; val id = raw.optString("id"); val title = raw.optString("title"); if (id.isBlank() || title.isBlank()) return null
+        val conversationIds = buildList { val ids = raw.optJSONArray("conversationIds") ?: JSONArray(); for (i in 0 until ids.length()) ids.optString(i).takeIf { it.isNotBlank() }?.let(::add) }
+        return MessagingFolder(id, title, raw.optString("icon").takeIf { it.isNotBlank() }, conversationIds, raw.optBoolean("includeContacts"), raw.optBoolean("includeBots"), raw.optBoolean("includeGroups"), raw.optBoolean("includeChannels"), raw.optBoolean("excludeMuted"), raw.optBoolean("excludeRead"), raw.optBoolean("excludeArchived", true))
+    }
     private fun parseContacts(array: JSONArray) = buildList {
         for (i in 0 until array.length()) {
             val raw = array.optJSONObject(i) ?: continue
@@ -296,8 +325,10 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
         raw ?: return null; val id = raw.optString("id"); val title = raw.optString("title"); if (id.isBlank() || title.isBlank()) return null
         val kind = ConversationKind.entries.firstOrNull { it.wire == raw.optString("kind") } ?: ConversationKind.DIRECT
         val mutedUntil = raw.optJSONObject("notificationSettings")?.optLong("mutedUntilMs", 0L) ?: 0L
+        val pinnedMessageIds = buildList { val ids = raw.optJSONArray("pinnedMessageIds") ?: JSONArray(); for (i in 0 until ids.length()) ids.optString(i).takeIf { it.isNotBlank() }?.let(::add) }
+        val folderIds = buildList { val ids = raw.optJSONArray("folderIds") ?: JSONArray(); for (i in 0 until ids.length()) ids.optString(i).takeIf { it.isNotBlank() }?.let(::add) }
         return ConversationSummary(id, title, raw.optString("description"), timeLabel(raw.optLong("updatedAtMs")), title.take(1).uppercase().ifBlank { "✦" }, kind,
-            raw.optInt("unreadCount"), raw.optBoolean("pinned"), mutedUntil > System.currentTimeMillis(), raw.optBoolean("archived"), raw.optString("lastMessageId").takeIf { it.isNotBlank() })
+            raw.optInt("unreadCount"), raw.optBoolean("pinned"), mutedUntil > System.currentTimeMillis(), raw.optBoolean("archived"), raw.optString("lastMessageId").takeIf { it.isNotBlank() }, pinnedMessageIds, folderIds)
     }
 
     private fun parseMessage(raw: JSONObject?): ChatMessage? {
