@@ -65,6 +65,8 @@ class MainActivity : ComponentActivity() {
                         onDeleteMessage = { conversationId, messageId -> messagingModel.deleteMessage(conversationId, messageId) },
                         onSetReaction = messagingModel::setReaction,
                         onForwardMessage = messagingModel::forwardMessage,
+                        onStartTyping = messagingModel::startTyping,
+                        onStopTyping = messagingModel::stopTyping,
                         onSetPinned = messagingModel::setPinned,
                         onSetArchived = messagingModel::setArchived,
                         onSetMuted = messagingModel::setMuted,

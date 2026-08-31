@@ -40,12 +40,20 @@ data class MessagingContact(
     val kind: String,
 )
 
+data class ChatReaction(val reaction: String, val count: Int, val chosenByMe: Boolean)
+
 data class ChatMessage(
     val id: String,
     val conversationId: String,
     val text: String,
     val outgoing: Boolean,
     val time: String,
+    val replyToMessageId: String? = null,
+    val forwardOrigin: String? = null,
+    val reactions: List<ChatReaction> = emptyList(),
+    val deliveryState: String = "sent",
+    val edited: Boolean = false,
+    val pinned: Boolean = false,
 )
 
 data class MessagingUiState(
@@ -53,6 +61,7 @@ data class MessagingUiState(
     val conversations: List<ConversationSummary> = emptyList(),
     val contacts: List<MessagingContact> = emptyList(),
     val messagesByConversation: Map<String, List<ChatMessage>> = emptyMap(),
+    val typingActorByConversation: Map<String, String> = emptyMap(),
     val error: String? = null,
 )
 
@@ -169,6 +178,7 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
     private fun apply(envelopes: JSONArray) {
         var conversations = mutableState.value.conversations.toMutableList()
         var contacts = mutableState.value.contacts
+        val typingMap = mutableState.value.typingActorByConversation.toMutableMap()
         val messageMap = mutableState.value.messagesByConversation.mapValues { it.value.toMutableList() }.toMutableMap()
         for (i in 0 until envelopes.length()) {
             val event = envelopes.optJSONObject(i)?.optJSONObject("event") ?: continue
@@ -188,12 +198,18 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
                 "messagesDeleted" -> {
                     val conversationId = event.optString("conversationId"); val ids = event.optJSONArray("messageIds")?.toStringSet().orEmpty(); messageMap[conversationId]?.removeAll { it.id in ids }
                 }
+                "typingChanged" -> {
+                    val conversationId = event.optString("conversationId")
+                    val typingActorId = event.optString("actorId")
+                    if (typingActorId.isBlank() || typingActorId == actorId || event.isNull("action")) typingMap.remove(conversationId)
+                    else typingMap[conversationId] = contacts.firstOrNull { it.id == typingActorId }?.displayName ?: "对方"
+                }
             }
         }
         conversations = conversations.map { conversation ->
             val last = messageMap[conversation.id]?.lastOrNull(); if (last == null) conversation else conversation.copy(preview = last.text, time = last.time)
         }.toMutableList()
-        mutableState.value = mutableState.value.copy(conversations = conversations, contacts = contacts, messagesByConversation = messageMap.mapValues { it.value.toList() }, error = null)
+        mutableState.value = mutableState.value.copy(conversations = conversations, contacts = contacts, messagesByConversation = messageMap.mapValues { it.value.toList() }, typingActorByConversation = typingMap, error = null)
     }
 
     private fun parseContacts(array: JSONArray) = buildList {
@@ -231,7 +247,21 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
             "text" -> content.optJSONObject("data")?.optJSONObject("text")?.optString("text").orEmpty()
             "photo" -> "🖼 图片"; "video" -> "🎬 视频"; "document" -> "📎 文件"; "location" -> "📍 位置"; "contact" -> "👤 联系人"; "invoice" -> "🧾 账单"; "miniApp" -> "▣ Mini App"; else -> "消息"
         }
-        return ChatMessage(id, conversationId, text, senderId == actorId, timeLabel(raw.optLong("createdAtMs")))
+        val reactions = buildList {
+            val array = raw.optJSONArray("reactions") ?: JSONArray()
+            for (i in 0 until array.length()) {
+                val reaction = array.optJSONObject(i) ?: continue
+                val symbol = reaction.optString("reaction"); if (symbol.isNotBlank()) add(ChatReaction(symbol, reaction.optInt("count"), reaction.optBoolean("chosenByMe")))
+            }
+        }
+        val deliveryRaw = raw.opt("deliveryState")
+        val deliveryState = when (deliveryRaw) {
+            is String -> deliveryRaw
+            is JSONObject -> deliveryRaw.optString("state").ifBlank { deliveryRaw.keys().asSequence().firstOrNull() ?: "sent" }
+            else -> "sent"
+        }
+        return ChatMessage(id, conversationId, text, senderId == actorId, timeLabel(raw.optLong("createdAtMs")),
+            raw.optString("replyToMessageId").takeIf { it.isNotBlank() }, raw.optString("forwardOrigin").takeIf { it.isNotBlank() }, reactions, deliveryState, !raw.isNull("editedAtMs"), raw.optBoolean("pinned"))
     }
 
     private fun timeLabel(ms: Long): String = if (ms <= 0) "" else java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(ms))
