@@ -502,7 +502,7 @@ class AndroidUpdateViewModel(application: Application) : AndroidViewModel(applic
         awaitingInstallPermission = false
         val uri = FileProvider.getUriForFile(
             applicationContext,
-            "${applicationContext.packageName}.updates",
+            "${applicationContext.packageName}.media",
             apk,
         )
         val intent = Intent(Intent.ACTION_VIEW).apply {
