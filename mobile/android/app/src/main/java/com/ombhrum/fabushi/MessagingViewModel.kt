@@ -1,6 +1,7 @@
 package com.ombhrum.fabushi
 
 import android.app.Application
+import android.util.Base64
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ombhrum.fabushi.core.MahayanaHost
@@ -46,6 +47,13 @@ data class ChatMessage(
     val id: String,
     val conversationId: String,
     val text: String,
+    val contentType: String = "text",
+    val mediaFileName: String? = null,
+    val contactName: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val pollQuestion: String? = null,
+    val pollOptions: List<String> = emptyList(),
     val outgoing: Boolean,
     val time: String,
     val replyToMessageId: String? = null,
@@ -127,6 +135,54 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
                     .put("content", JSONObject().put("type", "text").put("data", JSONObject().put("text", JSONObject().put("text", value).put("entities", JSONArray()))))
                     .put("replyToMessageId", replyToMessageId ?: JSONObject.NULL).put("threadRootMessageId", JSONObject.NULL).put("scheduledAtMs", JSONObject.NULL)
                     .put("silent", false).put("protectedContent", false))
+            }}.onFailure { mutableState.value = mutableState.value.copy(error = it.message) }
+        }
+    }
+
+    fun sendContact(conversationId: String, contact: MessagingContact) {
+        executeAsync(JSONObject().put("type", "sendMessage").put("conversationId", conversationId).put("clientMessageId", "android:${UUID.randomUUID()}")
+            .put("content", JSONObject().put("type", "contact").put("data", JSONObject().put("actorId", contact.id).put("displayName", contact.displayName).put("phoneNumber", JSONObject.NULL)))
+            .put("replyToMessageId", JSONObject.NULL).put("threadRootMessageId", JSONObject.NULL).put("scheduledAtMs", JSONObject.NULL).put("silent", false).put("protectedContent", false))
+    }
+    fun sendLocation(conversationId: String, latitude: Double, longitude: Double, liveUntilMs: Long? = null) {
+        executeAsync(JSONObject().put("type", "sendMessage").put("conversationId", conversationId).put("clientMessageId", "android:${UUID.randomUUID()}")
+            .put("content", JSONObject().put("type", "location").put("data", JSONObject().put("latitude", latitude).put("longitude", longitude).put("liveUntilMs", liveUntilMs ?: JSONObject.NULL)))
+            .put("replyToMessageId", JSONObject.NULL).put("threadRootMessageId", JSONObject.NULL).put("scheduledAtMs", JSONObject.NULL).put("silent", false).put("protectedContent", false))
+    }
+    fun sendPoll(conversationId: String, question: String, options: List<String>, multipleAnswers: Boolean = false) {
+        val cleanOptions = options.map { it.trim() }.filter { it.isNotEmpty() }; if (question.isBlank() || cleanOptions.size < 2) return
+        val pollOptions = JSONArray(); cleanOptions.forEachIndexed { index, option -> pollOptions.put(JSONObject().put("id", "option-${index + 1}").put("text", option).put("voterCount", 0).put("chosen", false).put("correct", JSONObject.NULL)) }
+        executeAsync(JSONObject().put("type", "sendMessage").put("conversationId", conversationId).put("clientMessageId", "android:${UUID.randomUUID()}")
+            .put("content", JSONObject().put("type", "poll").put("data", JSONObject().put("question", JSONObject().put("text", question.trim()).put("entities", JSONArray())).put("options", pollOptions).put("anonymous", true).put("multipleAnswers", multipleAnswers).put("quiz", false)))
+            .put("replyToMessageId", JSONObject.NULL).put("threadRootMessageId", JSONObject.NULL).put("scheduledAtMs", JSONObject.NULL).put("silent", false).put("protectedContent", false))
+    }
+
+    fun sendAttachment(conversationId: String, fileName: String, mimeType: String, bytes: ByteArray) {
+        if (bytes.isEmpty()) return
+        viewModelScope.launch {
+            runCatching { withContext(Dispatchers.IO) {
+                ensureIdentity()
+                val blobId = "blob-${UUID.randomUUID()}"
+                val now = System.currentTimeMillis()
+                execute(JSONObject().put("type", "beginBlobUpload").put("metadata", JSONObject().put("id", blobId).put("fileName", fileName).put("mimeType", mimeType).put("sizeBytes", bytes.size).put("contentHash", JSONObject.NULL).put("createdAtMs", now)))
+                val chunkSize = 512 * 1024
+                var offset = 0
+                while (offset < bytes.size) {
+                    val end = minOf(bytes.size, offset + chunkSize)
+                    val chunk = bytes.copyOfRange(offset, end)
+                    execute(JSONObject().put("type", "appendBlobChunk").put("blobId", blobId).put("offset", offset).put("dataBase64", Base64.encodeToString(chunk, Base64.NO_WRAP)))
+                    offset = end
+                }
+                execute(JSONObject().put("type", "finishBlobUpload").put("blobId", blobId))
+                val media = JSONObject().put("id", blobId).put("fileName", fileName).put("mimeType", mimeType).put("sizeBytes", bytes.size).put("remoteUrl", "fabushi-blob://$blobId")
+                val caption = JSONObject().put("text", "").put("entities", JSONArray())
+                val content = when {
+                    mimeType.startsWith("image/") -> JSONObject().put("type", "photo").put("data", JSONObject().put("media", media).put("caption", caption).put("spoiler", false))
+                    mimeType.startsWith("video/") -> JSONObject().put("type", "video").put("data", JSONObject().put("media", media).put("caption", caption).put("spoiler", false).put("streaming", true))
+                    else -> JSONObject().put("type", "document").put("data", JSONObject().put("media", media).put("caption", caption))
+                }
+                execute(JSONObject().put("type", "sendMessage").put("conversationId", conversationId).put("clientMessageId", "android:${UUID.randomUUID()}").put("content", content)
+                    .put("replyToMessageId", JSONObject.NULL).put("threadRootMessageId", JSONObject.NULL).put("scheduledAtMs", JSONObject.NULL).put("silent", false).put("protectedContent", false))
             }}.onFailure { mutableState.value = mutableState.value.copy(error = it.message) }
         }
     }
@@ -246,9 +302,29 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
 
     private fun parseMessage(raw: JSONObject?): ChatMessage? {
         raw ?: return null; val id = raw.optString("id"); val conversationId = raw.optString("conversationId"); val senderId = raw.optString("senderId"); if (id.isBlank() || conversationId.isBlank()) return null
-        val content = raw.optJSONObject("content") ?: JSONObject(); val text = when (content.optString("type")) {
-            "text" -> content.optJSONObject("data")?.optJSONObject("text")?.optString("text").orEmpty()
-            "photo" -> "🖼 图片"; "video" -> "🎬 视频"; "document" -> "📎 文件"; "location" -> "📍 位置"; "contact" -> "👤 联系人"; "invoice" -> "🧾 账单"; "miniApp" -> "▣ Mini App"; else -> "消息"
+        val content = raw.optJSONObject("content") ?: JSONObject()
+        val contentType = content.optString("type", "unknown")
+        val data = content.optJSONObject("data") ?: JSONObject()
+        val mediaFileName = data.optJSONObject("media")?.optString("fileName")?.takeIf { it.isNotBlank() }
+        val contactName = data.optString("displayName").takeIf { it.isNotBlank() }
+        val latitude = if (data.has("latitude")) data.optDouble("latitude") else null
+        val longitude = if (data.has("longitude")) data.optDouble("longitude") else null
+        val pollQuestion = data.optJSONObject("question")?.optString("text")?.takeIf { it.isNotBlank() }
+        val pollOptions = buildList {
+            val options = data.optJSONArray("options") ?: JSONArray()
+            for (i in 0 until options.length()) options.optJSONObject(i)?.optString("text")?.takeIf { it.isNotBlank() }?.let(::add)
+        }
+        val text = when (contentType) {
+            "text" -> data.optJSONObject("text")?.optString("text").orEmpty()
+            "photo" -> mediaFileName?.let { "🖼 $it" } ?: "🖼 图片"
+            "video" -> mediaFileName?.let { "🎬 $it" } ?: "🎬 视频"
+            "document" -> mediaFileName?.let { "📎 $it" } ?: "📎 文件"
+            "location" -> "📍 位置"
+            "contact" -> contactName?.let { "👤 $it" } ?: "👤 联系人"
+            "invoice" -> "🧾 账单"
+            "poll" -> pollQuestion?.let { "📊 $it" } ?: "📊 投票"
+            "miniApp" -> "▣ Mini App"
+            else -> "消息"
         }
         val reactions = buildList {
             val array = raw.optJSONArray("reactions") ?: JSONArray()
@@ -263,8 +339,13 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
             is JSONObject -> deliveryRaw.optString("state").ifBlank { deliveryRaw.keys().asSequence().firstOrNull() ?: "sent" }
             else -> "sent"
         }
-        return ChatMessage(id, conversationId, text, senderId == actorId, timeLabel(raw.optLong("createdAtMs")),
-            raw.optString("replyToMessageId").takeIf { it.isNotBlank() }, raw.optString("forwardOrigin").takeIf { it.isNotBlank() }, reactions, deliveryState, !raw.isNull("editedAtMs"), raw.optBoolean("pinned"))
+        return ChatMessage(
+            id = id, conversationId = conversationId, text = text, contentType = contentType, mediaFileName = mediaFileName, contactName = contactName,
+            latitude = latitude, longitude = longitude, pollQuestion = pollQuestion, pollOptions = pollOptions, outgoing = senderId == actorId,
+            time = timeLabel(raw.optLong("createdAtMs")), replyToMessageId = raw.optString("replyToMessageId").takeIf { it.isNotBlank() },
+            forwardOrigin = raw.optString("forwardOrigin").takeIf { it.isNotBlank() }, reactions = reactions, deliveryState = deliveryState,
+            edited = !raw.isNull("editedAtMs"), pinned = raw.optBoolean("pinned")
+        )
     }
 
     private fun timeLabel(ms: Long): String = if (ms <= 0) "" else java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(ms))

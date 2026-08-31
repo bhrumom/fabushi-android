@@ -1,5 +1,14 @@
 package com.ombhrum.fabushi
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.pm.PackageManager
+import android.location.LocationManager
+import android.os.Build
+import android.os.CancellationSignal
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -49,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -56,6 +66,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 
 object TestTags {
     const val AppShell = "app-shell"
@@ -121,6 +132,10 @@ fun FabushiScreen(
     onCreateDirect: (MessagingContact) -> Unit = {},
     onCreateConversation: (ConversationKind, String, String, List<String>) -> Unit = { _, _, _, _ -> },
     onSendText: (String, String, String?) -> Unit = { _, _, _ -> },
+    onSendAttachment: (String, String, String, ByteArray) -> Unit = { _, _, _, _ -> },
+    onSendContact: (String, MessagingContact) -> Unit = { _, _ -> },
+    onSendPoll: (String, String, List<String>, Boolean) -> Unit = { _, _, _, _ -> },
+    onSendLocation: (String, Double, Double) -> Unit = { _, _, _ -> },
     onEditText: (String, String, String) -> Unit = { _, _, _ -> },
     onDeleteMessage: (String, String) -> Unit = { _, _ -> },
     onSetReaction: (String, String, String, Boolean) -> Unit = { _, _, _, _ -> },
@@ -295,6 +310,10 @@ fun FabushiScreen(
             onCreateDirect = onCreateDirect,
             onCreateConversation = onCreateConversation,
             onSendText = onSendText,
+            onSendAttachment = onSendAttachment,
+            onSendContact = onSendContact,
+            onSendPoll = onSendPoll,
+            onSendLocation = onSendLocation,
             onEditText = onEditText,
             onDeleteMessage = onDeleteMessage,
             onSetReaction = onSetReaction,
@@ -334,6 +353,10 @@ private fun ConversationHome(
     onCreateDirect: (MessagingContact) -> Unit,
     onCreateConversation: (ConversationKind, String, String, List<String>) -> Unit,
     onSendText: (String, String, String?) -> Unit,
+    onSendAttachment: (String, String, String, ByteArray) -> Unit,
+    onSendContact: (String, MessagingContact) -> Unit,
+    onSendPoll: (String, String, List<String>, Boolean) -> Unit,
+    onSendLocation: (String, Double, Double) -> Unit,
     onEditText: (String, String, String) -> Unit,
     onDeleteMessage: (String, String) -> Unit,
     onSetReaction: (String, String, String, Boolean) -> Unit,
@@ -396,6 +419,11 @@ private fun ConversationHome(
             messages = messagingState.messagesByConversation[conversation.id].orEmpty(),
             onBack = { selectedConversation = null },
             onSend = { text, replyTo -> onSendText(conversation.id, text, replyTo) },
+            onSendAttachment = { fileName, mimeType, bytes -> onSendAttachment(conversation.id, fileName, mimeType, bytes) },
+            shareContacts = messagingState.contacts,
+            onSendContact = { contact -> onSendContact(conversation.id, contact) },
+            onSendPoll = { question, options, multiple -> onSendPoll(conversation.id, question, options, multiple) },
+            onSendLocation = { latitude, longitude -> onSendLocation(conversation.id, latitude, longitude) },
             onEdit = { messageId, text -> onEditText(conversation.id, messageId, text) },
             onDelete = { messageId -> onDeleteMessage(conversation.id, messageId) },
             onReact = { messageId, reaction -> onSetReaction(conversation.id, messageId, reaction, true) },
@@ -695,6 +723,11 @@ private fun ConversationDetail(
     messages: List<ChatMessage>,
     onBack: () -> Unit,
     onSend: (String, String?) -> Unit,
+    onSendAttachment: (String, String, ByteArray) -> Unit,
+    shareContacts: List<MessagingContact>,
+    onSendContact: (MessagingContact) -> Unit,
+    onSendPoll: (String, List<String>, Boolean) -> Unit,
+    onSendLocation: (Double, Double) -> Unit,
     onEdit: (String, String) -> Unit,
     onDelete: (String) -> Unit,
     onReact: (String, String) -> Unit,
@@ -714,6 +747,86 @@ private fun ConversationDetail(
     var forwardingMessage by remember { mutableStateOf<ChatMessage?>(null) }
     var showChatSearch by remember { mutableStateOf(false) }
     var chatSearchQuery by remember { mutableStateOf("") }
+    var showAttachmentMenu by remember { mutableStateOf(false) }
+    var showContactShare by remember { mutableStateOf(false) }
+    var showPollComposer by remember { mutableStateOf(false) }
+    var pollQuestion by remember { mutableStateOf("") }
+    var pollOption1 by remember { mutableStateOf("") }
+    var pollOption2 by remember { mutableStateOf("") }
+    var pollOption3 by remember { mutableStateOf("") }
+    var attachmentMime by remember { mutableStateOf("*/*") }
+    val context = LocalContext.current
+    var showLocationShare by remember { mutableStateOf(false) }
+    var currentLocation by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+    var locationError by remember { mutableStateOf<String?>(null) }
+    fun resolveLocation() {
+        requestFabushiCurrentLocation(context) { latitude, longitude, error ->
+            currentLocation = if (latitude != null && longitude != null) latitude to longitude else null
+            locationError = error
+        }
+    }
+    val locationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
+        if (grants.values.any { it }) resolveLocation() else locationError = "请允许位置权限后再分享位置"
+    }
+    val attachmentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            runCatching {
+                val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return@runCatching
+                val mime = context.contentResolver.getType(uri) ?: "application/octet-stream"
+                val name = uri.lastPathSegment?.substringAfterLast('/') ?: "attachment"
+                onSendAttachment(name, mime, bytes)
+            }
+        }
+    }
+
+    if (showLocationShare) {
+        AlertDialog(
+            onDismissRequest = { showLocationShare = false }, title = { Text("发送位置") },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    val location = currentLocation
+                    if (location != null) {
+                        Text("当前位置", color = homePrimaryText, fontWeight = FontWeight.SemiBold)
+                        Text("纬度 %.6f".format(location.first), color = homeSecondaryText, modifier = Modifier.padding(top = 8.dp))
+                        Text("经度 %.6f".format(location.second), color = homeSecondaryText)
+                    } else {
+                        Text(locationError ?: "正在获取位置…", color = homeSecondaryText)
+                    }
+                }
+            },
+            confirmButton = {
+                val location = currentLocation
+                Button(onClick = { if (location != null) { onSendLocation(location.first, location.second); showLocationShare = false } }, enabled = location != null) { Text("发送") }
+            },
+            dismissButton = { OutlinedButton(onClick = { showLocationShare = false }) { Text("取消") } },
+        )
+    }
+
+    if (showContactShare) {
+        AlertDialog(
+            onDismissRequest = { showContactShare = false }, title = { Text("发送联系人") },
+            text = {
+                Column {
+                    if (shareContacts.isEmpty()) Text("暂无可用联系人", color = homeSecondaryText)
+                    shareContacts.take(20).forEach { contact -> TextButton(onClick = { onSendContact(contact); showContactShare = false }) { Text(contact.displayName) } }
+                }
+            },
+            confirmButton = { OutlinedButton(onClick = { showContactShare = false }) { Text("取消") } },
+        )
+    }
+    if (showPollComposer) {
+        AlertDialog(
+            onDismissRequest = { showPollComposer = false }, title = { Text("新建投票") },
+            text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(pollQuestion, { pollQuestion = it }, label = { Text("问题") })
+                OutlinedTextField(pollOption1, { pollOption1 = it }, label = { Text("选项 1") })
+                OutlinedTextField(pollOption2, { pollOption2 = it }, label = { Text("选项 2") })
+                OutlinedTextField(pollOption3, { pollOption3 = it }, label = { Text("选项 3（可选）") })
+            } },
+            confirmButton = { Button(onClick = { onSendPoll(pollQuestion, listOf(pollOption1, pollOption2, pollOption3), false); showPollComposer = false }, enabled = pollQuestion.isNotBlank() && pollOption1.isNotBlank() && pollOption2.isNotBlank()) { Text("发送") } },
+            dismissButton = { OutlinedButton(onClick = { showPollComposer = false }) { Text("取消") } },
+        )
+    }
 
     selectedMessage?.let { message ->
         AlertDialog(
@@ -795,7 +908,25 @@ private fun ConversationDetail(
                                     Text(replied.text, color = homeSecondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
                                 }
                             }
-                            Text(message.text, color = homePrimaryText)
+                            when (message.contentType) {
+                                "contact" -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    Box(Modifier.size(40.dp).background(homeAccent, CircleShape), contentAlignment = Alignment.Center) { Text((message.contactName ?: "联").take(1), color = Color.Black, fontWeight = FontWeight.Bold) }
+                                    Column(Modifier.padding(start = 10.dp)) { Text(message.contactName ?: "联系人", color = homePrimaryText, fontWeight = FontWeight.SemiBold); Text("联系人", color = homeSecondaryText, style = MaterialTheme.typography.bodySmall) }
+                                }
+                                "location" -> Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text("📍 位置", color = homePrimaryText, fontWeight = FontWeight.SemiBold)
+                                    if (message.latitude != null && message.longitude != null) Text("%.6f, %.6f".format(message.latitude, message.longitude), color = homeSecondaryText, style = MaterialTheme.typography.bodySmall)
+                                }
+                                "poll" -> Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    Text(message.pollQuestion ?: "投票", color = homePrimaryText, fontWeight = FontWeight.SemiBold)
+                                    message.pollOptions.forEach { option -> Row(verticalAlignment = Alignment.CenterVertically) { Text("○", color = homeAccent); Text(option, color = homePrimaryText, modifier = Modifier.padding(start = 7.dp)) } }
+                                }
+                                "photo", "video", "document" -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    Text(if (message.contentType == "photo") "🖼" else if (message.contentType == "video") "🎬" else "📎", fontSize = 24.sp)
+                                    Column(Modifier.padding(start = 10.dp)) { Text(message.mediaFileName ?: message.text, color = homePrimaryText, fontWeight = FontWeight.Medium); Text(if (message.contentType == "photo") "图片" else if (message.contentType == "video") "视频" else "文件", color = homeSecondaryText, style = MaterialTheme.typography.bodySmall) }
+                                }
+                                else -> Text(message.text, color = homePrimaryText)
+                            }
                             if (message.reactions.isNotEmpty()) {
                                 Row(horizontalArrangement = Arrangement.spacedBy(5.dp), modifier = Modifier.padding(top = 5.dp)) {
                                     message.reactions.take(5).forEach { reaction ->
@@ -824,7 +955,22 @@ private fun ConversationDetail(
                 }
             }
             Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.Bottom) {
-                Text("⌕", color = homeSecondaryText, fontSize = 22.sp, modifier = Modifier.padding(10.dp))
+                Box {
+                    Text("＋", color = homeSecondaryText, fontSize = 26.sp, modifier = Modifier.clickable { showAttachmentMenu = true }.padding(8.dp))
+                    DropdownMenu(expanded = showAttachmentMenu, onDismissRequest = { showAttachmentMenu = false }, containerColor = homeSurface) {
+                        DropdownMenuItem(text = { Text("照片", color = homePrimaryText) }, onClick = { showAttachmentMenu = false; attachmentMime = "image/*"; attachmentLauncher.launch(attachmentMime) })
+                        DropdownMenuItem(text = { Text("视频", color = homePrimaryText) }, onClick = { showAttachmentMenu = false; attachmentMime = "video/*"; attachmentLauncher.launch(attachmentMime) })
+                        DropdownMenuItem(text = { Text("文件", color = homePrimaryText) }, onClick = { showAttachmentMenu = false; attachmentMime = "*/*"; attachmentLauncher.launch(attachmentMime) })
+                        DropdownMenuItem(text = { Text("位置", color = homePrimaryText) }, onClick = {
+                            showAttachmentMenu = false; showLocationShare = true; currentLocation = null; locationError = null
+                            val fine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                            val coarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                            if (fine || coarse) resolveLocation() else locationPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+                        })
+                        DropdownMenuItem(text = { Text("联系人", color = homePrimaryText) }, onClick = { showAttachmentMenu = false; showContactShare = true })
+                        DropdownMenuItem(text = { Text("投票", color = homePrimaryText) }, onClick = { showAttachmentMenu = false; pollQuestion = ""; pollOption1 = ""; pollOption2 = ""; pollOption3 = ""; showPollComposer = true })
+                    }
+                }
                 OutlinedTextField(
                     value = draft, onValueChange = { draft = it; onTypingChanged(it.isNotBlank()) }, modifier = Modifier.weight(1f), placeholder = { Text("消息", color = homeSecondaryText) }, maxLines = 5,
                     colors = OutlinedTextFieldDefaults.colors(focusedTextColor = homePrimaryText, unfocusedTextColor = homePrimaryText, focusedContainerColor = homeSurface, unfocusedContainerColor = homeSurface), shape = RoundedCornerShape(22.dp),
@@ -840,6 +986,25 @@ private fun ConversationDetail(
                     }.padding(10.dp))
             }
         }
+    }
+}
+
+@SuppressLint("MissingPermission")
+private fun requestFabushiCurrentLocation(context: Context, callback: (Double?, Double?, String?) -> Unit) {
+    val manager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+        ?: return callback(null, null, "设备不支持位置服务")
+    val provider = when {
+        manager.isProviderEnabled(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
+        manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER
+        else -> return callback(null, null, "请先开启系统位置服务")
+    }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        manager.getCurrentLocation(provider, CancellationSignal(), context.mainExecutor) { location ->
+            if (location == null) callback(null, null, "暂时无法获取当前位置") else callback(location.latitude, location.longitude, null)
+        }
+    } else {
+        val location = manager.getLastKnownLocation(provider)
+        if (location == null) callback(null, null, "暂时无法获取当前位置") else callback(location.latitude, location.longitude, null)
     }
 }
 
