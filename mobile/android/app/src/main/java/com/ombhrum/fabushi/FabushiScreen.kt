@@ -15,6 +15,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -57,8 +58,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -129,6 +133,7 @@ fun FabushiScreen(
     onCheckUpdate: () -> Unit = {},
     onInstallUpdate: () -> Unit = {},
     messagingState: MessagingUiState = MessagingUiState(),
+    messagingActorId: String = "",
     onMessagingRefresh: () -> Unit = {},
     onCreateDirect: (MessagingContact) -> Unit = {},
     onCreateConversation: (ConversationKind, String, String, List<String>) -> Unit = { _, _, _, _ -> },
@@ -138,6 +143,7 @@ fun FabushiScreen(
     onLoadBlob: (String, Int, (Result<ByteArray>) -> Unit) -> Unit = { _, _, callback -> callback(Result.failure(IllegalStateException("Blob loader unavailable"))) },
     onSendContact: (String, MessagingContact) -> Unit = { _, _ -> },
     onSendPoll: (String, String, List<String>, Boolean) -> Unit = { _, _, _, _ -> },
+    onVotePoll: (String, String, List<String>) -> Unit = { _, _, _ -> },
     onSendLocation: (String, Double, Double) -> Unit = { _, _, _ -> },
     onEditText: (String, String, String) -> Unit = { _, _, _ -> },
     onDeleteMessage: (String, String) -> Unit = { _, _ -> },
@@ -152,6 +158,9 @@ fun FabushiScreen(
     onMarkRead: (ConversationSummary) -> Unit = {},
     onSetMarkedUnread: (ConversationSummary, Boolean) -> Unit = { _, _ -> },
     onSetDraft: (String, String, String?) -> Unit = { _, _, _ -> },
+    onUpdateConversationInfo: (String, String, String) -> Unit = { _, _, _ -> },
+    onSetConversationParticipant: (ConversationSummary, String, String) -> Unit = { _, _, _ -> },
+    onRemoveConversationParticipant: (String, String) -> Unit = { _, _ -> },
     onUpsertFolder: (MessagingFolder) -> Unit = {},
     onDeleteFolder: (String) -> Unit = {},
     appAgentSurface: FabushiAppAgentSurface? = null,
@@ -314,6 +323,7 @@ fun FabushiScreen(
             showAddMenu = showAddMenu,
             onShowAddMenuChange = { showAddMenu = it },
             messagingState = messagingState,
+            messagingActorId = messagingActorId,
             onMessagingRefresh = onMessagingRefresh,
             onCreateDirect = onCreateDirect,
             onCreateConversation = onCreateConversation,
@@ -323,6 +333,7 @@ fun FabushiScreen(
             onLoadBlob = onLoadBlob,
             onSendContact = onSendContact,
             onSendPoll = onSendPoll,
+            onVotePoll = onVotePoll,
             onSendLocation = onSendLocation,
             onEditText = onEditText,
             onDeleteMessage = onDeleteMessage,
@@ -337,6 +348,9 @@ fun FabushiScreen(
             onMarkRead = onMarkRead,
             onSetMarkedUnread = onSetMarkedUnread,
             onSetDraft = onSetDraft,
+            onUpdateConversationInfo = onUpdateConversationInfo,
+            onSetConversationParticipant = onSetConversationParticipant,
+            onRemoveConversationParticipant = onRemoveConversationParticipant,
             onUpsertFolder = onUpsertFolder,
             onDeleteFolder = onDeleteFolder,
         )
@@ -364,6 +378,7 @@ private fun ConversationHome(
     showAddMenu: Boolean,
     onShowAddMenuChange: (Boolean) -> Unit,
     messagingState: MessagingUiState,
+    messagingActorId: String,
     onMessagingRefresh: () -> Unit,
     onCreateDirect: (MessagingContact) -> Unit,
     onCreateConversation: (ConversationKind, String, String, List<String>) -> Unit,
@@ -373,6 +388,7 @@ private fun ConversationHome(
     onLoadBlob: (String, Int, (Result<ByteArray>) -> Unit) -> Unit,
     onSendContact: (String, MessagingContact) -> Unit,
     onSendPoll: (String, String, List<String>, Boolean) -> Unit,
+    onVotePoll: (String, String, List<String>) -> Unit,
     onSendLocation: (String, Double, Double) -> Unit,
     onEditText: (String, String, String) -> Unit,
     onDeleteMessage: (String, String) -> Unit,
@@ -387,6 +403,9 @@ private fun ConversationHome(
     onMarkRead: (ConversationSummary) -> Unit,
     onSetMarkedUnread: (ConversationSummary, Boolean) -> Unit,
     onSetDraft: (String, String, String?) -> Unit,
+    onUpdateConversationInfo: (String, String, String) -> Unit,
+    onSetConversationParticipant: (ConversationSummary, String, String) -> Unit,
+    onRemoveConversationParticipant: (String, String) -> Unit,
     onUpsertFolder: (MessagingFolder) -> Unit,
     onDeleteFolder: (String) -> Unit,
 ) {
@@ -444,6 +463,11 @@ private fun ConversationHome(
             messages = messagingState.messagesByConversation[conversation.id].orEmpty(),
             sharedDraft = messagingState.draftsByConversation[conversation.id],
             onDraftChanged = { text, replyTo -> onSetDraft(conversation.id, text, replyTo) },
+            currentActorId = messagingActorId,
+            contacts = messagingState.contacts,
+            onUpdateConversationInfo = { title, description -> onUpdateConversationInfo(conversation.id, title, description) },
+            onSetConversationParticipant = { actorId, role -> onSetConversationParticipant(conversation, actorId, role) },
+            onRemoveConversationParticipant = { actorId -> onRemoveConversationParticipant(conversation.id, actorId) },
             onBack = { selectedConversation = null },
             onSend = { text, replyTo, silent, scheduledAt -> onSendText(conversation.id, text, replyTo, silent, scheduledAt) },
             onSendAttachment = { fileName, mimeType, bytes -> onSendAttachment(conversation.id, fileName, mimeType, bytes) },
@@ -452,6 +476,7 @@ private fun ConversationHome(
             shareContacts = messagingState.contacts,
             onSendContact = { contact -> onSendContact(conversation.id, contact) },
             onSendPoll = { question, options, multiple -> onSendPoll(conversation.id, question, options, multiple) },
+            onVotePoll = { messageId, optionIds -> onVotePoll(conversation.id, messageId, optionIds) },
             onSendLocation = { latitude, longitude -> onSendLocation(conversation.id, latitude, longitude) },
             onEdit = { messageId, text -> onEditText(conversation.id, messageId, text) },
             onDelete = { messageId -> onDeleteMessage(conversation.id, messageId) },
@@ -817,6 +842,11 @@ private fun ConversationDetail(
     messages: List<ChatMessage>,
     sharedDraft: MessagingDraft?,
     onDraftChanged: (String, String?) -> Unit,
+    currentActorId: String,
+    contacts: List<MessagingContact>,
+    onUpdateConversationInfo: (String, String) -> Unit,
+    onSetConversationParticipant: (String, String) -> Unit,
+    onRemoveConversationParticipant: (String) -> Unit,
     onBack: () -> Unit,
     onSend: (String, String?, Boolean, Long?) -> Unit,
     onSendAttachment: (String, String, ByteArray) -> Unit,
@@ -825,6 +855,7 @@ private fun ConversationDetail(
     shareContacts: List<MessagingContact>,
     onSendContact: (MessagingContact) -> Unit,
     onSendPoll: (String, List<String>, Boolean) -> Unit,
+    onVotePoll: (String, List<String>) -> Unit,
     onSendLocation: (Double, Double) -> Unit,
     onEdit: (String, String) -> Unit,
     onDelete: (String) -> Unit,
@@ -844,6 +875,8 @@ private fun ConversationDetail(
     var replyTarget by remember(conversation.id, sharedDraft?.replyToMessageId) { mutableStateOf(sharedDraft?.replyToMessageId?.let { replyId -> messages.firstOrNull { it.id == replyId } }) }
     var editingMessage by remember { mutableStateOf<ChatMessage?>(null) }
     var forwardingMessage by remember { mutableStateOf<ChatMessage?>(null) }
+    var mediaViewerMessage by remember { mutableStateOf<ChatMessage?>(null) }
+    var showConversationInfo by remember { mutableStateOf(false) }
     var showChatSearch by remember { mutableStateOf(false) }
     var chatSearchQuery by remember { mutableStateOf("") }
     var showAttachmentMenu by remember { mutableStateOf(false) }
@@ -856,6 +889,7 @@ private fun ConversationDetail(
     var pollOption3 by remember { mutableStateOf("") }
     var attachmentMime by remember { mutableStateOf("*/*") }
     val context = LocalContext.current
+    val haptics = LocalHapticFeedback.current
     val voiceRecorder = remember { NativeVoiceRecorder(context) }
     val voicePlayer = remember { NativeVoicePlayer(context) }
     var playingVoiceMessageId by remember { mutableStateOf<String?>(null) }
@@ -897,6 +931,19 @@ private fun ConversationDetail(
                 onSendAttachment(name, mime, bytes)
             }
         }
+    }
+
+    if (showConversationInfo) {
+        AndroidConversationInfo(
+            conversation = conversation, contacts = contacts, currentActorId = currentActorId, onBack = { showConversationInfo = false },
+            onUpdateInfo = onUpdateConversationInfo, onSetParticipant = onSetConversationParticipant, onRemoveParticipant = onRemoveConversationParticipant,
+        )
+        return
+    }
+
+    mediaViewerMessage?.let { mediaMessage ->
+        AndroidMediaViewer(message = mediaMessage, onLoadBlob = onLoadBlob, onClose = { mediaViewerMessage = null })
+        return
     }
 
     if (showSendModes) {
@@ -1007,9 +1054,9 @@ private fun ConversationDetail(
         Column(Modifier.fillMaxSize().padding(padding)) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("‹", color = homePrimaryText, fontSize = 34.sp, modifier = Modifier.clickable(onClick = onBack).padding(8.dp))
-                Column(Modifier.weight(1f)) {
+                Column(Modifier.weight(1f).clickable { showConversationInfo = true }.padding(vertical = 4.dp)) {
                     Text(conversation.title, color = homePrimaryText, fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
-                    Text(conversation.kind.label, color = homeSecondaryText, style = MaterialTheme.typography.bodySmall)
+                    Text("${conversation.participants.size} 位成员 · ${conversation.kind.label}", color = homeSecondaryText, style = MaterialTheme.typography.bodySmall)
                 }
                 Text("⌕", color = homePrimaryText, fontSize = 23.sp, modifier = Modifier.clickable { showChatSearch = !showChatSearch; if (!showChatSearch) chatSearchQuery = "" }.padding(8.dp))
                 Box {
@@ -1047,6 +1094,22 @@ private fun ConversationDetail(
                         Column(
                             Modifier.fillMaxWidth(0.78f)
                                 .background(if (message.outgoing) homeAccent.copy(alpha = 0.18f) else homeSurface, RoundedCornerShape(16.dp))
+                                .pointerInput(message.id) {
+                                    var horizontalDrag = 0f
+                                    detectHorizontalDragGestures(
+                                        onDragStart = { horizontalDrag = 0f },
+                                        onHorizontalDrag = { change, dragAmount -> horizontalDrag += dragAmount; change.consume() },
+                                        onDragEnd = {
+                                            if (horizontalDrag > 58.dp.toPx()) {
+                                                replyTarget = message
+                                                editingMessage = null
+                                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            }
+                                            horizontalDrag = 0f
+                                        },
+                                        onDragCancel = { horizontalDrag = 0f },
+                                    )
+                                }
                                 .combinedClickable(onClick = {}, onLongClick = { selectedMessage = message })
                                 .padding(horizontal = 12.dp, vertical = 8.dp),
                         ) {
@@ -1069,7 +1132,15 @@ private fun ConversationDetail(
                                 }
                                 "poll" -> Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                                     Text(message.pollQuestion ?: "投票", color = homePrimaryText, fontWeight = FontWeight.SemiBold)
-                                    message.pollOptions.forEach { option -> Row(verticalAlignment = Alignment.CenterVertically) { Text("○", color = homeAccent); Text(option, color = homePrimaryText, modifier = Modifier.padding(start = 7.dp)) } }
+                                    message.pollOptions.forEach { option ->
+                                        Row(Modifier.fillMaxWidth().clickable {
+                                            val chosenIds = message.pollOptions.filter { it.chosen }.map { it.id }.toMutableSet()
+                                            val next = if (message.pollMultipleAnswers) { if (option.chosen) chosenIds.remove(option.id) else chosenIds.add(option.id); chosenIds.toList() } else if (option.chosen) emptyList() else listOf(option.id)
+                                            onVotePoll(message.id, next)
+                                        }.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                                            Text(if (option.chosen) "●" else "○", color = homeAccent); Text(option.text, color = homePrimaryText, modifier = Modifier.weight(1f).padding(start = 7.dp)); Text("${option.voterCount}", color = homeSecondaryText, style = MaterialTheme.typography.bodySmall)
+                                        }
+                                    }
                                 }
                                 "voice" -> Row(Modifier.fillMaxWidth().clickable {
                                     val blobId = message.mediaBlobId
@@ -1084,9 +1155,9 @@ private fun ConversationDetail(
                                     Column(Modifier.padding(start = 10.dp)) { Text("语音消息", color = homePrimaryText, fontWeight = FontWeight.Medium); Text(if (playingVoiceMessageId == message.id) "正在播放" else (message.mediaFileName ?: "录音"), color = homeSecondaryText, style = MaterialTheme.typography.bodySmall) }
                                 }
                                 "audio" -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Text("♫", color = homeAccent, fontSize = 24.sp); Text(message.mediaFileName ?: "音频", color = homePrimaryText, modifier = Modifier.padding(start = 10.dp)) }
-                                "photo", "video", "document" -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                "photo", "video", "document" -> Row(Modifier.fillMaxWidth().clickable { mediaViewerMessage = message }, verticalAlignment = Alignment.CenterVertically) {
                                     Text(if (message.contentType == "photo") "🖼" else if (message.contentType == "video") "🎬" else "📎", fontSize = 24.sp)
-                                    Column(Modifier.padding(start = 10.dp)) { Text(message.mediaFileName ?: message.text, color = homePrimaryText, fontWeight = FontWeight.Medium); Text(if (message.contentType == "photo") "图片" else if (message.contentType == "video") "视频" else "文件", color = homeSecondaryText, style = MaterialTheme.typography.bodySmall) }
+                                    Column(Modifier.padding(start = 10.dp)) { Text(message.mediaFileName ?: message.text, color = homePrimaryText, fontWeight = FontWeight.Medium); Text(if (message.contentType == "photo") "图片 · 点击查看" else if (message.contentType == "video") "视频 · 点击播放" else "文件 · 点击打开", color = homeSecondaryText, style = MaterialTheme.typography.bodySmall) }
                                 }
                                 else -> Text(message.text, color = homePrimaryText)
                             }

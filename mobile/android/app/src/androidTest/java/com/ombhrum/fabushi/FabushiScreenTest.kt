@@ -3,7 +3,8 @@ package com.ombhrum.fabushi
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.test.assertDoesNotExist
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -38,11 +39,11 @@ class FabushiScreenTest {
         compose.onNodeWithTag(TestTags.HomeSearchButton).assertIsDisplayed()
         compose.onNodeWithTag(TestTags.AddButton).assertIsDisplayed()
         compose.onNodeWithTag(TestTags.ConversationList).assertIsDisplayed()
-        compose.onNodeWithTag(TestTags.ConversationRow).assertDoesNotExist()
+        assertEquals(0, compose.onAllNodesWithTag(TestTags.ConversationRow).fetchSemanticsNodes().size)
         compose.onNodeWithTag(TestTags.AddButton).performClick()
         compose.onNodeWithText("新消息").assertIsDisplayed().performClick()
         compose.onNodeWithText("暂无可用联系人").assertIsDisplayed()
-        compose.onNodeWithText("Chief of Staff").assertDoesNotExist()
+        assertEquals(0, compose.onAllNodesWithText("Chief of Staff").fetchSemanticsNodes().size)
     }
 
     @Test

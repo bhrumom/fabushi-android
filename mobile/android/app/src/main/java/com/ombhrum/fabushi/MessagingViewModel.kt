@@ -20,9 +20,14 @@ enum class ConversationKind(val wire: String, val label: String) {
     SAVED_MESSAGES("savedMessages", "收藏"), SECRET("secret", "加密聊天"),
 }
 
+data class ConversationParticipant(val actorId: String, val role: String, val joinedAtMs: Long)
+
 data class ConversationSummary(
     val id: String,
     val title: String,
+    val description: String,
+    val ownerId: String? = null,
+    val participants: List<ConversationParticipant> = emptyList(),
     val preview: String,
     val time: String,
     val badge: String,
@@ -54,6 +59,8 @@ data class MessagingContact(
 
 data class ChatReaction(val reaction: String, val count: Int, val chosenByMe: Boolean)
 
+data class ChatPollOption(val id: String, val text: String, val voterCount: Int, val chosen: Boolean)
+
 data class ChatMessage(
     val id: String,
     val conversationId: String,
@@ -67,7 +74,8 @@ data class ChatMessage(
     val latitude: Double? = null,
     val longitude: Double? = null,
     val pollQuestion: String? = null,
-    val pollOptions: List<String> = emptyList(),
+    val pollOptions: List<ChatPollOption> = emptyList(),
+    val pollMultipleAnswers: Boolean = false,
     val outgoing: Boolean,
     val time: String,
     val replyToMessageId: String? = null,
@@ -97,6 +105,7 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
     private var displayName = "当前用户"
     private val deviceId = "android:native"
     private val sessionId = "account-session:android-native"
+    val currentActorId: String get() = actorId
 
     init { refresh() }
 
@@ -165,6 +174,16 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
             .put("content", JSONObject().put("type", "location").put("data", JSONObject().put("latitude", latitude).put("longitude", longitude).put("liveUntilMs", liveUntilMs ?: JSONObject.NULL)))
             .put("replyToMessageId", JSONObject.NULL).put("threadRootMessageId", JSONObject.NULL).put("scheduledAtMs", JSONObject.NULL).put("silent", false).put("protectedContent", false))
     }
+    fun votePoll(conversationId: String, messageId: String, optionIds: List<String>) {
+        viewModelScope.launch {
+            runCatching { withContext(Dispatchers.IO) {
+                ensureIdentity()
+                execute(JSONObject().put("type", "votePoll").put("conversationId", conversationId).put("messageId", messageId).put("optionIds", JSONArray(optionIds)))
+                execute(JSONObject().put("type", "sync").put("cursor", JSONObject.NULL).put("limit", 1000))
+            }}.onFailure { mutableState.value = mutableState.value.copy(error = it.message) }
+        }
+    }
+
     fun sendPoll(conversationId: String, question: String, options: List<String>, multipleAnswers: Boolean = false) {
         val cleanOptions = options.map { it.trim() }.filter { it.isNotEmpty() }; if (question.isBlank() || cleanOptions.size < 2) return
         val pollOptions = JSONArray(); cleanOptions.forEachIndexed { index, option -> pollOptions.put(JSONObject().put("id", "option-${index + 1}").put("text", option).put("voterCount", 0).put("chosen", false).put("correct", JSONObject.NULL)) }
@@ -252,6 +271,13 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
         .put("excludeMuted", folder.excludeMuted).put("excludeRead", folder.excludeRead).put("excludeArchived", folder.excludeArchived)))
     fun deleteFolder(folderId: String) = executeAsync(JSONObject().put("type", "deleteFolder").put("folderId", folderId))
 
+    fun updateConversationInfo(conversationId: String, title: String, description: String) = executeAsync(JSONObject().put("type", "updateConversationInfo").put("conversationId", conversationId).put("title", title.trim()).put("description", description.trim().ifBlank { JSONObject.NULL }))
+    fun setConversationParticipant(conversation: ConversationSummary, targetActorId: String, role: String) {
+        val joinedAt = conversation.participants.firstOrNull { it.actorId == targetActorId }?.joinedAtMs ?: System.currentTimeMillis()
+        executeAsync(JSONObject().put("type", "setConversationParticipant").put("conversationId", conversation.id).put("participant", JSONObject().put("actorId", targetActorId).put("role", role).put("joinedAtMs", joinedAt).put("mutedUntilMs", JSONObject.NULL)))
+    }
+    fun removeConversationParticipant(conversationId: String, targetActorId: String) = executeAsync(JSONObject().put("type", "removeConversationParticipant").put("conversationId", conversationId).put("actorId", targetActorId))
+
     fun setMarkedUnread(conversation: ConversationSummary, markedUnread: Boolean) = executeAsync(JSONObject().put("type", "setMarkedUnread").put("conversationId", conversation.id).put("markedUnread", markedUnread))
     fun setDraft(conversationId: String, text: String, replyToMessageId: String?) = executeAsync(JSONObject().put("type", "setDraft").put("conversationId", conversationId).put("text", text).put("replyToMessageId", replyToMessageId ?: JSONObject.NULL))
 
@@ -323,6 +349,12 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
                 "conversationChanged" -> parseConversation(event.optJSONObject("conversation"))?.let { item ->
                     val index = conversations.indexOfFirst { it.id == item.id }; if (index >= 0) conversations[index] = item else conversations.add(item)
                 }
+                "conversationParticipantChanged" -> {
+                    val removedActorId = event.optString("removedActorId")
+                    val item = parseConversation(event.optJSONObject("conversation"))
+                    if (item != null && removedActorId == actorId) { conversations.removeAll { it.id == item.id }; messageMap.remove(item.id); draftMap.remove(item.id) }
+                    else if (item != null) { val index = conversations.indexOfFirst { it.id == item.id }; if (index >= 0) conversations[index] = item else conversations.add(item) }
+                }
                 "markedUnreadChanged" -> {
                     val conversationId = event.optString("conversationId"); val index = conversations.indexOfFirst { it.id == conversationId }; if (index >= 0) conversations[index] = conversations[index].copy(markedUnread = event.optBoolean("markedUnread"))
                 }
@@ -388,10 +420,11 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
         raw ?: return null; val id = raw.optString("id"); val title = raw.optString("title"); if (id.isBlank() || title.isBlank()) return null
         val kind = ConversationKind.entries.firstOrNull { it.wire == raw.optString("kind") } ?: ConversationKind.DIRECT
         val mutedUntil = raw.optJSONObject("notificationSettings")?.optLong("mutedUntilMs", 0L) ?: 0L
+        val participants = buildList { val values = raw.optJSONArray("participants") ?: JSONArray(); for (i in 0 until values.length()) { val participant = values.optJSONObject(i) ?: continue; val actorId = participant.optString("actorId"); val role = participant.optString("role"); if (actorId.isNotBlank() && role.isNotBlank()) add(ConversationParticipant(actorId, role, participant.optLong("joinedAtMs"))) } }
         val pinnedMessageIds = buildList { val ids = raw.optJSONArray("pinnedMessageIds") ?: JSONArray(); for (i in 0 until ids.length()) ids.optString(i).takeIf { it.isNotBlank() }?.let(::add) }
         val folderIds = buildList { val ids = raw.optJSONArray("folderIds") ?: JSONArray(); for (i in 0 until ids.length()) ids.optString(i).takeIf { it.isNotBlank() }?.let(::add) }
-        return ConversationSummary(id, title, raw.optString("description"), timeLabel(raw.optLong("updatedAtMs")), title.take(1).uppercase().ifBlank { "✦" }, kind,
-            raw.optInt("unreadCount"), raw.optBoolean("pinned"), mutedUntil > System.currentTimeMillis(), raw.optBoolean("archived"), raw.optString("lastMessageId").takeIf { it.isNotBlank() }, pinnedMessageIds, folderIds, raw.optBoolean("markedUnread"))
+        return ConversationSummary(id = id, title = title, description = raw.optString("description"), ownerId = raw.optString("ownerId").takeIf { it.isNotBlank() }, participants = participants, preview = raw.optString("description"), time = timeLabel(raw.optLong("updatedAtMs")), badge = title.take(1).uppercase().ifBlank { "✦" }, kind = kind,
+            unreadCount = raw.optInt("unreadCount"), isPinned = raw.optBoolean("pinned"), isMuted = mutedUntil > System.currentTimeMillis(), isArchived = raw.optBoolean("archived"), lastMessageId = raw.optString("lastMessageId").takeIf { it.isNotBlank() }, pinnedMessageIds = pinnedMessageIds, folderIds = folderIds, markedUnread = raw.optBoolean("markedUnread"))
     }
 
     private fun parseMessage(raw: JSONObject?): ChatMessage? {
@@ -410,8 +443,13 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
         val pollQuestion = data.optJSONObject("question")?.optString("text")?.takeIf { it.isNotBlank() }
         val pollOptions = buildList {
             val options = data.optJSONArray("options") ?: JSONArray()
-            for (i in 0 until options.length()) options.optJSONObject(i)?.optString("text")?.takeIf { it.isNotBlank() }?.let(::add)
+            for (i in 0 until options.length()) {
+                val option = options.optJSONObject(i) ?: continue
+                val id = option.optString("id"); val text = option.optString("text")
+                if (id.isNotBlank() && text.isNotBlank()) add(ChatPollOption(id, text, option.optInt("voterCount"), option.optBoolean("chosen")))
+            }
         }
+        val pollMultipleAnswers = data.optBoolean("multipleAnswers")
         val text = when (contentType) {
             "text" -> data.optJSONObject("text")?.optString("text").orEmpty()
             "photo" -> mediaFileName?.let { "🖼 $it" } ?: "🖼 图片"
@@ -441,7 +479,7 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
         }
         return ChatMessage(
             id = id, conversationId = conversationId, text = text, contentType = contentType, mediaFileName = mediaFileName, mediaBlobId = mediaBlobId, mediaMimeType = mediaMimeType, mediaSizeBytes = mediaSizeBytes, contactName = contactName,
-            latitude = latitude, longitude = longitude, pollQuestion = pollQuestion, pollOptions = pollOptions, outgoing = senderId == actorId,
+            latitude = latitude, longitude = longitude, pollQuestion = pollQuestion, pollOptions = pollOptions, pollMultipleAnswers = pollMultipleAnswers, outgoing = senderId == actorId,
             time = timeLabel(raw.optLong("createdAtMs")), replyToMessageId = raw.optString("replyToMessageId").takeIf { it.isNotBlank() },
             forwardOrigin = raw.optString("forwardOrigin").takeIf { it.isNotBlank() }, reactions = reactions, deliveryState = deliveryState,
             edited = !raw.isNull("editedAtMs"), pinned = raw.optBoolean("pinned")
