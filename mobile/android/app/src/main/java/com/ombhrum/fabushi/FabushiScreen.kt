@@ -135,6 +135,7 @@ fun FabushiScreen(
     onSendText: (String, String, String?) -> Unit = { _, _, _ -> },
     onSendAttachment: (String, String, String, ByteArray) -> Unit = { _, _, _, _ -> },
     onSendVoice: (String, String, String, ByteArray, List<Int>) -> Unit = { _, _, _, _, _ -> },
+    onLoadBlob: (String, Int, (Result<ByteArray>) -> Unit) -> Unit = { _, _, callback -> callback(Result.failure(IllegalStateException("Blob loader unavailable"))) },
     onSendContact: (String, MessagingContact) -> Unit = { _, _ -> },
     onSendPoll: (String, String, List<String>, Boolean) -> Unit = { _, _, _, _ -> },
     onSendLocation: (String, Double, Double) -> Unit = { _, _, _ -> },
@@ -317,6 +318,7 @@ fun FabushiScreen(
             onSendText = onSendText,
             onSendAttachment = onSendAttachment,
             onSendVoice = onSendVoice,
+            onLoadBlob = onLoadBlob,
             onSendContact = onSendContact,
             onSendPoll = onSendPoll,
             onSendLocation = onSendLocation,
@@ -364,6 +366,7 @@ private fun ConversationHome(
     onSendText: (String, String, String?) -> Unit,
     onSendAttachment: (String, String, String, ByteArray) -> Unit,
     onSendVoice: (String, String, String, ByteArray, List<Int>) -> Unit,
+    onLoadBlob: (String, Int, (Result<ByteArray>) -> Unit) -> Unit,
     onSendContact: (String, MessagingContact) -> Unit,
     onSendPoll: (String, String, List<String>, Boolean) -> Unit,
     onSendLocation: (String, Double, Double) -> Unit,
@@ -436,6 +439,7 @@ private fun ConversationHome(
             onSend = { text, replyTo -> onSendText(conversation.id, text, replyTo) },
             onSendAttachment = { fileName, mimeType, bytes -> onSendAttachment(conversation.id, fileName, mimeType, bytes) },
             onSendVoice = { fileName, mimeType, bytes, waveform -> onSendVoice(conversation.id, fileName, mimeType, bytes, waveform) },
+            onLoadBlob = onLoadBlob,
             shareContacts = messagingState.contacts,
             onSendContact = { contact -> onSendContact(conversation.id, contact) },
             onSendPoll = { question, options, multiple -> onSendPoll(conversation.id, question, options, multiple) },
@@ -806,6 +810,7 @@ private fun ConversationDetail(
     onSend: (String, String?) -> Unit,
     onSendAttachment: (String, String, ByteArray) -> Unit,
     onSendVoice: (String, String, ByteArray, List<Int>) -> Unit,
+    onLoadBlob: (String, Int, (Result<ByteArray>) -> Unit) -> Unit,
     shareContacts: List<MessagingContact>,
     onSendContact: (MessagingContact) -> Unit,
     onSendPoll: (String, List<String>, Boolean) -> Unit,
@@ -840,10 +845,12 @@ private fun ConversationDetail(
     var attachmentMime by remember { mutableStateOf("*/*") }
     val context = LocalContext.current
     val voiceRecorder = remember { NativeVoiceRecorder(context) }
+    val voicePlayer = remember { NativeVoicePlayer(context) }
+    var playingVoiceMessageId by remember { mutableStateOf<String?>(null) }
     var isRecordingVoice by remember { mutableStateOf(false) }
     var recordingSeconds by remember { mutableStateOf(0) }
     var voiceError by remember { mutableStateOf<String?>(null) }
-    DisposableEffect(Unit) { onDispose { voiceRecorder.cancel() } }
+    DisposableEffect(Unit) { onDispose { voiceRecorder.cancel(); voicePlayer.stop() } }
     LaunchedEffect(isRecordingVoice) {
         recordingSeconds = 0
         while (isRecordingVoice) { delay(1000); if (isRecordingVoice) recordingSeconds += 1 }
@@ -1027,7 +1034,18 @@ private fun ConversationDetail(
                                     Text(message.pollQuestion ?: "投票", color = homePrimaryText, fontWeight = FontWeight.SemiBold)
                                     message.pollOptions.forEach { option -> Row(verticalAlignment = Alignment.CenterVertically) { Text("○", color = homeAccent); Text(option, color = homePrimaryText, modifier = Modifier.padding(start = 7.dp)) } }
                                 }
-                                "voice" -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Text("▶", color = homeAccent, fontSize = 24.sp); Column(Modifier.padding(start = 10.dp)) { Text("语音消息", color = homePrimaryText, fontWeight = FontWeight.Medium); Text(message.mediaFileName ?: "录音", color = homeSecondaryText, style = MaterialTheme.typography.bodySmall) } }
+                                "voice" -> Row(Modifier.fillMaxWidth().clickable {
+                                    val blobId = message.mediaBlobId
+                                    if (playingVoiceMessageId == message.id) { voicePlayer.stop(); playingVoiceMessageId = null }
+                                    else if (blobId != null && message.mediaSizeBytes > 0) {
+                                        onLoadBlob(blobId, message.mediaSizeBytes) { result ->
+                                            result.onSuccess { bytes -> voicePlayer.toggle(message.id, bytes) { playingVoiceMessageId = null }.onSuccess { playing -> playingVoiceMessageId = if (playing) message.id else null } }
+                                        }
+                                    }
+                                }, verticalAlignment = Alignment.CenterVertically) {
+                                    Text(if (playingVoiceMessageId == message.id) "■" else "▶", color = homeAccent, fontSize = 24.sp)
+                                    Column(Modifier.padding(start = 10.dp)) { Text("语音消息", color = homePrimaryText, fontWeight = FontWeight.Medium); Text(if (playingVoiceMessageId == message.id) "正在播放" else (message.mediaFileName ?: "录音"), color = homeSecondaryText, style = MaterialTheme.typography.bodySmall) }
+                                }
                                 "audio" -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Text("♫", color = homeAccent, fontSize = 24.sp); Text(message.mediaFileName ?: "音频", color = homePrimaryText, modifier = Modifier.padding(start = 10.dp)) }
                                 "photo", "video", "document" -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                     Text(if (message.contentType == "photo") "🖼" else if (message.contentType == "video") "🎬" else "📎", fontSize = 24.sp)

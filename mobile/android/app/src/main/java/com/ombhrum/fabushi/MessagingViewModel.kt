@@ -57,6 +57,9 @@ data class ChatMessage(
     val text: String,
     val contentType: String = "text",
     val mediaFileName: String? = null,
+    val mediaBlobId: String? = null,
+    val mediaMimeType: String? = null,
+    val mediaSizeBytes: Int = 0,
     val contactName: String? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,
@@ -164,6 +167,27 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
         executeAsync(JSONObject().put("type", "sendMessage").put("conversationId", conversationId).put("clientMessageId", "android:${UUID.randomUUID()}")
             .put("content", JSONObject().put("type", "poll").put("data", JSONObject().put("question", JSONObject().put("text", question.trim()).put("entities", JSONArray())).put("options", pollOptions).put("anonymous", true).put("multipleAnswers", multipleAnswers).put("quiz", false)))
             .put("replyToMessageId", JSONObject.NULL).put("threadRootMessageId", JSONObject.NULL).put("scheduledAtMs", JSONObject.NULL).put("silent", false).put("protectedContent", false))
+    }
+
+    fun loadBlob(blobId: String, sizeBytes: Int, onResult: (Result<ByteArray>) -> Unit) {
+        viewModelScope.launch {
+            val result = runCatching { withContext(Dispatchers.IO) {
+                if (sizeBytes <= 0) return@withContext ByteArray(0)
+                val output = java.io.ByteArrayOutputStream(sizeBytes)
+                var offset = 0
+                val chunkSize = 1024 * 1024
+                while (offset < sizeBytes) {
+                    val requested = minOf(chunkSize, sizeBytes - offset)
+                    val response = host.request("feature.messaging.blob.read", JSONObject().put("blobId", blobId).put("offset", offset).put("length", requested))
+                    val encoded = response.optString("dataBase64")
+                    val chunk = Base64.decode(encoded, Base64.DEFAULT)
+                    check(chunk.isNotEmpty()) { "Blob read returned empty data" }
+                    output.write(chunk); offset += chunk.size
+                }
+                output.toByteArray()
+            }}
+            onResult(result)
+        }
     }
 
     fun sendVoice(conversationId: String, fileName: String, mimeType: String, bytes: ByteArray, waveform: List<Int> = emptyList()) {
@@ -356,7 +380,11 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
         val content = raw.optJSONObject("content") ?: JSONObject()
         val contentType = content.optString("type", "unknown")
         val data = content.optJSONObject("data") ?: JSONObject()
-        val mediaFileName = data.optJSONObject("media")?.optString("fileName")?.takeIf { it.isNotBlank() }
+        val media = data.optJSONObject("media")
+        val mediaFileName = media?.optString("fileName")?.takeIf { it.isNotBlank() }
+        val mediaBlobId = media?.optString("id")?.takeIf { it.isNotBlank() }
+        val mediaMimeType = media?.optString("mimeType")?.takeIf { it.isNotBlank() }
+        val mediaSizeBytes = media?.optInt("sizeBytes", 0) ?: 0
         val contactName = data.optString("displayName").takeIf { it.isNotBlank() }
         val latitude = if (data.has("latitude")) data.optDouble("latitude") else null
         val longitude = if (data.has("longitude")) data.optDouble("longitude") else null
@@ -393,7 +421,7 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
             else -> "sent"
         }
         return ChatMessage(
-            id = id, conversationId = conversationId, text = text, contentType = contentType, mediaFileName = mediaFileName, contactName = contactName,
+            id = id, conversationId = conversationId, text = text, contentType = contentType, mediaFileName = mediaFileName, mediaBlobId = mediaBlobId, mediaMimeType = mediaMimeType, mediaSizeBytes = mediaSizeBytes, contactName = contactName,
             latitude = latitude, longitude = longitude, pollQuestion = pollQuestion, pollOptions = pollOptions, outgoing = senderId == actorId,
             time = timeLabel(raw.optLong("createdAtMs")), replyToMessageId = raw.optString("replyToMessageId").takeIf { it.isNotBlank() },
             forwardOrigin = raw.optString("forwardOrigin").takeIf { it.isNotBlank() }, reactions = reactions, deliveryState = deliveryState,
