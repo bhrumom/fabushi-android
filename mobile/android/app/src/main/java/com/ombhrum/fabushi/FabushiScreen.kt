@@ -119,7 +119,7 @@ fun FabushiScreen(
     messagingState: MessagingUiState = MessagingUiState(),
     onMessagingRefresh: () -> Unit = {},
     onCreateDirect: (MessagingContact) -> Unit = {},
-    onCreateConversation: (ConversationKind, String, String) -> Unit = { _, _, _ -> },
+    onCreateConversation: (ConversationKind, String, String, List<String>) -> Unit = { _, _, _, _ -> },
     onSendText: (String, String, String?) -> Unit = { _, _, _ -> },
     onEditText: (String, String, String) -> Unit = { _, _, _ -> },
     onDeleteMessage: (String, String) -> Unit = { _, _ -> },
@@ -332,7 +332,7 @@ private fun ConversationHome(
     messagingState: MessagingUiState,
     onMessagingRefresh: () -> Unit,
     onCreateDirect: (MessagingContact) -> Unit,
-    onCreateConversation: (ConversationKind, String, String) -> Unit,
+    onCreateConversation: (ConversationKind, String, String, List<String>) -> Unit,
     onSendText: (String, String, String?) -> Unit,
     onEditText: (String, String, String) -> Unit,
     onDeleteMessage: (String, String) -> Unit,
@@ -351,6 +351,8 @@ private fun ConversationHome(
     var showContactPicker by remember { mutableStateOf(false) }
     var pendingKind by remember { mutableStateOf<ConversationKind?>(null) }
     var composeName by remember { mutableStateOf("") }
+    var composeDescription by remember { mutableStateOf("") }
+    var composeParticipantIds by remember { mutableStateOf(setOf<String>()) }
     var selectedConversation by remember { mutableStateOf<ConversationSummary?>(null) }
     var contextConversation by remember { mutableStateOf<ConversationSummary?>(null) }
     var activeSection by remember { mutableStateOf<AndroidMobileSection?>(null) }
@@ -413,20 +415,37 @@ private fun ConversationHome(
             onDismissRequest = { pendingKind = null; composeName = "" },
             title = { Text("新建${pendingKind!!.label}") },
             text = {
-                OutlinedTextField(value = composeName, onValueChange = { composeName = it }, modifier = Modifier.testTag(TestTags.ComposeName), singleLine = true, label = { Text("名称") })
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = composeName, onValueChange = { composeName = it }, modifier = Modifier.testTag(TestTags.ComposeName), singleLine = true, label = { Text("名称") })
+                    if (pendingKind == ConversationKind.CHANNEL) {
+                        OutlinedTextField(value = composeDescription, onValueChange = { composeDescription = it }, label = { Text("描述") }, maxLines = 3)
+                    }
+                    if (pendingKind == ConversationKind.GROUP) {
+                        Text("添加成员", color = homeSecondaryText, style = MaterialTheme.typography.bodySmall)
+                        messagingState.contacts.take(12).forEach { contact ->
+                            val selected = contact.id in composeParticipantIds
+                            Row(Modifier.fillMaxWidth().clickable { composeParticipantIds = if (selected) composeParticipantIds - contact.id else composeParticipantIds + contact.id }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(if (selected) "●" else "○", color = if (selected) homeAccent else homeSecondaryText)
+                                Text(contact.displayName, color = homePrimaryText, modifier = Modifier.padding(start = 10.dp))
+                            }
+                        }
+                    }
+                }
             },
             confirmButton = {
                 Button(onClick = {
                     val title = composeName.trim()
                     if (title.isNotEmpty()) {
                         val kind = pendingKind!!
-                        onCreateConversation(kind, title, "")
+                        onCreateConversation(kind, title, composeDescription, composeParticipantIds.toList())
                         pendingKind = null
                         composeName = ""
+                        composeDescription = ""
+                        composeParticipantIds = emptySet()
                     }
-                }, modifier = Modifier.testTag(TestTags.ComposeCreate), enabled = composeName.isNotBlank()) { Text("创建") }
+                }, modifier = Modifier.testTag(TestTags.ComposeCreate), enabled = composeName.isNotBlank() && (pendingKind != ConversationKind.GROUP || composeParticipantIds.isNotEmpty())) { Text("创建") }
             },
-            dismissButton = { OutlinedButton(onClick = { pendingKind = null; composeName = "" }) { Text("取消") } },
+            dismissButton = { OutlinedButton(onClick = { pendingKind = null; composeName = ""; composeDescription = ""; composeParticipantIds = emptySet() }) { Text("取消") } },
         )
     }
 

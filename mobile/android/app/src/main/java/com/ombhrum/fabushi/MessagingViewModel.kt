@@ -100,7 +100,7 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
         }
     }
 
-    fun createConversation(kind: ConversationKind, title: String, description: String = "") {
+    fun createConversation(kind: ConversationKind, title: String, description: String = "", participantActorIds: List<String> = emptyList()) {
         if (kind != ConversationKind.GROUP && kind != ConversationKind.CHANNEL) return
         viewModelScope.launch {
             runCatching { withContext(Dispatchers.IO) {
@@ -108,6 +108,9 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
                 val now = System.currentTimeMillis()
                 val id = "${kind.wire}:${UUID.randomUUID()}"
                 val participants = JSONArray().put(JSONObject().put("actorId", actorId).put("role", "owner").put("joinedAtMs", now).put("mutedUntilMs", JSONObject.NULL))
+                participantActorIds.filter { it.isNotBlank() && it != actorId }.distinct().forEach { participantId ->
+                    participants.put(JSONObject().put("actorId", participantId).put("role", "member").put("joinedAtMs", now).put("mutedUntilMs", JSONObject.NULL))
+                }
                 val conversation = baseConversation(id, kind, title.trim(), description.trim(), participants, now)
                 execute(JSONObject().put("type", "createConversation").put("conversation", conversation))
             }}.onFailure { mutableState.value = mutableState.value.copy(error = it.message) }
