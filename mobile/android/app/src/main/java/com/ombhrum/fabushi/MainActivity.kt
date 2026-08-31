@@ -60,7 +60,7 @@ class MainActivity : ComponentActivity() {
                         onMessagingRefresh = messagingModel::refresh,
                         onCreateDirect = messagingModel::createDirect,
                         onCreateConversation = messagingModel::createConversation,
-                        onSendText = { conversationId, text, replyTo -> messagingModel.sendText(conversationId, text, replyTo) },
+                        onSendText = { conversationId, text, replyTo, silent, scheduledAt -> messagingModel.sendText(conversationId, text, replyTo, silent, scheduledAt) },
                         onSendAttachment = messagingModel::sendAttachment,
                         onSendVoice = messagingModel::sendVoice,
                         onLoadBlob = messagingModel::loadBlob,

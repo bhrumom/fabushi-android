@@ -137,7 +137,7 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
         }
     }
 
-    fun sendText(conversationId: String, text: String, replyToMessageId: String? = null) {
+    fun sendText(conversationId: String, text: String, replyToMessageId: String? = null, silent: Boolean = false, scheduledAtMs: Long? = null) {
         val value = text.trim(); if (value.isEmpty()) return
         viewModelScope.launch {
             runCatching { withContext(Dispatchers.IO) {
@@ -145,8 +145,8 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
                 execute(JSONObject().put("type", "sendMessage").put("conversationId", conversationId)
                     .put("clientMessageId", "android:${UUID.randomUUID()}")
                     .put("content", JSONObject().put("type", "text").put("data", JSONObject().put("text", JSONObject().put("text", value).put("entities", JSONArray()))))
-                    .put("replyToMessageId", replyToMessageId ?: JSONObject.NULL).put("threadRootMessageId", JSONObject.NULL).put("scheduledAtMs", JSONObject.NULL)
-                    .put("silent", false).put("protectedContent", false))
+                    .put("replyToMessageId", replyToMessageId ?: JSONObject.NULL).put("threadRootMessageId", JSONObject.NULL).put("scheduledAtMs", scheduledAtMs ?: JSONObject.NULL)
+                    .put("silent", silent).put("protectedContent", false))
             }}.onFailure { mutableState.value = mutableState.value.copy(error = it.message) }
         }
     }

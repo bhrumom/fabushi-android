@@ -132,7 +132,7 @@ fun FabushiScreen(
     onMessagingRefresh: () -> Unit = {},
     onCreateDirect: (MessagingContact) -> Unit = {},
     onCreateConversation: (ConversationKind, String, String, List<String>) -> Unit = { _, _, _, _ -> },
-    onSendText: (String, String, String?) -> Unit = { _, _, _ -> },
+    onSendText: (String, String, String?, Boolean, Long?) -> Unit = { _, _, _, _, _ -> },
     onSendAttachment: (String, String, String, ByteArray) -> Unit = { _, _, _, _ -> },
     onSendVoice: (String, String, String, ByteArray, List<Int>) -> Unit = { _, _, _, _, _ -> },
     onLoadBlob: (String, Int, (Result<ByteArray>) -> Unit) -> Unit = { _, _, callback -> callback(Result.failure(IllegalStateException("Blob loader unavailable"))) },
@@ -363,7 +363,7 @@ private fun ConversationHome(
     onMessagingRefresh: () -> Unit,
     onCreateDirect: (MessagingContact) -> Unit,
     onCreateConversation: (ConversationKind, String, String, List<String>) -> Unit,
-    onSendText: (String, String, String?) -> Unit,
+    onSendText: (String, String, String?, Boolean, Long?) -> Unit,
     onSendAttachment: (String, String, String, ByteArray) -> Unit,
     onSendVoice: (String, String, String, ByteArray, List<Int>) -> Unit,
     onLoadBlob: (String, Int, (Result<ByteArray>) -> Unit) -> Unit,
@@ -436,7 +436,7 @@ private fun ConversationHome(
             conversation = conversation,
             messages = messagingState.messagesByConversation[conversation.id].orEmpty(),
             onBack = { selectedConversation = null },
-            onSend = { text, replyTo -> onSendText(conversation.id, text, replyTo) },
+            onSend = { text, replyTo, silent, scheduledAt -> onSendText(conversation.id, text, replyTo, silent, scheduledAt) },
             onSendAttachment = { fileName, mimeType, bytes -> onSendAttachment(conversation.id, fileName, mimeType, bytes) },
             onSendVoice = { fileName, mimeType, bytes, waveform -> onSendVoice(conversation.id, fileName, mimeType, bytes, waveform) },
             onLoadBlob = onLoadBlob,
@@ -807,7 +807,7 @@ private fun ConversationDetail(
     conversation: ConversationSummary,
     messages: List<ChatMessage>,
     onBack: () -> Unit,
-    onSend: (String, String?) -> Unit,
+    onSend: (String, String?, Boolean, Long?) -> Unit,
     onSendAttachment: (String, String, ByteArray) -> Unit,
     onSendVoice: (String, String, ByteArray, List<Int>) -> Unit,
     onLoadBlob: (String, Int, (Result<ByteArray>) -> Unit) -> Unit,
@@ -836,6 +836,7 @@ private fun ConversationDetail(
     var showChatSearch by remember { mutableStateOf(false) }
     var chatSearchQuery by remember { mutableStateOf("") }
     var showAttachmentMenu by remember { mutableStateOf(false) }
+    var showSendModes by remember { mutableStateOf(false) }
     var showContactShare by remember { mutableStateOf(false) }
     var showPollComposer by remember { mutableStateOf(false) }
     var pollQuestion by remember { mutableStateOf("") }
@@ -881,6 +882,27 @@ private fun ConversationDetail(
                 onSendAttachment(name, mime, bytes)
             }
         }
+    }
+
+    if (showSendModes) {
+        AlertDialog(
+            onDismissRequest = { showSendModes = false }, title = { Text("发送方式") },
+            text = {
+                Column {
+                    TextButton(onClick = {
+                        val text = draft.trim(); if (text.isNotEmpty()) { onSend(text, replyTarget?.id, true, null); draft = ""; replyTarget = null; editingMessage = null }; showSendModes = false
+                    }) { Text("静默发送") }
+                    TextButton(onClick = {
+                        val text = draft.trim(); if (text.isNotEmpty()) { onSend(text, replyTarget?.id, false, System.currentTimeMillis() + 3_600_000); draft = ""; replyTarget = null; editingMessage = null }; showSendModes = false
+                    }) { Text("1 小时后发送") }
+                    TextButton(onClick = {
+                        val calendar = java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_YEAR, 1); set(java.util.Calendar.HOUR_OF_DAY, 9); set(java.util.Calendar.MINUTE, 0); set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0) }
+                        val text = draft.trim(); if (text.isNotEmpty()) { onSend(text, replyTarget?.id, false, calendar.timeInMillis); draft = ""; replyTarget = null; editingMessage = null }; showSendModes = false
+                    }) { Text("明天上午 9:00") }
+                }
+            },
+            confirmButton = { OutlinedButton(onClick = { showSendModes = false }) { Text("取消") } },
+        )
     }
 
     if (showLocationShare) {
@@ -1111,19 +1133,22 @@ private fun ConversationDetail(
                     colors = OutlinedTextFieldDefaults.colors(focusedTextColor = homePrimaryText, unfocusedTextColor = homePrimaryText, focusedContainerColor = homeSurface, unfocusedContainerColor = homeSurface), shape = RoundedCornerShape(22.dp),
                 )
                 Text(if (draft.isBlank()) (if (isRecordingVoice) "■" else "●") else "➤", color = if (isRecordingVoice) Color.Red else if (draft.isBlank()) homeSecondaryText else homeAccent, fontSize = 22.sp,
-                    modifier = Modifier.clickable {
-                        val text = draft.trim()
-                        if (text.isNotEmpty()) {
-                            val edit = editingMessage
-                            if (edit != null) onEdit(edit.id, text) else onSend(text, replyTarget?.id)
-                            draft = ""; onTypingChanged(false); editingMessage = null; replyTarget = null
-                        } else if (isRecordingVoice) {
-                            voiceRecorder.stop().onSuccess { recording -> onSendVoice(recording.file.name, "audio/mp4", recording.bytes, emptyList()); isRecordingVoice = false; voiceError = null }.onFailure { voiceError = it.message; isRecordingVoice = false }
-                        } else {
-                            val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-                            if (granted) voiceRecorder.start().onSuccess { isRecordingVoice = true; voiceError = null }.onFailure { voiceError = it.message } else microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                        }
-                    }.padding(10.dp))
+                    modifier = Modifier.combinedClickable(
+                        onClick = {
+                            val text = draft.trim()
+                            if (text.isNotEmpty()) {
+                                val edit = editingMessage
+                                if (edit != null) onEdit(edit.id, text) else onSend(text, replyTarget?.id, false, null)
+                                draft = ""; onTypingChanged(false); editingMessage = null; replyTarget = null
+                            } else if (isRecordingVoice) {
+                                voiceRecorder.stop().onSuccess { recording -> onSendVoice(recording.file.name, "audio/mp4", recording.bytes, emptyList()); isRecordingVoice = false; voiceError = null }.onFailure { voiceError = it.message; isRecordingVoice = false }
+                            } else {
+                                val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+                                if (granted) voiceRecorder.start().onSuccess { isRecordingVoice = true; voiceError = null }.onFailure { voiceError = it.message } else microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            }
+                        },
+                        onLongClick = { if (draft.isNotBlank()) showSendModes = true },
+                    ).padding(10.dp))
             }
         }
     }
