@@ -78,6 +78,8 @@ class MainActivity : ComponentActivity() {
                         onSetArchived = messagingModel::setArchived,
                         onSetMuted = messagingModel::setMuted,
                         onMarkRead = messagingModel::markRead,
+                        onSetMarkedUnread = messagingModel::setMarkedUnread,
+                        onSetDraft = messagingModel::setDraft,
                         onUpsertFolder = messagingModel::upsertFolder,
                         onDeleteFolder = messagingModel::deleteFolder,
                         appAgentSurface = appAgentSurface,

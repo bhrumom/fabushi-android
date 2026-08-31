@@ -150,6 +150,8 @@ fun FabushiScreen(
     onSetArchived: (ConversationSummary, Boolean) -> Unit = { _, _ -> },
     onSetMuted: (ConversationSummary, Boolean) -> Unit = { _, _ -> },
     onMarkRead: (ConversationSummary) -> Unit = {},
+    onSetMarkedUnread: (ConversationSummary, Boolean) -> Unit = { _, _ -> },
+    onSetDraft: (String, String, String?) -> Unit = { _, _, _ -> },
     onUpsertFolder: (MessagingFolder) -> Unit = {},
     onDeleteFolder: (String) -> Unit = {},
     appAgentSurface: FabushiAppAgentSurface? = null,
@@ -333,6 +335,8 @@ fun FabushiScreen(
             onSetArchived = onSetArchived,
             onSetMuted = onSetMuted,
             onMarkRead = onMarkRead,
+            onSetMarkedUnread = onSetMarkedUnread,
+            onSetDraft = onSetDraft,
             onUpsertFolder = onUpsertFolder,
             onDeleteFolder = onDeleteFolder,
         )
@@ -381,6 +385,8 @@ private fun ConversationHome(
     onSetArchived: (ConversationSummary, Boolean) -> Unit,
     onSetMuted: (ConversationSummary, Boolean) -> Unit,
     onMarkRead: (ConversationSummary) -> Unit,
+    onSetMarkedUnread: (ConversationSummary, Boolean) -> Unit,
+    onSetDraft: (String, String, String?) -> Unit,
     onUpsertFolder: (MessagingFolder) -> Unit,
     onDeleteFolder: (String) -> Unit,
 ) {
@@ -409,6 +415,7 @@ private fun ConversationHome(
                 Column {
                     TextButton(onClick = { onSetPinned(conversation, !conversation.isPinned); contextConversation = null }) { Text(if (conversation.isPinned) "取消置顶" else "置顶") }
                     TextButton(onClick = { onSetMuted(conversation, !conversation.isMuted); contextConversation = null }) { Text(if (conversation.isMuted) "取消静音" else "静音") }
+                    TextButton(onClick = { onSetMarkedUnread(conversation, !conversation.markedUnread); contextConversation = null }) { Text(if (conversation.markedUnread) "取消标为未读" else "标为未读") }
                     TextButton(onClick = { onSetArchived(conversation, !conversation.isArchived); contextConversation = null }) { Text(if (conversation.isArchived) "恢复" else "归档") }
                 }
             },
@@ -435,6 +442,8 @@ private fun ConversationHome(
         ConversationDetail(
             conversation = conversation,
             messages = messagingState.messagesByConversation[conversation.id].orEmpty(),
+            sharedDraft = messagingState.draftsByConversation[conversation.id],
+            onDraftChanged = { text, replyTo -> onSetDraft(conversation.id, text, replyTo) },
             onBack = { selectedConversation = null },
             onSend = { text, replyTo, silent, scheduledAt -> onSendText(conversation.id, text, replyTo, silent, scheduledAt) },
             onSendAttachment = { fileName, mimeType, bytes -> onSendAttachment(conversation.id, fileName, mimeType, bytes) },
@@ -806,6 +815,8 @@ private fun PlusGlyph() {
 private fun ConversationDetail(
     conversation: ConversationSummary,
     messages: List<ChatMessage>,
+    sharedDraft: MessagingDraft?,
+    onDraftChanged: (String, String?) -> Unit,
     onBack: () -> Unit,
     onSend: (String, String?, Boolean, Long?) -> Unit,
     onSendAttachment: (String, String, ByteArray) -> Unit,
@@ -827,10 +838,10 @@ private fun ConversationDetail(
     onTogglePin: () -> Unit,
     onArchive: () -> Unit,
 ) {
-    var draft by remember(conversation.id) { mutableStateOf("") }
+    var draft by remember(conversation.id, sharedDraft?.updatedAtMs) { mutableStateOf(sharedDraft?.text.orEmpty()) }
     var showMenu by remember { mutableStateOf(false) }
     var selectedMessage by remember { mutableStateOf<ChatMessage?>(null) }
-    var replyTarget by remember { mutableStateOf<ChatMessage?>(null) }
+    var replyTarget by remember(conversation.id, sharedDraft?.replyToMessageId) { mutableStateOf(sharedDraft?.replyToMessageId?.let { replyId -> messages.firstOrNull { it.id == replyId } }) }
     var editingMessage by remember { mutableStateOf<ChatMessage?>(null) }
     var forwardingMessage by remember { mutableStateOf<ChatMessage?>(null) }
     var showChatSearch by remember { mutableStateOf(false) }
@@ -855,6 +866,10 @@ private fun ConversationDetail(
     LaunchedEffect(isRecordingVoice) {
         recordingSeconds = 0
         while (isRecordingVoice) { delay(1000); if (isRecordingVoice) recordingSeconds += 1 }
+    }
+    LaunchedEffect(conversation.id, draft, replyTarget?.id, editingMessage?.id) {
+        delay(350)
+        if (editingMessage == null) onDraftChanged(draft, replyTarget?.id)
     }
     var showLocationShare by remember { mutableStateOf(false) }
     var currentLocation by remember { mutableStateOf<Pair<Double, Double>?>(null) }
@@ -890,14 +905,14 @@ private fun ConversationDetail(
             text = {
                 Column {
                     TextButton(onClick = {
-                        val text = draft.trim(); if (text.isNotEmpty()) { onSend(text, replyTarget?.id, true, null); draft = ""; replyTarget = null; editingMessage = null }; showSendModes = false
+                        val text = draft.trim(); if (text.isNotEmpty()) { onSend(text, replyTarget?.id, true, null); onDraftChanged("", null); draft = ""; replyTarget = null; editingMessage = null }; showSendModes = false
                     }) { Text("静默发送") }
                     TextButton(onClick = {
-                        val text = draft.trim(); if (text.isNotEmpty()) { onSend(text, replyTarget?.id, false, System.currentTimeMillis() + 3_600_000); draft = ""; replyTarget = null; editingMessage = null }; showSendModes = false
+                        val text = draft.trim(); if (text.isNotEmpty()) { onSend(text, replyTarget?.id, false, System.currentTimeMillis() + 3_600_000); onDraftChanged("", null); draft = ""; replyTarget = null; editingMessage = null }; showSendModes = false
                     }) { Text("1 小时后发送") }
                     TextButton(onClick = {
                         val calendar = java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_YEAR, 1); set(java.util.Calendar.HOUR_OF_DAY, 9); set(java.util.Calendar.MINUTE, 0); set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0) }
-                        val text = draft.trim(); if (text.isNotEmpty()) { onSend(text, replyTarget?.id, false, calendar.timeInMillis); draft = ""; replyTarget = null; editingMessage = null }; showSendModes = false
+                        val text = draft.trim(); if (text.isNotEmpty()) { onSend(text, replyTarget?.id, false, calendar.timeInMillis); onDraftChanged("", null); draft = ""; replyTarget = null; editingMessage = null }; showSendModes = false
                     }) { Text("明天上午 9:00") }
                 }
             },
@@ -1138,7 +1153,7 @@ private fun ConversationDetail(
                             val text = draft.trim()
                             if (text.isNotEmpty()) {
                                 val edit = editingMessage
-                                if (edit != null) onEdit(edit.id, text) else onSend(text, replyTarget?.id, false, null)
+                                if (edit != null) onEdit(edit.id, text) else { onSend(text, replyTarget?.id, false, null); onDraftChanged("", null) }
                                 draft = ""; onTypingChanged(false); editingMessage = null; replyTarget = null
                             } else if (isRecordingVoice) {
                                 voiceRecorder.stop().onSuccess { recording -> onSendVoice(recording.file.name, "audio/mp4", recording.bytes, emptyList()); isRecordingVoice = false; voiceError = null }.onFailure { voiceError = it.message; isRecordingVoice = false }
