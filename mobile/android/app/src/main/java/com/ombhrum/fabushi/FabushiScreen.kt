@@ -109,13 +109,13 @@ object TestTags {
 
 private enum class MobileDestination { HOME, MARKETPLACE, REMOTE_COMPUTER }
 private enum class AndroidMobileSection(val label: String) { CONTACTS("联系人"), BOTS("Bots"), GROUPS("群组"), CHANNELS("频道"), SAVED("收藏"), ARCHIVE("归档"), CALLS("通话"), FOLDERS("文件夹"), SETTINGS("设置") }
-private val homeBackground = Color(0xFF0B0B0C)
-private val homeSurface = Color(0xFF151516)
-private val homeBorder = Color(0xFF29292B)
-private val homePrimaryText = Color(0xFFF3F3F4)
-private val homeSecondaryText = Color(0xFF8C8C91)
-private val homeAccent = Color(0xFFFFB21A)
-private val conversationAccent = Color(0xFFFF5A0A)
+internal val homeBackground = Color(0xFF0B0B0C)
+internal val homeSurface = Color(0xFF151516)
+internal val homeBorder = Color(0xFF29292B)
+internal val homePrimaryText = Color(0xFFF3F3F4)
+internal val homeSecondaryText = Color(0xFF8C8C91)
+internal val homeAccent = Color(0xFFFFB21A)
+internal val conversationAccent = Color(0xFFFF5A0A)
 
 @Composable
 fun FabushiScreen(
