@@ -105,7 +105,7 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
         }
     }
 
-    fun sendText(conversationId: String, text: String) {
+    fun sendText(conversationId: String, text: String, replyToMessageId: String? = null) {
         val value = text.trim(); if (value.isEmpty()) return
         viewModelScope.launch {
             runCatching { withContext(Dispatchers.IO) {
@@ -113,7 +113,7 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
                 execute(JSONObject().put("type", "sendMessage").put("conversationId", conversationId)
                     .put("clientMessageId", "android:${UUID.randomUUID()}")
                     .put("content", JSONObject().put("type", "text").put("data", JSONObject().put("text", JSONObject().put("text", value).put("entities", JSONArray()))))
-                    .put("replyToMessageId", JSONObject.NULL).put("threadRootMessageId", JSONObject.NULL).put("scheduledAtMs", JSONObject.NULL)
+                    .put("replyToMessageId", replyToMessageId ?: JSONObject.NULL).put("threadRootMessageId", JSONObject.NULL).put("scheduledAtMs", JSONObject.NULL)
                     .put("silent", false).put("protectedContent", false))
             }}.onFailure { mutableState.value = mutableState.value.copy(error = it.message) }
         }
@@ -123,6 +123,21 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
     fun setArchived(conversation: ConversationSummary, archived: Boolean) = executeAsync(JSONObject().put("type", "archiveConversation").put("conversationId", conversation.id).put("archived", archived))
     fun setMuted(conversation: ConversationSummary, muted: Boolean) = executeAsync(JSONObject().put("type", "setConversationNotifications").put("conversationId", conversation.id).put("settings", JSONObject().put("mutedUntilMs", if (muted) Long.MAX_VALUE / 4 else JSONObject.NULL).put("sound", JSONObject.NULL).put("showPreview", true).put("notifyMentions", true)))
     fun markRead(conversation: ConversationSummary) { conversation.lastMessageId?.let { executeAsync(JSONObject().put("type", "markRead").put("conversationId", conversation.id).put("messageId", it)) } }
+
+    fun editText(conversationId: String, messageId: String, text: String) {
+        val value = text.trim(); if (value.isEmpty()) return
+        executeAsync(JSONObject().put("type", "editMessage").put("conversationId", conversationId).put("messageId", messageId)
+            .put("content", JSONObject().put("type", "text").put("data", JSONObject().put("text", JSONObject().put("text", value).put("entities", JSONArray())))))
+    }
+    fun deleteMessage(conversationId: String, messageId: String, forEveryone: Boolean = true) =
+        executeAsync(JSONObject().put("type", "deleteMessages").put("conversationId", conversationId).put("messageIds", JSONArray().put(messageId)).put("forEveryone", forEveryone))
+    fun setReaction(conversationId: String, messageId: String, reaction: String, enabled: Boolean) =
+        executeAsync(JSONObject().put("type", "setReaction").put("conversationId", conversationId).put("messageId", messageId)
+            .put("reaction", JSONObject().put("reaction", reaction).put("count", if (enabled) 1 else 0).put("chosenByMe", enabled).put("recentActorIds", if (enabled) JSONArray().put(actorId) else JSONArray())))
+    fun forwardMessage(sourceConversationId: String, messageId: String, destinationConversationId: String) =
+        executeAsync(JSONObject().put("type", "forwardMessage").put("sourceConversationId", sourceConversationId).put("messageId", messageId).put("destinationConversationId", destinationConversationId).put("clientMessageId", "android:${UUID.randomUUID()}"))
+    fun startTyping(conversationId: String) = executeAsync(JSONObject().put("type", "startTyping").put("conversationId", conversationId).put("action", "typing"))
+    fun stopTyping(conversationId: String) = executeAsync(JSONObject().put("type", "stopTyping").put("conversationId", conversationId))
 
     private fun executeAsync(command: JSONObject) {
         viewModelScope.launch { runCatching { withContext(Dispatchers.IO) { ensureIdentity(); execute(command) } }.onFailure { mutableState.value = mutableState.value.copy(error = it.message) } }

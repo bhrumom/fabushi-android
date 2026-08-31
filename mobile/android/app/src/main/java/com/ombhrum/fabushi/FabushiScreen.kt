@@ -3,7 +3,9 @@ package com.ombhrum.fabushi
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -116,7 +118,11 @@ fun FabushiScreen(
     onMessagingRefresh: () -> Unit = {},
     onCreateDirect: (MessagingContact) -> Unit = {},
     onCreateConversation: (ConversationKind, String, String) -> Unit = { _, _, _ -> },
-    onSendText: (String, String) -> Unit = { _, _ -> },
+    onSendText: (String, String, String?) -> Unit = { _, _, _ -> },
+    onEditText: (String, String, String) -> Unit = { _, _, _ -> },
+    onDeleteMessage: (String, String) -> Unit = { _, _ -> },
+    onSetReaction: (String, String, String, Boolean) -> Unit = { _, _, _, _ -> },
+    onForwardMessage: (String, String, String) -> Unit = { _, _, _ -> },
     onSetPinned: (ConversationSummary, Boolean) -> Unit = { _, _ -> },
     onSetArchived: (ConversationSummary, Boolean) -> Unit = { _, _ -> },
     onSetMuted: (ConversationSummary, Boolean) -> Unit = { _, _ -> },
@@ -285,6 +291,10 @@ fun FabushiScreen(
             onCreateDirect = onCreateDirect,
             onCreateConversation = onCreateConversation,
             onSendText = onSendText,
+            onEditText = onEditText,
+            onDeleteMessage = onDeleteMessage,
+            onSetReaction = onSetReaction,
+            onForwardMessage = onForwardMessage,
             onSetPinned = onSetPinned,
             onSetArchived = onSetArchived,
             onSetMuted = onSetMuted,
@@ -317,7 +327,11 @@ private fun ConversationHome(
     onMessagingRefresh: () -> Unit,
     onCreateDirect: (MessagingContact) -> Unit,
     onCreateConversation: (ConversationKind, String, String) -> Unit,
-    onSendText: (String, String) -> Unit,
+    onSendText: (String, String, String?) -> Unit,
+    onEditText: (String, String, String) -> Unit,
+    onDeleteMessage: (String, String) -> Unit,
+    onSetReaction: (String, String, String, Boolean) -> Unit,
+    onForwardMessage: (String, String, String) -> Unit,
     onSetPinned: (ConversationSummary, Boolean) -> Unit,
     onSetArchived: (ConversationSummary, Boolean) -> Unit,
     onSetMuted: (ConversationSummary, Boolean) -> Unit,
@@ -342,7 +356,12 @@ private fun ConversationHome(
             conversation = conversation,
             messages = messagingState.messagesByConversation[conversation.id].orEmpty(),
             onBack = { selectedConversation = null },
-            onSend = { onSendText(conversation.id, it) },
+            onSend = { text, replyTo -> onSendText(conversation.id, text, replyTo) },
+            onEdit = { messageId, text -> onEditText(conversation.id, messageId, text) },
+            onDelete = { messageId -> onDeleteMessage(conversation.id, messageId) },
+            onReact = { messageId, reaction -> onSetReaction(conversation.id, messageId, reaction, true) },
+            onForward = { messageId, destinationId -> onForwardMessage(conversation.id, messageId, destinationId) },
+            forwardDestinations = conversations.filter { it.id != conversation.id && !it.isArchived },
             onToggleMute = { onSetMuted(conversation, !conversation.isMuted) },
             onTogglePin = { onSetPinned(conversation, !conversation.isPinned) },
             onArchive = { onSetArchived(conversation, true); selectedConversation = null },
@@ -550,24 +569,65 @@ private fun PlusGlyph() {
 }
 
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ConversationDetail(
     conversation: ConversationSummary,
     messages: List<ChatMessage>,
     onBack: () -> Unit,
-    onSend: (String) -> Unit,
+    onSend: (String, String?) -> Unit,
+    onEdit: (String, String) -> Unit,
+    onDelete: (String) -> Unit,
+    onReact: (String, String) -> Unit,
+    onForward: (String, String) -> Unit,
+    forwardDestinations: List<ConversationSummary>,
     onToggleMute: () -> Unit,
     onTogglePin: () -> Unit,
     onArchive: () -> Unit,
 ) {
     var draft by remember(conversation.id) { mutableStateOf("") }
     var showMenu by remember { mutableStateOf(false) }
+    var selectedMessage by remember { mutableStateOf<ChatMessage?>(null) }
+    var replyTarget by remember { mutableStateOf<ChatMessage?>(null) }
+    var editingMessage by remember { mutableStateOf<ChatMessage?>(null) }
+    var forwardingMessage by remember { mutableStateOf<ChatMessage?>(null) }
+
+    selectedMessage?.let { message ->
+        AlertDialog(
+            onDismissRequest = { selectedMessage = null },
+            title = { Text("消息操作") },
+            text = {
+                Column {
+                    TextButton(onClick = { replyTarget = message; editingMessage = null; selectedMessage = null }) { Text("回复") }
+                    TextButton(onClick = { forwardingMessage = message; selectedMessage = null }) { Text("转发") }
+                    TextButton(onClick = { onReact(message.id, "👍"); selectedMessage = null }) { Text("👍 赞") }
+                    if (message.outgoing) TextButton(onClick = { editingMessage = message; replyTarget = null; draft = message.text; selectedMessage = null }) { Text("编辑") }
+                    TextButton(onClick = { onDelete(message.id); selectedMessage = null }) { Text("删除") }
+                }
+            },
+            confirmButton = { OutlinedButton(onClick = { selectedMessage = null }) { Text("取消") } },
+        )
+    }
+
+    forwardingMessage?.let { message ->
+        AlertDialog(
+            onDismissRequest = { forwardingMessage = null },
+            title = { Text("转发到") },
+            text = {
+                Column {
+                    if (forwardDestinations.isEmpty()) Text("暂无其他会话", color = homeSecondaryText)
+                    forwardDestinations.take(20).forEach { destination ->
+                        TextButton(onClick = { onForward(message.id, destination.id); forwardingMessage = null }) { Text(destination.title) }
+                    }
+                }
+            },
+            confirmButton = { OutlinedButton(onClick = { forwardingMessage = null }) { Text("取消") } },
+        )
+    }
+
     Scaffold(containerColor = homeBackground) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("‹", color = homePrimaryText, fontSize = 34.sp, modifier = Modifier.clickable(onClick = onBack).padding(8.dp))
                 Column(Modifier.weight(1f)) {
                     Text(conversation.title, color = homePrimaryText, fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
@@ -583,15 +643,13 @@ private fun ConversationDetail(
                 }
             }
             LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (messages.isEmpty()) item {
-                    Text("开始与 ${conversation.title} 对话", color = homeSecondaryText, modifier = Modifier.fillMaxWidth().padding(top = 72.dp))
-                }
+                if (messages.isEmpty()) item { Text("开始与 ${conversation.title} 对话", color = homeSecondaryText, modifier = Modifier.fillMaxWidth().padding(top = 72.dp)) }
                 items(messages, key = { it.id }) { message ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (message.outgoing) Arrangement.End else Arrangement.Start) {
                         Column(
-                            Modifier
-                                .fillMaxWidth(0.78f)
+                            Modifier.fillMaxWidth(0.78f)
                                 .background(if (message.outgoing) homeAccent.copy(alpha = 0.18f) else homeSurface, RoundedCornerShape(16.dp))
+                                .combinedClickable(onClick = {}, onLongClick = { selectedMessage = message })
                                 .padding(horizontal = 12.dp, vertical = 8.dp),
                         ) {
                             Text(message.text, color = homePrimaryText)
@@ -600,24 +658,31 @@ private fun ConversationDetail(
                     }
                 }
             }
+            if (editingMessage != null || replyTarget != null) {
+                Row(Modifier.fillMaxWidth().background(homeSurface).padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (editingMessage != null) "✎" else "↩", color = homeAccent, fontSize = 20.sp)
+                    Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                        Text(if (editingMessage != null) "编辑消息" else "回复", color = homeAccent, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                        Text((editingMessage ?: replyTarget)?.text.orEmpty(), color = homeSecondaryText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    Text("×", color = homeSecondaryText, fontSize = 24.sp, modifier = Modifier.clickable { editingMessage = null; replyTarget = null; if (draft.isNotEmpty()) draft = "" }.padding(6.dp))
+                }
+            }
             Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.Bottom) {
                 Text("⌕", color = homeSecondaryText, fontSize = 22.sp, modifier = Modifier.padding(10.dp))
                 OutlinedTextField(
-                    value = draft, onValueChange = { draft = it },
-                    modifier = Modifier.weight(1f), placeholder = { Text("消息", color = homeSecondaryText) },
-                    maxLines = 5,
-                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = homePrimaryText, unfocusedTextColor = homePrimaryText, focusedContainerColor = homeSurface, unfocusedContainerColor = homeSurface),
-                    shape = RoundedCornerShape(22.dp),
+                    value = draft, onValueChange = { draft = it }, modifier = Modifier.weight(1f), placeholder = { Text("消息", color = homeSecondaryText) }, maxLines = 5,
+                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = homePrimaryText, unfocusedTextColor = homePrimaryText, focusedContainerColor = homeSurface, unfocusedContainerColor = homeSurface), shape = RoundedCornerShape(22.dp),
                 )
-                Text(
-                    if (draft.isBlank()) "●" else "➤",
-                    color = if (draft.isBlank()) homeSecondaryText else homeAccent,
-                    fontSize = 22.sp,
+                Text(if (draft.isBlank()) "●" else "➤", color = if (draft.isBlank()) homeSecondaryText else homeAccent, fontSize = 22.sp,
                     modifier = Modifier.clickable {
                         val text = draft.trim()
-                        if (text.isNotEmpty()) { onSend(text); draft = "" }
-                    }.padding(10.dp),
-                )
+                        if (text.isNotEmpty()) {
+                            val edit = editingMessage
+                            if (edit != null) onEdit(edit.id, text) else onSend(text, replyTarget?.id)
+                            draft = ""; editingMessage = null; replyTarget = null
+                        }
+                    }.padding(10.dp))
             }
         }
     }
