@@ -173,11 +173,12 @@ class FabushiAppAgentSurface(
     ): Assertion {
         val bounded = timeoutMilliseconds.coerceIn(100, 30_000)
         val satisfied = withTimeoutOrNull(bounded) {
-            while (true) {
-                val result = assertState(expectedScreen, agentId, role, name, state)
-                if (result.passed) return@withTimeoutOrNull result
+            var result = assertState(expectedScreen, agentId, role, name, state)
+            while (!result.passed) {
                 delay(100)
+                result = assertState(expectedScreen, agentId, role, name, state)
             }
+            result
         }
         return satisfied ?: assertState(expectedScreen, agentId, role, name, state)
     }
