@@ -3,6 +3,7 @@ package com.ombhrum.fabushi
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -37,12 +38,13 @@ class FabushiScreenTest {
         compose.onNodeWithTag(TestTags.HomeSearchButton).assertIsDisplayed()
         compose.onNodeWithTag(TestTags.AddButton).assertIsDisplayed()
         compose.onNodeWithTag(TestTags.ConversationList).assertIsDisplayed()
-        compose.onNodeWithTag(TestTags.ConversationRow).assertIsDisplayed()
-        compose.onNodeWithText("Chief of Staff").assertIsDisplayed()
-
-        compose.onNodeWithTag(TestTags.HomeSearchButton).performClick()
-        compose.onNodeWithTag(TestTags.HomeSearchField).performTextInput("Chief")
-        compose.onNodeWithText("Chief of Staff").assertIsDisplayed()
+        compose.onNodeWithTag(TestTags.ConversationRow).assertDoesNotExist()
+        compose.onNodeWithTag(TestTags.AddButton).performClick()
+        compose.onNodeWithText("新建私聊").assertIsDisplayed().performClick()
+        compose.onNodeWithTag(TestTags.ComposeName).performTextInput("测试联系人")
+        compose.onNodeWithTag(TestTags.ComposeCreate).performClick()
+        compose.onNodeWithText("测试联系人").assertIsDisplayed()
+        compose.onNodeWithText("Chief of Staff").assertDoesNotExist()
     }
 
     @Test
@@ -64,7 +66,7 @@ class FabushiScreenTest {
             )
         }
 
-        compose.onNodeWithTag(TestTags.AddButton).performClick()
+        compose.onNodeWithTag(TestTags.ProfileAvatar).performClick()
         compose.onNodeWithTag(TestTags.MarketplaceEntry).assertIsDisplayed().performClick()
         compose.onNodeWithTag(TestTags.RuntimeBadge).assertTextContains("Compose", substring = true)
         compose.onNodeWithTag(TestTags.HostStatus).assertIsDisplayed()
@@ -95,7 +97,7 @@ class FabushiScreenTest {
             )
         }
 
-        compose.onNodeWithTag(TestTags.AddButton).performClick()
+        compose.onNodeWithTag(TestTags.ProfileAvatar).performClick()
         compose.onNodeWithTag(TestTags.RemoteComputerEntry).assertIsDisplayed().performClick()
         compose.onNodeWithTag(TestTags.RemoteComputerSurface).assertIsDisplayed()
         compose.onNodeWithTag(TestTags.RemoteComputerClose).assertIsDisplayed().performClick()
@@ -172,10 +174,10 @@ class FabushiScreenTest {
         compose.waitForIdle()
         var snapshot = surface.snapshot()
         assertEquals("home", snapshot.screen)
-        assertEquals(TestTags.AddButton, surface.find(agentId = TestTags.AddButton).single().agentId)
+        assertEquals(TestTags.ProfileAvatar, surface.find(agentId = TestTags.ProfileAvatar).single().agentId)
 
         compose.runOnIdle {
-            surface.action(snapshot.generation, TestTags.AddButton, "invoke")
+            surface.action(snapshot.generation, TestTags.ProfileAvatar, "invoke")
         }
         compose.waitForIdle()
         snapshot = surface.snapshot()
