@@ -28,7 +28,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 val model: MarketplaceViewModel = viewModel()
+                val messagingModel: MessagingViewModel = viewModel()
                 val state by model.state.collectAsState()
+                val messagingState by messagingModel.state.collectAsState()
                 val updateState by updateModel.state.collectAsState()
                 var openedMiniApp by remember { mutableStateOf<MarketplacePlugin?>(null) }
                 LaunchedEffect(model) {
@@ -54,6 +56,15 @@ class MainActivity : ComponentActivity() {
                         updateState = updateState,
                         onCheckUpdate = { updateModel.checkForUpdates(force = true) },
                         onInstallUpdate = updateModel::downloadAndInstall,
+                        messagingState = messagingState,
+                        onMessagingRefresh = messagingModel::refresh,
+                        onCreateDirect = messagingModel::createDirect,
+                        onCreateConversation = messagingModel::createConversation,
+                        onSendText = messagingModel::sendText,
+                        onSetPinned = messagingModel::setPinned,
+                        onSetArchived = messagingModel::setArchived,
+                        onSetMuted = messagingModel::setMuted,
+                        onMarkRead = messagingModel::markRead,
                         appAgentSurface = appAgentSurface,
                     )
                 }

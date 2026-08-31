@@ -38,8 +38,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -91,28 +89,6 @@ object TestTags {
 }
 
 private enum class MobileDestination { HOME, MARKETPLACE, REMOTE_COMPUTER }
-private enum class ConversationKind(val label: String) { DIRECT("私聊"), GROUP("群组"), CHANNEL("频道"), BOT("Bot") }
-
-private data class ConversationSummary(
-    val id: String,
-    var title: String,
-    var preview: String,
-    var time: String,
-    val badge: String,
-    val kind: ConversationKind,
-    var unreadCount: Int = 0,
-    var isPinned: Boolean = false,
-    var isMuted: Boolean = false,
-    var isArchived: Boolean = false,
-)
-
-private data class ChatMessage(
-    val id: String,
-    val text: String,
-    val outgoing: Boolean,
-    val time: String,
-)
-
 private val homeBackground = Color(0xFF0B0B0C)
 private val homeSurface = Color(0xFF151516)
 private val homeBorder = Color(0xFF29292B)
@@ -136,6 +112,15 @@ fun FabushiScreen(
     ),
     onCheckUpdate: () -> Unit = {},
     onInstallUpdate: () -> Unit = {},
+    messagingState: MessagingUiState = MessagingUiState(),
+    onMessagingRefresh: () -> Unit = {},
+    onCreateDirect: (MessagingContact) -> Unit = {},
+    onCreateConversation: (ConversationKind, String, String) -> Unit = { _, _, _ -> },
+    onSendText: (String, String) -> Unit = { _, _ -> },
+    onSetPinned: (ConversationSummary, Boolean) -> Unit = { _, _ -> },
+    onSetArchived: (ConversationSummary, Boolean) -> Unit = { _, _ -> },
+    onSetMuted: (ConversationSummary, Boolean) -> Unit = { _, _ -> },
+    onMarkRead: (ConversationSummary) -> Unit = {},
     appAgentSurface: FabushiAppAgentSurface? = null,
 ) {
     var destination by remember { mutableStateOf(MobileDestination.HOME) }
@@ -295,6 +280,15 @@ fun FabushiScreen(
             onOpenRemoteComputer = { destination = MobileDestination.REMOTE_COMPUTER },
             showAddMenu = showAddMenu,
             onShowAddMenuChange = { showAddMenu = it },
+            messagingState = messagingState,
+            onMessagingRefresh = onMessagingRefresh,
+            onCreateDirect = onCreateDirect,
+            onCreateConversation = onCreateConversation,
+            onSendText = onSendText,
+            onSetPinned = onSetPinned,
+            onSetArchived = onSetArchived,
+            onSetMuted = onSetMuted,
+            onMarkRead = onMarkRead,
         )
         MobileDestination.MARKETPLACE -> MarketplaceContent(
             state = state,
@@ -319,47 +313,39 @@ private fun ConversationHome(
     onOpenRemoteComputer: () -> Unit,
     showAddMenu: Boolean,
     onShowAddMenuChange: (Boolean) -> Unit,
+    messagingState: MessagingUiState,
+    onMessagingRefresh: () -> Unit,
+    onCreateDirect: (MessagingContact) -> Unit,
+    onCreateConversation: (ConversationKind, String, String) -> Unit,
+    onSendText: (String, String) -> Unit,
+    onSetPinned: (ConversationSummary, Boolean) -> Unit,
+    onSetArchived: (ConversationSummary, Boolean) -> Unit,
+    onSetMuted: (ConversationSummary, Boolean) -> Unit,
+    onMarkRead: (ConversationSummary) -> Unit,
 ) {
     var showSearch by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var showComposeMenu by remember { mutableStateOf(false) }
+    var showContactPicker by remember { mutableStateOf(false) }
     var pendingKind by remember { mutableStateOf<ConversationKind?>(null) }
     var composeName by remember { mutableStateOf("") }
     var selectedConversation by remember { mutableStateOf<ConversationSummary?>(null) }
-    val conversations = remember { mutableStateListOf<ConversationSummary>() }
-    val messageStore = remember { mutableStateMapOf<String, List<ChatMessage>>() }
+    val conversations = messagingState.conversations
     val filteredConversations = conversations
         .filter { !it.isArchived }
         .sortedWith(compareByDescending<ConversationSummary> { it.isPinned }.thenByDescending { it.time })
         .filter { conversation -> searchQuery.isBlank() || conversation.title.contains(searchQuery, true) || conversation.preview.contains(searchQuery, true) }
 
-    selectedConversation?.let { conversation ->
+    selectedConversation?.let { selected ->
+        val conversation = conversations.firstOrNull { it.id == selected.id } ?: selected
         ConversationDetail(
             conversation = conversation,
-            messages = messageStore[conversation.id].orEmpty(),
+            messages = messagingState.messagesByConversation[conversation.id].orEmpty(),
             onBack = { selectedConversation = null },
-            onSend = { text ->
-                val next = ChatMessage(System.nanoTime().toString(), text, true, "现在")
-                messageStore[conversation.id] = messageStore[conversation.id].orEmpty() + next
-                val index = conversations.indexOfFirst { it.id == conversation.id }
-                if (index >= 0) {
-                    conversations[index] = conversations[index].copy(preview = text, time = "现在")
-                    selectedConversation = conversations[index]
-                }
-            },
-            onToggleMute = {
-                val index = conversations.indexOfFirst { it.id == conversation.id }
-                if (index >= 0) { conversations[index] = conversations[index].copy(isMuted = !conversations[index].isMuted); selectedConversation = conversations[index] }
-            },
-            onTogglePin = {
-                val index = conversations.indexOfFirst { it.id == conversation.id }
-                if (index >= 0) { conversations[index] = conversations[index].copy(isPinned = !conversations[index].isPinned); selectedConversation = conversations[index] }
-            },
-            onArchive = {
-                val index = conversations.indexOfFirst { it.id == conversation.id }
-                if (index >= 0) conversations[index] = conversations[index].copy(isArchived = true)
-                selectedConversation = null
-            },
+            onSend = { onSendText(conversation.id, it) },
+            onToggleMute = { onSetMuted(conversation, !conversation.isMuted) },
+            onTogglePin = { onSetPinned(conversation, !conversation.isPinned) },
+            onArchive = { onSetArchived(conversation, true); selectedConversation = null },
         )
         return
     }
@@ -376,12 +362,9 @@ private fun ConversationHome(
                     val title = composeName.trim()
                     if (title.isNotEmpty()) {
                         val kind = pendingKind!!
-                        val conversation = ConversationSummary(
-                            id = "${kind.name.lowercase()}-${System.nanoTime()}", title = title,
-                            preview = "开始一段新的对话", time = "现在", badge = title.take(1).uppercase(), kind = kind,
-                        )
-                        conversations.add(0, conversation)
-                        pendingKind = null; composeName = ""; selectedConversation = conversation
+                        onCreateConversation(kind, title, "")
+                        pendingKind = null
+                        composeName = ""
                     }
                 }, modifier = Modifier.testTag(TestTags.ComposeCreate), enabled = composeName.isNotBlank()) { Text("创建") }
             },
@@ -389,11 +372,35 @@ private fun ConversationHome(
         )
     }
 
+    LaunchedEffect(Unit) { onMessagingRefresh() }
+
+    if (showContactPicker) {
+        AlertDialog(
+            onDismissRequest = { showContactPicker = false },
+            title = { Text("新消息") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    if (messagingState.contacts.isEmpty()) Text("暂无可用联系人", color = homeSecondaryText)
+                    messagingState.contacts.take(20).forEach { contact ->
+                        Row(Modifier.fillMaxWidth().clickable { showContactPicker = false; onCreateDirect(contact) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(40.dp).background(homeAccent, CircleShape), contentAlignment = Alignment.Center) { Text(contact.displayName.take(1).uppercase(), color = Color.Black, fontWeight = FontWeight.Bold) }
+                            Column(Modifier.padding(start = 12.dp)) {
+                                Text(contact.displayName, color = homePrimaryText)
+                                Text(contact.username?.let { "@$it" } ?: contact.kind, color = homeSecondaryText, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { OutlinedButton(onClick = { showContactPicker = false }) { Text("取消") } },
+        )
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize().testTag(TestTags.AppShell),
         containerColor = homeBackground,
         floatingActionButton = {
-            Box {
+            if (!showSearch) Box {
                 FloatingActionButton(
                     onClick = { showComposeMenu = true },
                     modifier = Modifier.testTag(TestTags.AddButton),
@@ -401,9 +408,9 @@ private fun ConversationHome(
                     contentColor = Color.Black,
                 ) { PlusGlyph() }
                 DropdownMenu(expanded = showComposeMenu, onDismissRequest = { showComposeMenu = false }, containerColor = homeSurface) {
-                    ConversationKind.entries.forEach { kind ->
-                        DropdownMenuItem(text = { Text("新建${kind.label}", color = homePrimaryText) }, onClick = { showComposeMenu = false; pendingKind = kind })
-                    }
+                    DropdownMenuItem(text = { Text("新消息", color = homePrimaryText) }, onClick = { showComposeMenu = false; showContactPicker = true })
+                    DropdownMenuItem(text = { Text("新建群组", color = homePrimaryText) }, onClick = { showComposeMenu = false; pendingKind = ConversationKind.GROUP })
+                    DropdownMenuItem(text = { Text("新建频道", color = homePrimaryText) }, onClick = { showComposeMenu = false; pendingKind = ConversationKind.CHANNEL })
                     DropdownMenuItem(text = { Text("联系人分组", color = homePrimaryText) }, onClick = { showComposeMenu = false })
                 }
             }
@@ -458,9 +465,8 @@ private fun ConversationHome(
                 }
             } else items(filteredConversations, key = { it.id }) { conversation ->
                 ConversationRow(conversation, onClick = {
-                    val index = conversations.indexOfFirst { it.id == conversation.id }
-                    if (index >= 0) conversations[index] = conversations[index].copy(unreadCount = 0)
-                    selectedConversation = conversations.firstOrNull { it.id == conversation.id } ?: conversation
+                    selectedConversation = conversation
+                    onMarkRead(conversation)
                 })
             }
             item { Spacer(Modifier.height(88.dp)) }
