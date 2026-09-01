@@ -334,11 +334,13 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
                 }
                 "operation.completed", "operation.interrupted" -> if (eventOperationId == operationId) {
                     removeChatThinking(operationId)
+                    settleChatActions(operationId, if (event.optString("type") == "operation.completed") "completed" else "failed")
                     mutableState.value = mutableState.value.copy(chatBusy = false, activeOperationId = null)
                     return
                 }
                 "operation.failed" -> if (eventOperationId == operationId) {
                     removeChatThinking(operationId)
+                    settleChatActions(operationId, "failed")
                     mutableState.value = mutableState.value.copy(chatBusy = false, activeOperationId = null, message = event.optString("message").ifBlank { "本次任务失败" })
                     return
                 }
@@ -354,6 +356,16 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
 
     private fun removeChatThinking(operationId: String) {
         mutableState.value = mutableState.value.copy(chatMessages = mutableState.value.chatMessages.filterNot { it.kind == MobileChatEntryKind.THINKING && it.operationId == operationId })
+    }
+
+    private fun settleChatActions(operationId: String, status: String) {
+        mutableState.value = mutableState.value.copy(
+            chatMessages = mutableState.value.chatMessages.map { entry ->
+                if (entry.kind == MobileChatEntryKind.ACTION && entry.operationId == operationId && entry.actionStatus == "running") {
+                    entry.copy(actionStatus = status)
+                } else entry
+            },
+        )
     }
 
     private fun appendChatAction(operationId: String, stepId: String, title: String, detail: String?, status: String) {
