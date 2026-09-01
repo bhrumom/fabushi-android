@@ -36,6 +36,9 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(model) {
                     deepLinks.collect { uri -> model.handleDeepLink(uri) }
                 }
+                LaunchedEffect(state.loggedIn) {
+                    if (state.loggedIn) messagingModel.refresh()
+                }
                 val active = openedMiniApp
                 if (active != null) {
                     MiniAppWebMcpSurface(
@@ -88,6 +91,16 @@ class MainActivity : ComponentActivity() {
                         onUpsertFolder = messagingModel::upsertFolder,
                         onDeleteFolder = messagingModel::deleteFolder,
                         appAgentSurface = appAgentSurface,
+                        authGateEnabled = true,
+                        onAdvanceOnboarding = model::advanceOnboarding,
+                        onSkipOnboarding = model::skipOnboarding,
+                        onBeginBrowserLogin = model::beginBrowserLogin,
+                        onReopenBrowserLogin = model::reopenBrowserLogin,
+                        onCancelBrowserLogin = model::cancelBrowserLogin,
+                        onLogout = model::logout,
+                        onChatDraftChange = model::setChatDraft,
+                        onSendChat = model::sendChat,
+                        onStopChat = model::stopChat,
                     )
                 }
             }

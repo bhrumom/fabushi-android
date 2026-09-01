@@ -97,6 +97,20 @@ object TestTags {
     const val SearchField = "marketplace-search"
     const val SearchButton = "marketplace-search-submit"
     const val HostStatus = "host-status"
+    const val MobileOnboarding = "mobile-onboarding"
+    const val MobileOnboardingContinue = "mobile-onboarding-continue"
+    const val MobileOnboardingSkip = "mobile-onboarding-skip"
+    const val MobileLogin = "mobile-login"
+    const val MobileLoginBrowser = "mobile-login-browser"
+    const val MobileLoginReopen = "mobile-login-reopen"
+    const val MobileLoginCancel = "mobile-login-cancel"
+    const val MobileLogout = "mobile-logout"
+    const val MahayanaAgentEntry = "mahayana-agent-entry"
+    const val MahayanaAgentChat = "mahayana-agent-chat"
+    const val MahayanaSend = "mahayana-send"
+    const val MahayanaStop = "mahayana-stop"
+    const val MahayanaThinking = "mahayana-thinking"
+    const val MahayanaStep = "mahayana-step"
     const val PermissionDialog = "permission-dialog"
     const val PermissionApprove = "permission-approve"
     const val PermissionDeny = "permission-deny"
@@ -164,9 +178,37 @@ fun FabushiScreen(
     onUpsertFolder: (MessagingFolder) -> Unit = {},
     onDeleteFolder: (String) -> Unit = {},
     appAgentSurface: FabushiAppAgentSurface? = null,
+    authGateEnabled: Boolean = false,
+    onAdvanceOnboarding: () -> Unit = {},
+    onSkipOnboarding: () -> Unit = {},
+    onBeginBrowserLogin: () -> Unit = {},
+    onReopenBrowserLogin: () -> Unit = {},
+    onCancelBrowserLogin: () -> Unit = {},
+    onLogout: () -> Unit = {},
+    onChatDraftChange: (String) -> Unit = {},
+    onSendChat: () -> Unit = {},
+    onStopChat: () -> Unit = {},
 ) {
     var destination by remember { mutableStateOf(MobileDestination.HOME) }
     var showAddMenu by remember { mutableStateOf(false) }
+    var showAgentChat by remember { mutableStateOf(false) }
+
+    if (authGateEnabled && state.onboardingStep < 3) {
+        MobileOnboarding(state.onboardingStep, onAdvanceOnboarding, onSkipOnboarding)
+        return
+    }
+    if (authGateEnabled && !state.authResolved) {
+        MobileAuthLoading()
+        return
+    }
+    if (authGateEnabled && !state.loggedIn) {
+        MobileLogin(state, onBeginBrowserLogin, onReopenBrowserLogin, onCancelBrowserLogin)
+        return
+    }
+    if (showAgentChat) {
+        MobileAgentChat(state, onChatDraftChange, onSendChat, onStopChat) { showAgentChat = false }
+        return
+    }
 
     LaunchedEffect(destination, showAddMenu, state, updateState.phase, appAgentSurface) {
         val elements = mutableListOf<FabushiAppAgentSurface.Element>()
@@ -353,6 +395,8 @@ fun FabushiScreen(
             onRemoveConversationParticipant = onRemoveConversationParticipant,
             onUpsertFolder = onUpsertFolder,
             onDeleteFolder = onDeleteFolder,
+            onOpenAgentChat = { showAgentChat = true },
+            onLogout = onLogout,
         )
         MobileDestination.MARKETPLACE -> MarketplaceContent(
             state = state,
@@ -365,6 +409,123 @@ fun FabushiScreen(
         MobileDestination.REMOTE_COMPUTER -> RemoteComputerSurface(
             onClose = { destination = MobileDestination.HOME },
         )
+    }
+}
+
+@Composable
+private fun MobileOnboarding(step: Int, onContinue: () -> Unit, onSkip: () -> Unit) {
+    Box(Modifier.fillMaxSize().background(homeBackground).testTag(TestTags.MobileOnboarding), contentAlignment = Alignment.Center) {
+        Column(Modifier.fillMaxWidth().padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            Spacer(Modifier.height(42.dp))
+            Box(Modifier.size(92.dp).background(homeSurface, CircleShape).border(1.dp, homeBorder, CircleShape), contentAlignment = Alignment.Center) {
+                Text("✦", color = homeAccent, fontSize = 48.sp, fontWeight = FontWeight.Bold)
+            }
+            Text("欢迎来到法布施", color = homePrimaryText, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text("统一的聊天、插件和 Mahayana 多步骤智能体工作台。每一步工作都会像消息一样实时出现。", color = homeSecondaryText, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                repeat(3) { index -> Box(Modifier.size(width = 24.dp, height = 5.dp).background(if (index <= step) homeAccent else homeBorder, RoundedCornerShape(8.dp))) }
+            }
+            Spacer(Modifier.weight(1f))
+            Button(onClick = onContinue, modifier = Modifier.fillMaxWidth().testTag(TestTags.MobileOnboardingContinue), colors = ButtonDefaults.buttonColors(containerColor = homeAccent, contentColor = Color.Black)) {
+                Text(if (step >= 2) "开始使用" else "继续")
+            }
+            TextButton(onClick = onSkip, modifier = Modifier.testTag(TestTags.MobileOnboardingSkip)) { Text("跳过介绍", color = homeSecondaryText) }
+        }
+    }
+}
+
+@Composable
+private fun MobileAuthLoading() {
+    Box(Modifier.fillMaxSize().background(homeBackground), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Box(Modifier.size(70.dp).background(homeSurface, CircleShape), contentAlignment = Alignment.Center) { Text("✦", color = homeAccent, fontSize = 38.sp, fontWeight = FontWeight.Bold) }
+            CircularProgressIndicator(color = homeAccent, modifier = Modifier.size(28.dp))
+            Text("正在连接 Mahayana Rust Host…", color = homePrimaryText)
+        }
+    }
+}
+
+@Composable
+private fun MobileLogin(
+    state: MarketplaceUiState,
+    onBegin: () -> Unit,
+    onReopen: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    Box(Modifier.fillMaxSize().background(homeBackground).testTag(TestTags.MobileLogin), contentAlignment = Alignment.Center) {
+        Column(Modifier.fillMaxWidth().padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Box(Modifier.size(86.dp).background(homeSurface, CircleShape).border(1.dp, homeBorder, CircleShape), contentAlignment = Alignment.Center) { Text("✦", color = homeAccent, fontSize = 44.sp, fontWeight = FontWeight.Bold) }
+            Text("登录 Fabushi", color = homePrimaryText, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text("登录后即可使用桌面端与移动端共用的会话、智能体和插件能力。", color = homeSecondaryText, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            if (state.browserLoginAttemptId != null) {
+                Text("正在等待浏览器完成登录", color = homePrimaryText, fontWeight = FontWeight.SemiBold)
+                Text(state.browserLoginAttemptId, color = homeSecondaryText, fontSize = 12.sp)
+                Button(onClick = onReopen, modifier = Modifier.fillMaxWidth().testTag(TestTags.MobileLoginReopen), colors = ButtonDefaults.buttonColors(containerColor = homeAccent, contentColor = Color.Black)) { Text("重新打开登录页面") }
+                OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth().testTag(TestTags.MobileLoginCancel)) { Text("取消登录") }
+            } else {
+                Button(onClick = onBegin, enabled = !state.loginBusy, modifier = Modifier.fillMaxWidth().testTag(TestTags.MobileLoginBrowser), colors = ButtonDefaults.buttonColors(containerColor = homeAccent, contentColor = Color.Black)) {
+                    if (state.loginBusy) CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(18.dp)) else Text("使用浏览器登录")
+                }
+            }
+            state.loginError?.let { Text(it, color = Color(0xFFFF6B6B), textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
+            Text(state.message, color = homeSecondaryText, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        }
+    }
+}
+
+@Composable
+private fun MobileAgentChat(
+    state: MarketplaceUiState,
+    onDraftChange: (String) -> Unit,
+    onSend: () -> Unit,
+    onStop: () -> Unit,
+    onClose: () -> Unit,
+) {
+    Scaffold(containerColor = homeBackground, modifier = Modifier.fillMaxSize().testTag(TestTags.MahayanaAgentChat)) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("‹", color = homePrimaryText, fontSize = 34.sp, modifier = Modifier.clickable(onClick = onClose).padding(8.dp))
+                Column(Modifier.weight(1f).padding(start = 4.dp)) {
+                    Text("大乘助手", color = homePrimaryText, fontWeight = FontWeight.SemiBold, fontSize = 20.sp)
+                    Text(if (state.chatBusy) "正在工作" else "Mahayana 多步骤智能体", color = if (state.chatBusy) homeAccent else homeSecondaryText, fontSize = 12.sp)
+                }
+            }
+            LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                if (state.chatMessages.isEmpty()) item {
+                    Column(Modifier.fillMaxWidth().padding(top = 92.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Box(Modifier.size(68.dp).background(homeSurface, CircleShape), contentAlignment = Alignment.Center) { Text("✦", color = homeAccent, fontSize = 36.sp, fontWeight = FontWeight.Bold) }
+                        Text("大乘助手", color = homePrimaryText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text("真实的模型路由、工具调用和每一步工作会逐条显示在这里。", color = homeSecondaryText, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    }
+                }
+                items(state.chatMessages, key = { it.id }) { entry -> MobileAgentChatEntry(entry) }
+            }
+            Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = state.chatDraft, onValueChange = onDraftChange, modifier = Modifier.weight(1f), enabled = !state.chatBusy, placeholder = { Text("消息大乘助手") }, maxLines = 5)
+                if (state.chatBusy) {
+                    Button(onClick = onStop, modifier = Modifier.size(52.dp).testTag(TestTags.MahayanaStop), contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE44F61))) { Text("■", color = Color.White) }
+                } else {
+                    Button(onClick = onSend, enabled = state.chatDraft.trim().isNotEmpty(), modifier = Modifier.size(52.dp).testTag(TestTags.MahayanaSend), contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp), colors = ButtonDefaults.buttonColors(containerColor = homeAccent, contentColor = Color.Black)) { Text("↑", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MobileAgentChatEntry(entry: MobileChatMessage) {
+    when {
+        entry.kind == MobileChatEntryKind.THINKING -> Row(Modifier.fillMaxWidth().background(homeSurface, RoundedCornerShape(13.dp)).border(1.dp, Color(0xFF6F5BC6), RoundedCornerShape(13.dp)).padding(10.dp).testTag(TestTags.MahayanaThinking), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+            Box(Modifier.size(30.dp).background(homeBackground, CircleShape), contentAlignment = Alignment.Center) { Text("✦", color = homeAccent, fontSize = 18.sp) }
+            Column(Modifier.weight(1f)) { Text(entry.actionTitle ?: "正在思考", color = homePrimaryText, fontWeight = FontWeight.SemiBold); Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(color = homeAccent, modifier = Modifier.size(13.dp), strokeWidth = 2.dp); Text("Mahayana 正在处理…", color = homeSecondaryText, fontSize = 12.sp) } }
+        }
+        entry.kind == MobileChatEntryKind.ACTION -> Row(Modifier.fillMaxWidth().background(homeSurface, RoundedCornerShape(11.dp)).padding(horizontal = 10.dp, vertical = 8.dp).testTag(TestTags.MahayanaStep), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(Modifier.size(25.dp).background(homeBackground, CircleShape), contentAlignment = Alignment.Center) { Text("✦", color = homeAccent, fontSize = 15.sp) }
+            Column(Modifier.weight(1f)) { Text(entry.actionTitle ?: "助手动作", color = homePrimaryText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold); entry.actionDetail?.let { if (it.isNotBlank()) Text(it, color = homeSecondaryText, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis) } }
+            Text(if (entry.actionStatus == "failed") "失败" else if (entry.actionStatus == "running") "进行中" else "完成", color = if (entry.actionStatus == "failed") Color(0xFFFF6B6B) else if (entry.actionStatus == "running") homeAccent else Color(0xFF65D6A0), fontSize = 11.sp)
+        }
+        entry.role == MobileChatRole.USER -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { Text(entry.text, color = Color.White, modifier = Modifier.background(Color.Black, RoundedCornerShape(16.dp)).padding(horizontal = 13.dp, vertical = 10.dp)) }
+        else -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.Top) { Text("✦", color = homeAccent, modifier = Modifier.padding(7.dp)); Text(entry.text, color = homePrimaryText, modifier = Modifier.background(homeSurface, RoundedCornerShape(16.dp)).padding(horizontal = 13.dp, vertical = 10.dp)) }
     }
 }
 
@@ -408,6 +569,8 @@ private fun ConversationHome(
     onRemoveConversationParticipant: (String, String) -> Unit,
     onUpsertFolder: (MessagingFolder) -> Unit,
     onDeleteFolder: (String) -> Unit,
+    onOpenAgentChat: () -> Unit,
+    onLogout: () -> Unit,
 ) {
     var showSearch by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -597,6 +760,7 @@ private fun ConversationHome(
                             DropdownMenuItem(text = { Text("设置", color = homePrimaryText) }, onClick = { onShowAddMenuChange(false); activeSection = AndroidMobileSection.SETTINGS })
                             DropdownMenuItem(modifier = Modifier.testTag(TestTags.MarketplaceEntry), text = { Text("Mini Apps / 插件市场", color = homePrimaryText) }, onClick = { onShowAddMenuChange(false); onOpenMarketplace() })
                             DropdownMenuItem(modifier = Modifier.testTag(TestTags.RemoteComputerEntry), text = { Text("我的电脑", color = homePrimaryText) }, onClick = { onShowAddMenuChange(false); onOpenRemoteComputer() })
+                            DropdownMenuItem(modifier = Modifier.testTag(TestTags.MobileLogout), text = { Text("退出登录", color = Color(0xFFFF6B6B)) }, onClick = { onShowAddMenuChange(false); onLogout() })
                             if (updateState.phase != AndroidUpdatePhase.DISABLED) DropdownMenuItem(text = { Text("检查更新", color = homePrimaryText) }, onClick = { onShowAddMenuChange(false); onCheckUpdate() })
                         }
                     }
@@ -619,7 +783,22 @@ private fun ConversationHome(
                     Text("▣", color = homeSecondaryText); Text("已归档", color = homePrimaryText, modifier = Modifier.padding(start = 12.dp).weight(1f)); Text("${conversations.count { it.isArchived }}", color = homeSecondaryText)
                 }
             }
-            if (filteredConversations.isEmpty()) item {
+            if (searchQuery.isBlank()) item {
+                Row(
+                    Modifier.fillMaxWidth().testTag(TestTags.MahayanaAgentEntry).clickable(onClick = onOpenAgentChat).padding(horizontal = 18.dp, vertical = 11.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.size(54.dp).background(homeSurface, CircleShape).border(1.dp, homeBorder, CircleShape), contentAlignment = Alignment.Center) {
+                        Text("✦", color = homeAccent, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Column(Modifier.padding(start = 13.dp).weight(1f)) {
+                        Text("大乘助手", color = homePrimaryText, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
+                        Text("Mahayana 多步骤智能体 · 实时工作流", color = homeSecondaryText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    Text("›", color = homeSecondaryText, fontSize = 24.sp)
+                }
+            }
+            if (filteredConversations.isEmpty() && searchQuery.isNotBlank()) item {
                 Column(Modifier.fillMaxWidth().padding(vertical = 88.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(if (searchQuery.isBlank()) "还没有对话" else "没有找到结果", color = homeSecondaryText, fontWeight = FontWeight.SemiBold)
                     Text(if (searchQuery.isBlank()) "点击右下角写消息按钮开始聊天" else "尝试其他关键词", color = homeSecondaryText, style = MaterialTheme.typography.bodySmall)
