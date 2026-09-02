@@ -1,7 +1,6 @@
 package com.ombhrum.fabushi
 
 import android.app.Application
-import android.content.Intent
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -65,6 +64,7 @@ data class MarketplaceUiState(
     val onboardingStep: Int = 0,
     val browserLoginAttemptId: String? = null,
     val browserLoginUrl: String? = null,
+    val browserLaunchNonce: Long = 0,
     val loginBusy: Boolean = false,
     val loginError: String? = null,
     val chatDraft: String = "",
@@ -129,11 +129,15 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
                 val attemptId = result.optString("attemptId")
                 val loginUrl = result.optString("loginUrl").ifBlank { result.optString("authorizationUrl") }
                 check(attemptId.isNotBlank() && loginUrl.isNotBlank()) { "登录地址无效" }
-                mutableState.value = mutableState.value.copy(loginBusy = false, browserLoginAttemptId = attemptId, browserLoginUrl = loginUrl, message = "请在浏览器中完成登录")
+                mutableState.value = mutableState.value.copy(
+                    loginBusy = false,
+                    browserLoginAttemptId = attemptId,
+                    browserLoginUrl = loginUrl,
+                    browserLaunchNonce = mutableState.value.browserLaunchNonce + 1,
+                    message = "登录页面已打开",
+                )
                 if (loginUrl.startsWith("about:blank#fabushi-test-browser-login")) {
                     completeBrowserLogin(attemptId)
-                } else {
-                    getApplication<Application>().startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(loginUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 }
             }.onFailure { error ->
                 mutableState.value = mutableState.value.copy(loginBusy = false, loginError = error.message ?: error::class.java.simpleName)
@@ -148,9 +152,15 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
                 withContext(Dispatchers.IO) { host.request("feature.auth.browserReopen", JSONObject().put("attemptId", attemptId)) }
             }.onSuccess { result ->
                 val loginUrl = result.optString("loginUrl").ifBlank { result.optString("authorizationUrl") }
-                mutableState.value = mutableState.value.copy(browserLoginUrl = loginUrl.ifBlank { mutableState.value.browserLoginUrl })
-                if (loginUrl.isNotBlank() && !loginUrl.startsWith("about:blank#fabushi-test-browser-login")) {
-                    getApplication<Application>().startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(loginUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                val resolvedUrl = loginUrl.ifBlank { mutableState.value.browserLoginUrl.orEmpty() }
+                if (resolvedUrl.isNotBlank()) {
+                    mutableState.value = mutableState.value.copy(
+                        browserLoginUrl = resolvedUrl,
+                        browserLaunchNonce = mutableState.value.browserLaunchNonce + 1,
+                    )
+                    if (resolvedUrl.startsWith("about:blank#fabushi-test-browser-login")) {
+                        completeBrowserLogin(attemptId)
+                    }
                 }
             }.onFailure { error -> mutableState.value = mutableState.value.copy(loginError = error.message ?: error::class.java.simpleName) }
         }

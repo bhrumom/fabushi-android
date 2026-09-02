@@ -47,6 +47,35 @@ class FabushiScreenTest {
     }
 
     @Test
+    fun signedOutMobileSurfaceUsesSingleNativeLoginAction() {
+        var loginRequests = 0
+        compose.setContent {
+            FabushiScreen(
+                state = MarketplaceUiState(
+                    authResolved = true,
+                    loggedIn = false,
+                    onboardingStep = 3,
+                ),
+                onQueryChange = {},
+                onSearch = {},
+                onInstall = {},
+                onOpen = {},
+                onApprovePermissions = {},
+                onDenyPermissions = {},
+                authGateEnabled = true,
+                onBeginBrowserLogin = { loginRequests += 1 },
+            )
+        }
+
+        compose.onNodeWithTag(TestTags.MobileLogin).assertIsDisplayed()
+        compose.onNodeWithText("Fabushi").assertIsDisplayed()
+        compose.onNodeWithText("你的常驻智能体团队，持续完成工作。").assertIsDisplayed()
+        compose.onNodeWithTag(TestTags.MobileLoginBrowser).assertIsDisplayed().performClick()
+        assertEquals(1, loginRequests)
+        assertEquals(0, compose.onAllNodesWithText("账号状态加载失败").fetchSemanticsNodes().size)
+    }
+
+    @Test
     fun addMenuOpensMarketplaceAndKeepsMarketplaceCallbacks() {
         var query by mutableStateOf("")
         var searches = 0

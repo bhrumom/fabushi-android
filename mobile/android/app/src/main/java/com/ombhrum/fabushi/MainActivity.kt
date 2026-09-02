@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -38,6 +39,15 @@ class MainActivity : ComponentActivity() {
                 }
                 LaunchedEffect(state.loggedIn) {
                     if (state.loggedIn) messagingModel.refresh()
+                }
+                LaunchedEffect(state.browserLaunchNonce, state.browserLoginUrl) {
+                    val loginUrl = state.browserLoginUrl
+                    if (state.browserLaunchNonce > 0 && !loginUrl.isNullOrBlank() && !loginUrl.startsWith("about:blank")) {
+                        CustomTabsIntent.Builder()
+                            .setShowTitle(true)
+                            .build()
+                            .launchUrl(this@MainActivity, Uri.parse(loginUrl))
+                    }
                 }
                 val active = openedMiniApp
                 if (active != null) {
