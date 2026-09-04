@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -30,15 +31,22 @@ class MainActivity : ComponentActivity() {
             MaterialTheme {
                 val model: MarketplaceViewModel = viewModel()
                 val messagingModel: MessagingViewModel = viewModel()
+                val botModel: MobileBotViewModel = viewModel()
                 val state by model.state.collectAsState()
                 val messagingState by messagingModel.state.collectAsState()
+                val botState by botModel.state.collectAsState()
                 val updateState by updateModel.state.collectAsState()
                 var openedMiniApp by remember { mutableStateOf<MarketplacePlugin?>(null) }
+                var showLegacyShell by remember { mutableStateOf(false) }
+
+                BackHandler(enabled = showLegacyShell) { showLegacyShell = false }
+
                 LaunchedEffect(model) {
                     deepLinks.collect { uri -> model.handleDeepLink(uri) }
                 }
                 LaunchedEffect(state.loggedIn) {
                     if (state.loggedIn) messagingModel.refresh()
+                    if (!state.loggedIn) showLegacyShell = false
                 }
                 LaunchedEffect(state.browserLaunchNonce, state.browserLoginUrl) {
                     val loginUrl = state.browserLoginUrl
@@ -49,6 +57,7 @@ class MainActivity : ComponentActivity() {
                             .launchUrl(this@MainActivity, Uri.parse(loginUrl))
                     }
                 }
+
                 val active = openedMiniApp
                 if (active != null) {
                     MiniAppWebMcpSurface(
@@ -56,6 +65,20 @@ class MainActivity : ComponentActivity() {
                         loadLocalHtml = model::loadLocalMiniAppHtml,
                         callRuntimeToolJson = model::callRuntimeToolJson,
                         onClose = { openedMiniApp = null },
+                    )
+                } else if (state.onboardingStep >= 3 && state.authResolved && state.loggedIn && !showLegacyShell) {
+                    GrokMobileShellAndroid(
+                        accountName = state.accountName,
+                        messagingState = messagingState,
+                        botState = botState,
+                        onOpenLegacy = { showLegacyShell = true },
+                        onRefreshBots = botModel::refreshBots,
+                        onCreateBot = botModel::createBot,
+                        onOpenBot = botModel::openBot,
+                        onCloseBot = botModel::closeBot,
+                        onDraftChange = botModel::setDraft,
+                        onSend = botModel::send,
+                        onStop = botModel::stop,
                     )
                 } else {
                     FabushiScreen(
