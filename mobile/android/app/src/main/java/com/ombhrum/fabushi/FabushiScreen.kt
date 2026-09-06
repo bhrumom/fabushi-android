@@ -89,6 +89,7 @@ object TestTags {
     const val ComposeName = "compose-name"
     const val ComposeCreate = "compose-create"
     const val MarketplaceEntry = "marketplace-entry"
+    const val MarketplaceBack = "marketplace-back"
     const val RemoteComputerEntry = "remote-computer-entry"
     const val RemoteComputerSurface = "remote-computer-surface"
     const val RemoteComputerClose = "remote-computer-close"
@@ -284,6 +285,12 @@ fun FabushiScreen(
                 "home"
             }
             MobileDestination.MARKETPLACE -> {
+                element(
+                    TestTags.MarketplaceBack,
+                    "button",
+                    "返回消息",
+                    action = FabushiAppAgentSurface.Action(setOf("invoke")) { destination = MobileDestination.HOME },
+                )
                 element(
                     TestTags.SearchField,
                     "textbox",
@@ -1664,7 +1671,7 @@ private fun MarketplaceContent(
                         Text("MAHAYANA RUST HOST", style = MaterialTheme.typography.labelSmall)
                         Text("全球法布施", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
                     }
-                    OutlinedButton(onClick = onBack) { Text("返回消息") }
+                    OutlinedButton(onClick = onBack, modifier = Modifier.testTag(TestTags.MarketplaceBack)) { Text("返回消息") }
                 }
             }
 
