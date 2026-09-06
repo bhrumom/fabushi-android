@@ -18,6 +18,8 @@ data class MobileBotSummaryAndroid(
     val id: String,
     val name: String,
     val description: String = "",
+    val miniAppId: String? = null,
+    val menuButtonText: String? = null,
 )
 
 data class MobileBotUiState(
@@ -33,6 +35,7 @@ data class MobileBotUiState(
 
 class MobileBotViewModel(application: Application) : AndroidViewModel(application) {
     private val host = MahayanaHost(application)
+    private val miniApps = MiniAppPlatformBridge(host)
     private val mutableState = MutableStateFlow(MobileBotUiState())
     val state: StateFlow<MobileBotUiState> = mutableState.asStateFlow()
 
@@ -41,38 +44,89 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             runCatching {
                 withContext(Dispatchers.IO) {
-                    val requestId = "android-mobile-bot-list-${UUID.randomUUID()}"
-                    host.request(
-                        "feature.execute",
-                        JSONObject().put(
-                            "command",
-                            JSONObject().put("type", "bot.list").put("requestId", requestId),
-                        ),
-                    )
-                    repeat(48) {
-                        val event = host.request("feature.receive", JSONObject().put("timeoutMs", 120))
-                        if (event.optString("type") == "bot.listed") {
-                            val rows = event.optJSONArray("bots")
-                            val bots = buildList {
-                                if (rows != null) for (index in 0 until rows.length()) {
-                                    val row = rows.optJSONObject(index) ?: continue
-                                    val id = row.optString("id")
-                                    if (id.isBlank() || id == "mahayana-assistant") continue
-                                    add(
-                                        MobileBotSummaryAndroid(
-                                            id = id,
-                                            name = row.optString("name").ifBlank { row.optString("displayName").ifBlank { id } },
-                                            description = row.optString("description"),
-                                        ),
-                                    )
-                                }
-                            }
-                            return@withContext bots
-                        }
-                    }
-                    emptyList()
+                    val surfaceBots = loadSurfaceBots()
+                    val installedMiniAppBots = loadInstalledMiniAppBots()
+                    (installedMiniAppBots + surfaceBots)
+                        .distinctBy { it.id }
+                        .sortedWith(compareByDescending<MobileBotSummaryAndroid> { it.miniAppId != null }.thenBy { it.name.lowercase() })
                 }
             }.onSuccess { bots -> mutableState.value = mutableState.value.copy(bots = bots, error = null) }
+                .onFailure { error -> mutableState.value = mutableState.value.copy(error = error.message ?: "Bot list failed") }
+        }
+    }
+
+    private fun loadSurfaceBots(): List<MobileBotSummaryAndroid> {
+        val requestId = "android-mobile-bot-list-${UUID.randomUUID()}"
+        host.request(
+            "feature.execute",
+            JSONObject().put(
+                "command",
+                JSONObject().put("type", "bot.list").put("requestId", requestId),
+            ),
+        )
+        repeat(48) {
+            val event = host.request("feature.receive", JSONObject().put("timeoutMs", 120))
+            if (event.optString("type") == "bot.listed") {
+                val rows = event.optJSONArray("bots")
+                return buildList {
+                    if (rows != null) for (index in 0 until rows.length()) {
+                        val row = rows.optJSONObject(index) ?: continue
+                        val id = row.optString("id")
+                        if (id.isBlank() || id == "mahayana-assistant") continue
+                        add(
+                            MobileBotSummaryAndroid(
+                                id = id,
+                                name = row.optString("name").ifBlank { row.optString("displayName").ifBlank { id } },
+                                description = row.optString("description"),
+                                miniAppId = row.optString("miniAppId").takeIf(String::isNotBlank),
+                                menuButtonText = row.optString("menuButtonText").takeIf(String::isNotBlank),
+                            ),
+                        )
+                    }
+                }
+            }
+        }
+        return emptyList()
+    }
+
+    /**
+     * Canonical Mini App Bot projection. Local installation pointers are reconciled into the
+     * authenticated account install ledger before reading manifests back from `/marketplace/added`.
+     * No Android-private Bot/contact database is created.
+     */
+    private fun loadInstalledMiniAppBots(): List<MobileBotSummaryAndroid> {
+        val installed = host.request("feature.plugin.listInstalled").optJSONArray("plugins") ?: return emptyList()
+        val installedIds = buildSet {
+            for (index in 0 until installed.length()) {
+                val id = installed.optJSONObject(index)?.optString("pluginId").orEmpty().trim()
+                if (id.isNotBlank()) add(id)
+            }
+        }
+        if (installedIds.isEmpty()) return emptyList()
+        val manifests = miniApps.syncInstalledMiniApps(installedIds)
+        return buildList {
+            for (index in 0 until manifests.length()) {
+                val manifest = manifests.optJSONObject(index) ?: continue
+                val pluginId = manifest.optString("id").ifBlank { manifest.optString("pluginId") }
+                if (pluginId !in installedIds) continue
+                val bot = manifest.optJSONObject("bot") ?: continue
+                val botId = bot.optString("id")
+                if (botId.isBlank()) continue
+                val menu = bot.optJSONObject("menuButton")
+                val miniAppId = menu?.takeIf { it.optString("action") == "open-miniapp" }
+                    ?.optString("miniAppId")
+                    ?.takeIf(String::isNotBlank)
+                    ?: pluginId
+                add(
+                    MobileBotSummaryAndroid(
+                        id = botId,
+                        name = bot.optString("displayName").ifBlank { manifest.optString("title").ifBlank { botId } },
+                        description = bot.optString("description").ifBlank { manifest.optString("description") },
+                        miniAppId = miniAppId,
+                        menuButtonText = menu?.optString("text")?.takeIf(String::isNotBlank) ?: "打开应用",
+                    ),
+                )
+            }
         }
     }
 
@@ -129,8 +183,87 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
             draft = "",
             busy = true,
             error = null,
+            operationId = requestId,
             messages = snapshot.messages + MobileChatMessage(requestId, MobileChatRole.USER, text),
         )
+        val miniAppId = bot.miniAppId
+        if (!miniAppId.isNullOrBlank()) {
+            sendMiniApp(miniAppId, text, requestId)
+            return
+        }
+        sendAgent(bot, text, requestId)
+    }
+
+    private fun sendMiniApp(pluginId: String, text: String, operationId: String) {
+        viewModelScope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    val routed = miniApps.routeInput(pluginId, text)
+                    val execution = routed.optJSONObject("execution")
+                    if (execution == null) {
+                        return@withContext routed.optString("message").ifBlank {
+                            "全球法布施没有把这条输入解析成可执行命令。"
+                        }
+                    }
+                    val command = routed.optJSONObject("command")
+                    val slash = command?.optString("slash").orEmpty()
+                    if (routed.optBoolean("requiresApproval", false)) {
+                        return@withContext listOf(
+                            "已通过统一 Mini App 路由解析${if (slash.isBlank()) "" else "为 $slash"}。",
+                            "该 Tool 需要宿主明确批准；Android 当前不会静默执行写入/破坏性调用。",
+                        ).joinToString("\n")
+                    }
+                    val kind = execution.optString("kind")
+                    val tool = execution.optString("tool")
+                    check(kind == "mcp-http") { "Android Mini App Bot does not support execution surface $kind" }
+                    check(tool.isNotBlank()) { "Mini App route did not return an MCP tool" }
+                    val arguments = routed.optJSONObject("arguments") ?: JSONObject()
+                    val result = miniApps.callOfficialMcpTool(pluginId, tool, arguments)
+                    mcpResultText(result)
+                }
+            }.onSuccess { reply ->
+                mutableState.value = mutableState.value.copy(
+                    busy = false,
+                    operationId = null,
+                    messages = mutableState.value.messages + MobileChatMessage(
+                        id = "assistant:$operationId",
+                        role = MobileChatRole.ASSISTANT,
+                        text = reply,
+                        operationId = operationId,
+                    ),
+                )
+            }.onFailure { error ->
+                mutableState.value = mutableState.value.copy(
+                    busy = false,
+                    operationId = null,
+                    error = error.message ?: "Mini App WebMCP call failed",
+                    messages = mutableState.value.messages + MobileChatMessage(
+                        id = "assistant:$operationId:error",
+                        role = MobileChatRole.ASSISTANT,
+                        text = "Mini App 调用失败：${error.message ?: "unknown error"}",
+                        operationId = operationId,
+                    ),
+                )
+            }
+        }
+    }
+
+    private fun mcpResultText(result: JSONObject): String {
+        val content = result.optJSONArray("content")
+        if (content != null) {
+            val text = buildList {
+                for (index in 0 until content.length()) {
+                    val item = content.optJSONObject(index) ?: continue
+                    if (item.optString("type") == "text") item.optString("text").takeIf(String::isNotBlank)?.let(::add)
+                }
+            }.joinToString("\n")
+            if (text.isNotBlank()) return text
+        }
+        val structured = result.optJSONObject("structuredContent")
+        return structured?.toString(2) ?: result.toString(2)
+    }
+
+    private fun sendAgent(bot: MobileBotSummaryAndroid, text: String, requestId: String) {
         viewModelScope.launch {
             runCatching {
                 val operationId = withContext(Dispatchers.IO) {
@@ -169,6 +302,7 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun stop() {
         val operationId = mutableState.value.operationId ?: return
+        if (mutableState.value.activeBot?.miniAppId != null) return
         viewModelScope.launch {
             runCatching { withContext(Dispatchers.IO) { host.request("feature.interrupt", JSONObject().put("operationId", operationId)) } }
         }

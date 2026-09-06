@@ -69,9 +69,17 @@ class FabushiAppAgentSurface(
         val invoke: (String?) -> Unit,
     )
 
+    private data class Overlay(
+        val elements: List<Element>,
+        val actions: Map<String, Action>,
+    )
+
     private val lock = Any()
     private var generation = 0L
     private var screen = "unavailable"
+    private var baseElements = emptyList<Element>()
+    private var baseActions = emptyMap<String, Action>()
+    private val overlays = linkedMapOf<String, Overlay>()
     private var elements = emptyList<Element>()
     private var actions = emptyMap<String, Action>()
 
@@ -81,24 +89,47 @@ class FabushiAppAgentSurface(
         actions: Map<String, Action> = emptyMap(),
     ): Snapshot = synchronized(lock) {
         require(screen.isNotBlank() && screen.length <= 160) { "invalid_app_surface_screen" }
-        require(elements.size <= 500) { "app_surface_element_limit" }
-        val ids = HashSet<String>()
-        elements.forEach { element ->
-            require(element.agentId.matches(Regex("[A-Za-z0-9._:/@-]{1,200}"))) { "invalid_app_surface_agent_id" }
-            require(ids.add(element.agentId)) { "duplicate_app_surface_agent_id" }
-            require(element.role.length <= 80 && element.name.length <= 240) { "invalid_app_surface_element" }
-        }
-        require(actions.keys.all(ids::contains)) { "app_surface_action_target_missing" }
-        generation = if (generation == Long.MAX_VALUE) 1 else generation + 1
+        validateElements(elements, actions)
         this.screen = screen
-        this.elements = elements.toList()
-        this.actions = actions.toMap()
+        this.baseElements = elements.toList()
+        this.baseActions = actions.toMap()
+        rebuildLocked()
+        advanceGenerationLocked()
+        snapshotLocked()
+    }
+
+    /**
+     * Adds a small app-shell-owned semantic overlay without replacing the active screen contract.
+     * This is used for cross-surface controls such as a Mini App Bot's canonical "打开应用" menu
+     * button while preserving the Bot chat's draft/send/stop actions.
+     */
+    fun setOverlay(
+        key: String,
+        elements: List<Element>,
+        actions: Map<String, Action> = emptyMap(),
+    ): Snapshot = synchronized(lock) {
+        require(key.matches(Regex("[A-Za-z0-9._:-]{1,80}"))) { "invalid_app_surface_overlay_key" }
+        validateElements(elements, actions)
+        overlays[key] = Overlay(elements.toList(), actions.toMap())
+        rebuildLocked()
+        advanceGenerationLocked()
+        snapshotLocked()
+    }
+
+    fun clearOverlay(key: String): Snapshot = synchronized(lock) {
+        if (overlays.remove(key) != null) {
+            rebuildLocked()
+            advanceGenerationLocked()
+        }
         snapshotLocked()
     }
 
     fun clear() = synchronized(lock) {
-        generation = if (generation == Long.MAX_VALUE) 1 else generation + 1
+        advanceGenerationLocked()
         screen = "unavailable"
+        baseElements = emptyList()
+        baseActions = emptyMap()
+        overlays.clear()
         elements = emptyList()
         actions = emptyMap()
     }
@@ -203,9 +234,45 @@ class FabushiAppAgentSurface(
         }
         callback(value)
         return synchronized(lock) {
-            generation = if (generation == Long.MAX_VALUE) 1 else generation + 1
+            advanceGenerationLocked()
             snapshotLocked()
         }
+    }
+
+    private fun validateElements(elements: List<Element>, actions: Map<String, Action>) {
+        require(elements.size <= 500) { "app_surface_element_limit" }
+        val ids = HashSet<String>()
+        elements.forEach { element ->
+            require(element.agentId.matches(Regex("[A-Za-z0-9._:/@-]{1,200}"))) { "invalid_app_surface_agent_id" }
+            require(ids.add(element.agentId)) { "duplicate_app_surface_agent_id" }
+            require(element.role.length <= 80 && element.name.length <= 240) { "invalid_app_surface_element" }
+        }
+        require(actions.keys.all(ids::contains)) { "app_surface_action_target_missing" }
+    }
+
+    private fun rebuildLocked() {
+        val mergedElements = ArrayList<Element>(baseElements.size + overlays.values.sumOf { it.elements.size })
+        val mergedActions = linkedMapOf<String, Action>()
+        val ids = HashSet<String>()
+        fun add(rows: List<Element>, rowActions: Map<String, Action>) {
+            rows.forEach { element ->
+                require(ids.add(element.agentId)) { "duplicate_app_surface_agent_id" }
+                mergedElements += element
+            }
+            rowActions.forEach { (id, action) ->
+                require(id in ids) { "app_surface_action_target_missing" }
+                mergedActions[id] = action
+            }
+        }
+        add(baseElements, baseActions)
+        overlays.values.forEach { overlay -> add(overlay.elements, overlay.actions) }
+        require(mergedElements.size <= 500) { "app_surface_element_limit" }
+        elements = mergedElements
+        actions = mergedActions
+    }
+
+    private fun advanceGenerationLocked() {
+        generation = if (generation == Long.MAX_VALUE) 1 else generation + 1
     }
 
     private fun snapshotLocked() = Snapshot(

@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.ombhrum.fabushi.core.MahayanaHost
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URLEncoder
@@ -118,12 +119,42 @@ private fun toolContractJson(plugin: MarketplacePlugin): String {
     return rows.toString()
 }
 
-private fun injectLocalWebMcp(html: String, plugin: MarketplacePlugin): String {
+/** UI-safe Fabushi account projection. Account/session credentials never enter the WebView. */
+private fun miniAppAccountProjection(auth: JSONObject): JSONObject {
+    val projection = JSONObject().put("loggedIn", auth.optBoolean("loggedIn", false))
+    val source = auth.optJSONObject("user") ?: JSONObject()
+    val user = JSONObject()
+    for (key in listOf("id", "userId", "username", "nickname", "email", "avatar", "role", "membership")) {
+        if (source.has(key) && !source.isNull(key)) user.put(key, source.opt(key))
+    }
+    projection.put("user", user)
+    return projection
+}
+
+/** FeatureHost events are projected as scalar UI state only; nested credentials/results are dropped. */
+private fun miniAppEventProjection(event: JSONObject): JSONObject {
+    val output = JSONObject()
+    val allowed = listOf(
+        "type", "timestamp", "requestId", "operationId", "miniAppId", "pluginId", "agentId",
+        "stepId", "title", "detail", "status", "role", "text", "delta", "label", "tool",
+        "progress", "current", "total", "message",
+    )
+    for (key in allowed) {
+        if (!event.has(key) || event.isNull(key)) continue
+        when (val value = event.opt(key)) {
+            is String, is Number, is Boolean -> output.put(key, value)
+        }
+    }
+    return output
+}
+
+private fun injectLocalWebMcp(html: String, plugin: MarketplacePlugin, account: JSONObject): String {
     val tools = toolContractJson(plugin)
     val bootstrap = """
         <script>
         (function(){
           const definitions=$tools;
+          const account=${account};
           const localTools=new Map();
           const controllers=[];
           function publicTool(tool){const copy={...tool};delete copy.execute;return copy;}
@@ -142,8 +173,21 @@ private fun injectLocalWebMcp(html: String, plugin: MarketplacePlugin): String {
             }
           }
           for(const item of definitions)register(item);
+          const host={
+            version:1,
+            pluginId:${JSONObject.quote(plugin.pluginId)},
+            account,
+            lastEvent:null,
+            getAccount:()=>account,
+            pushEvent:(event)=>{
+              host.lastEvent=event;
+              window.dispatchEvent(new CustomEvent('fabushi:host-event',{detail:event}));
+            }
+          };
+          Object.defineProperty(window,'__fabushiMiniAppHost',{configurable:true,value:host});
           Object.defineProperty(window,'__fabushiWebMcp',{configurable:true,value:{version:1,list:()=>Array.from(localTools.values()).map(publicTool),call:async(name,input={})=>{const tool=localTools.get(name);if(!tool)throw new Error('Unknown WebMCP tool: '+name);return tool.execute(input);}}});
           window.addEventListener('pagehide',()=>{for(const controller of controllers)controller.abort();},{once:true});
+          window.dispatchEvent(new CustomEvent('fabushi:miniapp-auth',{detail:account}));
           window.dispatchEvent(new CustomEvent('fabushi:webmcp-ready',{detail:{pluginId:${JSONObject.quote(plugin.pluginId)},tools:definitions.map(t=>t.name)}}));
         })();
         </script>
@@ -164,17 +208,25 @@ fun MiniAppWebMcpSurface(
     onClose: () -> Unit,
 ) {
     val context = LocalContext.current
+    val host = remember(plugin.pluginId) { MahayanaHost(context.applicationContext) }
     var status by remember(plugin.pluginId) { mutableStateOf("正在解析本地 WebMCP…") }
     var localHtml by remember(plugin.pluginId) { mutableStateOf<String?>(null) }
+    var accountProjection by remember(plugin.pluginId) { mutableStateOf(JSONObject().put("loggedIn", false).put("user", JSONObject())) }
     var sourceResolved by remember(plugin.pluginId) { mutableStateOf(false) }
     val localDocumentActive = remember(plugin.pluginId) { AtomicBoolean(false) }
     val encodedId = URLEncoder.encode(plugin.pluginId, StandardCharsets.UTF_8.toString())
     val hostedUrl = "https://fabushi.ombhrum.com/miniapps/$encodedId/"
 
     LaunchedEffect(plugin.pluginId) {
+        accountProjection = runCatching { miniAppAccountProjection(host.request("feature.auth.status")) }
+            .getOrElse { JSONObject().put("loggedIn", false).put("user", JSONObject()) }
         localHtml = loadLocalHtml(plugin.pluginId)
         sourceResolved = true
-        status = if (localHtml != null) "正在加载本地 WebMCP…" else "正在加载 Hosted WebMCP…"
+        status = if (localHtml != null) {
+            if (accountProjection.optBoolean("loggedIn")) "正在加载本地 WebMCP · Fabushi 已登录" else "正在加载本地 WebMCP…"
+        } else {
+            "正在加载 Hosted WebMCP…"
+        }
     }
 
     BackHandler(onBack = onClose)
@@ -186,7 +238,7 @@ fun MiniAppWebMcpSurface(
             }
             Column(modifier = Modifier.padding(start = 12.dp)) {
                 Text(plugin.displayName, style = MaterialTheme.typography.titleMedium)
-                Text(status, style = MaterialTheme.typography.labelSmall)
+                Text(status, style = MaterialTheme.typography.labelSmall, modifier = Modifier.testTag("miniapp-webmcp-status"))
             }
         }
 
@@ -222,12 +274,16 @@ fun MiniAppWebMcpSurface(
                         val probe = """
                             (() => {
                               const tools = window.__fabushiWebMcp?.list?.() || [];
-                              return JSON.stringify({ ready: tools.length > 0, tools: tools.map(t => t.name) });
+                              return JSON.stringify({ ready: tools.length > 0, tools: tools.map(t => t.name), loggedIn: window.__fabushiMiniAppHost?.account?.loggedIn === true });
                             })()
                         """.trimIndent()
                         view.evaluateJavascript(probe) { value ->
                             status = if (value.contains("\\\"ready\\\":true")) {
-                                if (url?.contains(LOCAL_WEB_MCP_ORIGIN) == true) "本地 WebMCP 已连接" else "WebMCP 已连接"
+                                if (url?.contains(LOCAL_WEB_MCP_ORIGIN) == true) {
+                                    if (value.contains("\\\"loggedIn\\\":true")) "本地 WebMCP 已连接 · Fabushi 已登录" else "本地 WebMCP 已连接"
+                                } else {
+                                    "WebMCP 已连接"
+                                }
                             } else {
                                 "WebMCP 页面已打开"
                             }
@@ -237,12 +293,24 @@ fun MiniAppWebMcpSurface(
             }
         }
 
+        val eventListener = remember(plugin.pluginId, webView) {
+            host.addFeatureEventListener { event ->
+                if (!localDocumentActive.get()) return@addFeatureEventListener
+                val projected = miniAppEventProjection(event)
+                if (projected.length() == 0) return@addFeatureEventListener
+                val script = "window.__fabushiMiniAppHost?.pushEvent(JSON.parse(${JSONObject.quote(projected.toString())}));"
+                Handler(Looper.getMainLooper()).post {
+                    if (localDocumentActive.get()) runCatching { webView.evaluateJavascript(script, null) }
+                }
+            }
+        }
+
         AndroidView(
             factory = { webView },
             update = { view ->
                 if (!sourceResolved) return@AndroidView
                 val local = localHtml
-                val desiredTag = if (local != null) "local:${plugin.pluginId}" else "hosted:${plugin.pluginId}"
+                val desiredTag = if (local != null) "local:${plugin.pluginId}:${accountProjection.optBoolean("loggedIn")}" else "hosted:${plugin.pluginId}"
                 if (view.tag == desiredTag) return@AndroidView
                 view.tag = desiredTag
                 if (local != null) {
@@ -250,7 +318,7 @@ fun MiniAppWebMcpSurface(
                     val baseUrl = "https://$LOCAL_WEB_MCP_ORIGIN/miniapps/$encodedId/"
                     view.loadDataWithBaseURL(
                         baseUrl,
-                        injectLocalWebMcp(local, plugin),
+                        injectLocalWebMcp(local, plugin, accountProjection),
                         "text/html",
                         "utf-8",
                         null,
@@ -263,14 +331,16 @@ fun MiniAppWebMcpSurface(
             modifier = Modifier.fillMaxSize().testTag("miniapp-webmcp-webview"),
         )
 
-        DisposableEffect(webView) {
+        DisposableEffect(webView, eventListener, host) {
             onDispose {
+                eventListener.close()
                 localDocumentActive.set(false)
                 webView.stopLoading()
                 webView.removeJavascriptInterface("FabushiWebMcpNative")
                 webView.loadUrl("about:blank")
                 webView.removeAllViews()
                 webView.destroy()
+                host.close()
             }
         }
     }
