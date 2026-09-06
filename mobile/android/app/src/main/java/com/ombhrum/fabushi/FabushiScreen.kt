@@ -196,6 +196,8 @@ fun FabushiScreen(
     var destination by remember { mutableStateOf(MobileDestination.HOME) }
     var showAddMenu by remember { mutableStateOf(false) }
     var showAgentChat by remember { mutableStateOf(false) }
+    var showHomeSearch by remember { mutableStateOf(false) }
+    var homeSearchQuery by remember { mutableStateOf("") }
 
     if (authGateEnabled && state.onboardingStep < 3) {
         MobileOnboarding(state.onboardingStep, onAdvanceOnboarding, onSkipOnboarding)
@@ -214,7 +216,7 @@ fun FabushiScreen(
         return
     }
 
-    LaunchedEffect(destination, showAddMenu, state, updateState.phase, appAgentSurface) {
+    LaunchedEffect(destination, showAddMenu, showHomeSearch, homeSearchQuery, state, updateState.phase, appAgentSurface) {
         val elements = mutableListOf<FabushiAppAgentSurface.Element>()
         val actions = linkedMapOf<String, FabushiAppAgentSurface.Action>()
         fun element(
@@ -240,7 +242,23 @@ fun FabushiScreen(
         val screen = when (destination) {
             MobileDestination.HOME -> {
                 element(TestTags.AppShell, "application", "Fabushi")
-                element(TestTags.HomeSearchButton, "button", "搜索对话")
+                element(
+                    TestTags.HomeSearchButton,
+                    "button",
+                    if (showHomeSearch) "关闭搜索" else "搜索对话",
+                    action = FabushiAppAgentSurface.Action(setOf("invoke")) {
+                        showHomeSearch = !showHomeSearch
+                        if (!showHomeSearch) homeSearchQuery = ""
+                    },
+                )
+                if (showHomeSearch) {
+                    element(
+                        TestTags.HomeSearchField,
+                        "textbox",
+                        "搜索对话",
+                        action = FabushiAppAgentSurface.Action(setOf("setValue")) { homeSearchQuery = it.orEmpty() },
+                    )
+                }
                 element(TestTags.ProfileAvatar, "button", "个人菜单", action = FabushiAppAgentSurface.Action(setOf("invoke")) { showAddMenu = true })
                 element(TestTags.AddButton, "button", "新建对话")
                 if (showAddMenu) {
@@ -368,6 +386,13 @@ fun FabushiScreen(
             onOpenRemoteComputer = { destination = MobileDestination.REMOTE_COMPUTER },
             showAddMenu = showAddMenu,
             onShowAddMenuChange = { showAddMenu = it },
+            showSearch = showHomeSearch,
+            searchQuery = homeSearchQuery,
+            onShowSearchChange = { visible ->
+                showHomeSearch = visible
+                if (!visible) homeSearchQuery = ""
+            },
+            onSearchQueryChange = { homeSearchQuery = it },
             messagingState = messagingState,
             messagingActorId = messagingActorId,
             onMessagingRefresh = onMessagingRefresh,
@@ -609,6 +634,10 @@ private fun ConversationHome(
     onOpenRemoteComputer: () -> Unit,
     showAddMenu: Boolean,
     onShowAddMenuChange: (Boolean) -> Unit,
+    showSearch: Boolean,
+    searchQuery: String,
+    onShowSearchChange: (Boolean) -> Unit,
+    onSearchQueryChange: (String) -> Unit,
     messagingState: MessagingUiState,
     messagingActorId: String,
     onMessagingRefresh: () -> Unit,
@@ -643,8 +672,6 @@ private fun ConversationHome(
     onOpenAgentChat: () -> Unit,
     onLogout: () -> Unit,
 ) {
-    var showSearch by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
     var showComposeMenu by remember { mutableStateOf(false) }
     var showContactPicker by remember { mutableStateOf(false) }
     var pendingKind by remember { mutableStateOf<ConversationKind?>(null) }
@@ -836,12 +863,12 @@ private fun ConversationHome(
                         }
                     }
                     Text("聊天", color = homePrimaryText, fontWeight = FontWeight.SemiBold, fontSize = 20.sp)
-                    CircularActionButton(TestTags.HomeSearchButton, if (showSearch) "关闭搜索" else "搜索对话", { showSearch = !showSearch; if (!showSearch) searchQuery = "" }) { SearchGlyph() }
+                    CircularActionButton(TestTags.HomeSearchButton, if (showSearch) "关闭搜索" else "搜索对话", { onShowSearchChange(!showSearch) }) { SearchGlyph() }
                 }
             }
             if (showSearch) item {
                 OutlinedTextField(
-                    value = searchQuery, onValueChange = { searchQuery = it },
+                    value = searchQuery, onValueChange = onSearchQueryChange,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).testTag(TestTags.HomeSearchField),
                     singleLine = true, placeholder = { Text("搜索", color = homeSecondaryText) },
                     colors = OutlinedTextFieldDefaults.colors(focusedTextColor = homePrimaryText, unfocusedTextColor = homePrimaryText, focusedContainerColor = homeSurface, unfocusedContainerColor = homeSurface),
