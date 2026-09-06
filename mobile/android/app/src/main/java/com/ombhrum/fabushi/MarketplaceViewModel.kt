@@ -75,6 +75,7 @@ data class MarketplaceUiState(
 
 class MarketplaceViewModel(application: Application) : AndroidViewModel(application) {
     private val host = MahayanaHost(application)
+    private val miniApps = MiniAppPlatformBridge(host)
     private val mutableState = MutableStateFlow(MarketplaceUiState())
     val state: StateFlow<MarketplaceUiState> = mutableState.asStateFlow()
 
@@ -459,10 +460,13 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
                     )
                     val release = metadata.optJSONObject("releaseManifest")
                         ?: error("marketplace release has no releaseManifest")
-                    host.request(
+                    val installed = host.request(
                         "feature.plugin.install",
                         JSONObject().put("release", release).put("platform", "android"),
                     )
+                    val installedPluginId = installed.optString("pluginId", plugin.pluginId)
+                    miniApps.confirmInstalledMiniApp(installedPluginId)
+                    installed
                 }
             }.onSuccess { installed ->
                 val pluginId = installed.optString("pluginId", plugin.pluginId)
@@ -480,7 +484,7 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
             }.onFailure { error ->
                 mutableState.value = mutableState.value.copy(
                     installingPluginId = null,
-                    message = "安装失败：${error.message ?: error::class.java.simpleName}",
+                    message = "安装未完成：${error.message ?: error::class.java.simpleName}",
                 )
             }
         }

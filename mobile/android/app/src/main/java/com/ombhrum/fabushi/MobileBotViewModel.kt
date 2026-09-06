@@ -42,16 +42,38 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
     fun refreshBots() {
         if (mutableState.value.busy) return
         viewModelScope.launch {
-            runCatching {
+            val previous = mutableState.value.bots
+            val installedResult = withContext(Dispatchers.IO) { runCatching { loadInstalledMiniAppBots() } }
+            val surfaceResult = withContext(Dispatchers.IO) { runCatching { loadSurfaceBots() } }
+            val cachedInstalledBots = if (installedResult.isFailure) {
                 withContext(Dispatchers.IO) {
-                    val surfaceBots = loadSurfaceBots()
-                    val installedMiniAppBots = loadInstalledMiniAppBots()
-                    (installedMiniAppBots + surfaceBots)
-                        .distinctBy { it.id }
-                        .sortedWith(compareByDescending<MobileBotSummaryAndroid> { it.miniAppId != null }.thenBy { it.name.lowercase() })
+                    runCatching {
+                        miniApps.lastInstalledMiniApps()?.let(::projectInstalledMiniAppBots)
+                    }.getOrNull()
                 }
-            }.onSuccess { bots -> mutableState.value = mutableState.value.copy(bots = bots, error = null) }
-                .onFailure { error -> mutableState.value = mutableState.value.copy(error = error.message ?: "Bot list failed") }
+            } else null
+            val installedBots = installedResult.getOrElse {
+                cachedInstalledBots ?: previous.filter { it.miniAppId != null }
+            }
+            val surfaceBots = surfaceResult.getOrElse { previous.filter { it.miniAppId == null } }
+            val bots = (installedBots + surfaceBots)
+                .distinctBy { it.id }
+                .sortedWith(
+                    compareByDescending<MobileBotSummaryAndroid> { it.miniAppId != null }
+                        .thenBy { it.name.lowercase() },
+                )
+            val diagnostics = buildList {
+                installedResult.exceptionOrNull()?.let { error ->
+                    add("canonical installed projection: ${(error.message ?: error::class.java.simpleName).take(240)}")
+                }
+                surfaceResult.exceptionOrNull()?.let { error ->
+                    add("surface bot list: ${(error.message ?: error::class.java.simpleName).take(240)}")
+                }
+            }
+            mutableState.value = mutableState.value.copy(
+                bots = bots,
+                error = diagnostics.takeIf { it.isNotEmpty() }?.joinToString(" | "),
+            )
         }
     }
 
@@ -90,43 +112,41 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     /**
-     * Canonical Mini App Bot projection. Local installation pointers are reconciled into the
-     * authenticated account install ledger before reading manifests back from `/marketplace/added`.
-     * No Android-private Bot/contact database is created.
+     * Canonical Mini App Bot projection. Messenger refresh is read-only: account installation
+     * mutation belongs to the install flow, while `/marketplace/added` owns cross-device identity.
+     * No Android-private Bot/contact database is created. The only fallback is the last validated
+     * in-process canonical projection, never a second persistent install/Bot truth.
      */
     private fun loadInstalledMiniAppBots(): List<MobileBotSummaryAndroid> {
-        val installed = host.request("feature.plugin.listInstalled").optJSONArray("plugins") ?: return emptyList()
-        val installedIds = buildSet {
-            for (index in 0 until installed.length()) {
-                val id = installed.optJSONObject(index)?.optString("pluginId").orEmpty().trim()
-                if (id.isNotBlank()) add(id)
-            }
-        }
-        if (installedIds.isEmpty()) return emptyList()
-        val manifests = miniApps.syncInstalledMiniApps(installedIds)
-        return buildList {
-            for (index in 0 until manifests.length()) {
-                val manifest = manifests.optJSONObject(index) ?: continue
-                val pluginId = manifest.optString("id").ifBlank { manifest.optString("pluginId") }
-                if (pluginId !in installedIds) continue
-                val bot = manifest.optJSONObject("bot") ?: continue
-                val botId = bot.optString("id")
-                if (botId.isBlank()) continue
-                val menu = bot.optJSONObject("menuButton")
-                val miniAppId = menu?.takeIf { it.optString("action") == "open-miniapp" }
-                    ?.optString("miniAppId")
-                    ?.takeIf(String::isNotBlank)
-                    ?: pluginId
-                add(
-                    MobileBotSummaryAndroid(
-                        id = botId,
-                        name = bot.optString("displayName").ifBlank { manifest.optString("title").ifBlank { botId } },
-                        description = bot.optString("description").ifBlank { manifest.optString("description") },
-                        miniAppId = miniAppId,
-                        menuButtonText = menu?.optString("text")?.takeIf(String::isNotBlank) ?: "打开应用",
-                    ),
-                )
-            }
+        val manifests = miniApps.readInstalledMiniApps()
+        val bots = projectInstalledMiniAppBots(manifests)
+        miniApps.rememberInstalledMiniApps(manifests)
+        return bots
+    }
+
+    private fun projectInstalledMiniAppBots(manifests: org.json.JSONArray): List<MobileBotSummaryAndroid> = buildList {
+        for (index in 0 until manifests.length()) {
+            val manifest = manifests.optJSONObject(index)
+                ?: error("Canonical installed projection entry $index was not an object")
+            val pluginId = manifest.optString("id").ifBlank { manifest.optString("pluginId") }
+            check(pluginId.isNotBlank()) { "Canonical installed projection entry $index did not include plugin id" }
+            val bot = manifest.optJSONObject("bot") ?: continue
+            val botId = bot.optString("id")
+            check(botId.isNotBlank()) { "Canonical bot projection for $pluginId did not include id" }
+            val menu = bot.optJSONObject("menuButton")
+            val miniAppId = menu?.takeIf { it.optString("action") == "open-miniapp" }
+                ?.optString("miniAppId")
+                ?.takeIf(String::isNotBlank)
+                ?: pluginId
+            add(
+                MobileBotSummaryAndroid(
+                    id = botId,
+                    name = bot.optString("displayName").ifBlank { manifest.optString("title").ifBlank { botId } },
+                    description = bot.optString("description").ifBlank { manifest.optString("description") },
+                    miniAppId = miniAppId,
+                    menuButtonText = menu?.optString("text")?.takeIf(String::isNotBlank) ?: "打开应用",
+                ),
+            )
         }
     }
 

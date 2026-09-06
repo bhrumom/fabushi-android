@@ -319,7 +319,9 @@ fun GrokMobileShellAndroid(
                             action = FabushiAppAgentSurface.Action(setOf("invoke")) { onOpenBot(bot) },
                         )
                     }
-                if (botState.error?.isNotBlank() == true) element("grok-bot-error", "status", "Bot 加载失败")
+                botState.error?.takeIf { it.isNotBlank() }?.let { diagnostic ->
+                    element("grok-bot-error", "status", "Bot 刷新异常：$diagnostic")
+                }
                 if (addOpen) "grok-compose" else "grok-home"
             }
         }
@@ -418,6 +420,16 @@ fun GrokMobileShellAndroid(
             if (visibleBots.isNotEmpty()) {
                 item { SectionLabelAndroid("Bots  ${visibleBots.size}") }
                 items(visibleBots, key = { it.id }) { bot -> GrokBotRowAndroid(bot, "Bot", onOpenBot) }
+            }
+            botState.error?.takeIf { it.isNotBlank() }?.let { diagnostic ->
+                item {
+                    Text(
+                        "Bot 刷新异常：$diagnostic",
+                        color = Color(0xFFD14343),
+                        fontSize = 12.sp,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 6.dp),
+                    )
+                }
             }
             val rows = messagingState.conversations.filter { !it.isArchived && (query.isBlank() || it.title.contains(query.trim(), true) || it.preview.contains(query.trim(), true)) }
             if (rows.isNotEmpty()) {
