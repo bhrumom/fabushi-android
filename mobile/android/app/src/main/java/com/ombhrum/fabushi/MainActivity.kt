@@ -23,9 +23,17 @@ class MainActivity : ComponentActivity() {
     private val deepLinks = MutableSharedFlow<Uri>(replay = 1, extraBufferCapacity = 31)
     private val updateModel: AndroidUpdateViewModel by viewModels()
     private val appAgentSurface = FabushiAppAgentSurface()
+    private lateinit var remoteDeviceGateway: FabushiRemoteDeviceGateway
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val ciBootstrapActive = FabushiCiBootstrap.prepare(this)
+        remoteDeviceGateway = FabushiRemoteDeviceGateway(
+            context = applicationContext,
+            surface = appAgentSurface,
+            metadata = FabushiCiBootstrap.gatewayMetadata(intent, ciBootstrapActive),
+            configuredDeviceName = FabushiCiBootstrap.configuredDeviceName(intent, ciBootstrapActive),
+        )
         enableEdgeToEdge()
         setContent {
             MaterialTheme {
@@ -45,6 +53,7 @@ class MainActivity : ComponentActivity() {
                     deepLinks.collect { uri -> model.handleDeepLink(uri) }
                 }
                 LaunchedEffect(state.loggedIn) {
+                    remoteDeviceGateway.setLoggedIn(state.loggedIn)
                     if (state.loggedIn) messagingModel.refresh()
                     if (!state.loggedIn) showLegacyShell = false
                 }
@@ -149,6 +158,11 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         updateModel.setForeground(false)
         super.onStop()
+    }
+
+    override fun onDestroy() {
+        if (::remoteDeviceGateway.isInitialized) remoteDeviceGateway.close()
+        super.onDestroy()
     }
 
     override fun onNewIntent(intent: Intent) {

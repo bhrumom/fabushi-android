@@ -16,6 +16,7 @@ android {
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         vectorDrawables { useSupportLibrary true }
         buildConfigField 'boolean', 'GITHUB_UPDATES_ENABLED', 'false'
+        buildConfigField 'boolean', 'CI_ACCOUNT_SESSION_IMPORT_ENABLED', 'false'
     }
 
     buildFeatures {
@@ -56,6 +57,7 @@ android {
             initWith release
             matchingFallbacks = ['release']
             buildConfigField 'boolean', 'GITHUB_UPDATES_ENABLED', 'true'
+            buildConfigField 'boolean', 'CI_ACCOUNT_SESSION_IMPORT_ENABLED', 'true'
             if (releaseKeystore) signingConfig signingConfigs.release
         }
     }
@@ -81,6 +83,7 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.10.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
+    implementation 'com.squareup.okhttp3:okhttp:5.4.0'
     implementation 'com.android.billingclient:billing-ktx:9.1.0'
 
     debugImplementation 'androidx.compose.ui:ui-tooling'
