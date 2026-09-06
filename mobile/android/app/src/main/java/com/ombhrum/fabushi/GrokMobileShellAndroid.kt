@@ -32,6 +32,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -158,6 +159,7 @@ fun GrokMobileShellAndroid(
     accountName: String,
     messagingState: MessagingUiState,
     botState: MobileBotUiState,
+    appAgentSurface: FabushiAppAgentSurface,
     onOpenLegacy: () -> Unit,
     onRefreshBots: () -> Unit,
     onCreateBot: (String, String, (() -> Unit)?) -> Unit,
@@ -170,7 +172,7 @@ fun GrokMobileShellAndroid(
     LaunchedEffect(Unit) { onRefreshBots() }
     val active = botState.activeBot
     if (active != null) {
-        GrokBotChatAndroid(active, botState, onCloseBot, onDraftChange, onSend, onStop)
+        GrokBotChatAndroid(active, botState, appAgentSurface, onCloseBot, onDraftChange, onSend, onStop)
         return
     }
 
@@ -179,6 +181,153 @@ fun GrokMobileShellAndroid(
     var createOpen by remember { mutableStateOf(false) }
     var botName by remember { mutableStateOf("") }
     var botDescription by remember { mutableStateOf("") }
+
+    LaunchedEffect(
+        query,
+        addOpen,
+        createOpen,
+        botName,
+        botDescription,
+        botState.creating,
+        botState.error,
+        botState.bots,
+        messagingState.conversations,
+        appAgentSurface,
+    ) {
+        val elements = mutableListOf<FabushiAppAgentSurface.Element>()
+        val actions = linkedMapOf<String, FabushiAppAgentSurface.Action>()
+        fun element(
+            id: String,
+            role: String,
+            name: String,
+            enabled: Boolean = true,
+            action: FabushiAppAgentSurface.Action? = null,
+        ) {
+            val agentId = id.replace(Regex("[^A-Za-z0-9._:/@-]"), "-").take(200)
+            elements += FabushiAppAgentSurface.Element(
+                agentId = agentId,
+                role = role.take(80),
+                name = name.take(240),
+                enabled = enabled,
+            )
+            if (action != null) actions[agentId] = action
+        }
+
+        val screen = when {
+            createOpen -> {
+                element("grok-create-bot", "dialog", "创建 Bot")
+                element(
+                    "new-bot-name",
+                    "textbox",
+                    "Bot 名称",
+                    action = FabushiAppAgentSurface.Action(setOf("setValue")) { botName = it.orEmpty() },
+                )
+                element(
+                    "new-bot-description",
+                    "textbox",
+                    "Bot 描述",
+                    action = FabushiAppAgentSurface.Action(setOf("setValue")) { botDescription = it.orEmpty() },
+                )
+                element(
+                    "create-bot-submit",
+                    "button",
+                    "创建 Bot",
+                    enabled = botName.isNotBlank() && !botState.creating,
+                    action = FabushiAppAgentSurface.Action(setOf("invoke")) {
+                        if (botName.isNotBlank() && !botState.creating) {
+                            onCreateBot(botName, botDescription) {
+                                botName = ""
+                                botDescription = ""
+                                createOpen = false
+                            }
+                        }
+                    },
+                )
+                element(
+                    "create-bot-cancel",
+                    "button",
+                    "取消创建 Bot",
+                    enabled = !botState.creating,
+                    action = FabushiAppAgentSurface.Action(setOf("invoke")) { if (!botState.creating) createOpen = false },
+                )
+                botState.error?.takeIf { it.isNotBlank() }?.let { element("create-bot-error", "status", "Bot 创建失败") }
+                "grok-create-bot"
+            }
+            else -> {
+                element("grok-mobile-home", "application", "Fabushi")
+                element(
+                    "grok-mobile-legacy",
+                    "button",
+                    "打开完整 Fabushi",
+                    action = FabushiAppAgentSurface.Action(setOf("invoke")) { onOpenLegacy() },
+                )
+                element(
+                    "grok-mobile-search-toggle",
+                    "button",
+                    if (query.isEmpty()) "打开搜索" else "关闭搜索",
+                    action = FabushiAppAgentSurface.Action(setOf("invoke")) { query = if (query.isEmpty()) " " else "" },
+                )
+                if (query.isNotEmpty()) {
+                    element(
+                        "grok-mobile-search-field",
+                        "textbox",
+                        "搜索",
+                        action = FabushiAppAgentSurface.Action(setOf("setValue")) { query = it.orEmpty() },
+                    )
+                }
+                element(
+                    "grok-mobile-add",
+                    "button",
+                    "新建",
+                    action = FabushiAppAgentSurface.Action(setOf("invoke")) { addOpen = true },
+                )
+                if (addOpen) {
+                    element(
+                        "grok-mobile-new-bot",
+                        "menuitem",
+                        "New Bot",
+                        action = FabushiAppAgentSurface.Action(setOf("invoke")) { addOpen = false; createOpen = true },
+                    )
+                    for ((id, name) in listOf(
+                        "grok-mobile-new-message" to "New message",
+                        "grok-mobile-new-group" to "New group",
+                        "grok-mobile-new-channel" to "New channel",
+                    )) {
+                        element(
+                            id,
+                            "menuitem",
+                            name,
+                            action = FabushiAppAgentSurface.Action(setOf("invoke")) { addOpen = false; onOpenLegacy() },
+                        )
+                    }
+                }
+                val mahayana = MobileBotSummaryAndroid("mahayana-assistant", "Mahayana", "that's the only new one.")
+                element(
+                    "grok-bot-mahayana-assistant",
+                    "button",
+                    "打开 Mahayana",
+                    action = FabushiAppAgentSurface.Action(setOf("invoke")) { onOpenBot(mahayana) },
+                )
+                botState.bots
+                    .filter { query.isBlank() || it.name.contains(query.trim(), true) || it.description.contains(query.trim(), true) }
+                    .take(100)
+                    .forEach { bot ->
+                        element(
+                            "grok-bot-${bot.id}",
+                            "button",
+                            "打开 ${bot.name}",
+                            action = FabushiAppAgentSurface.Action(setOf("invoke")) { onOpenBot(bot) },
+                        )
+                    }
+                if (botState.error?.isNotBlank() == true) element("grok-bot-error", "status", "Bot 加载失败")
+                if (addOpen) "grok-compose" else "grok-home"
+            }
+        }
+        appAgentSurface.publish(screen = screen, elements = elements, actions = actions)
+    }
+    DisposableEffect(appAgentSurface) {
+        onDispose { appAgentSurface.clear() }
+    }
 
     if (createOpen) {
         AlertDialog(
@@ -322,11 +471,49 @@ private fun GrokBotRowAndroid(bot: MobileBotSummaryAndroid, badge: String, onCli
 private fun GrokBotChatAndroid(
     bot: MobileBotSummaryAndroid,
     state: MobileBotUiState,
+    appAgentSurface: FabushiAppAgentSurface,
     onClose: () -> Unit,
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
     onStop: () -> Unit,
 ) {
+    LaunchedEffect(bot.id, state.draft, state.busy, state.error, state.messages, appAgentSurface) {
+        val elements = mutableListOf(
+            FabushiAppAgentSurface.Element("mobile-bot-chat", "application", "Bot ${bot.name}"),
+            FabushiAppAgentSurface.Element("mobile-bot-close", "button", "关闭 Bot 对话"),
+            FabushiAppAgentSurface.Element("mobile-bot-draft", "textbox", "Bot 消息"),
+        )
+        val sendId = if (state.busy) "mobile-bot-stop" else "mobile-bot-send"
+        elements += FabushiAppAgentSurface.Element(
+            sendId,
+            "button",
+            if (state.busy) "停止 Bot" else "发送 Bot 消息",
+            enabled = state.busy || state.draft.trim().isNotEmpty(),
+        )
+        state.messages.takeLast(50).forEach { entry ->
+            val id = "mobile-bot-entry-${entry.id}".replace(Regex("[^A-Za-z0-9._:/@-]"), "-").take(200)
+            val roleName = when {
+                entry.role == MobileChatRole.USER -> "用户消息"
+                entry.kind == MobileChatEntryKind.ACTION -> "Bot 动作"
+                entry.kind == MobileChatEntryKind.THINKING -> "Bot 思考"
+                else -> "Bot 消息"
+            }
+            elements += FabushiAppAgentSurface.Element(id, "log", roleName)
+        }
+        if (state.error?.isNotBlank() == true) {
+            elements += FabushiAppAgentSurface.Element("mobile-bot-error", "status", "Bot 对话失败")
+        }
+        val actions = linkedMapOf(
+            "mobile-bot-close" to FabushiAppAgentSurface.Action(setOf("invoke")) { onClose() },
+            "mobile-bot-draft" to FabushiAppAgentSurface.Action(setOf("setValue")) { onDraftChange(it.orEmpty()) },
+            sendId to FabushiAppAgentSurface.Action(setOf("invoke")) { if (state.busy) onStop() else onSend() },
+        )
+        appAgentSurface.publish(screen = "bot-chat", elements = elements, actions = actions)
+    }
+    DisposableEffect(appAgentSurface) {
+        onDispose { appAgentSurface.clear() }
+    }
+
     Column(Modifier.fillMaxSize().background(GrokMobileBackground).testTag("mobile-bot-chat")) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("‹", color = GrokMobileInk, fontSize = 34.sp, modifier = Modifier.clickable(onClick = onClose).padding(horizontal = 8.dp))
@@ -378,7 +565,7 @@ private fun GrokBotChatAndroid(
                 onDraftChange,
                 placeholder = { Text("Message") },
                 maxLines = 5,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).testTag("mobile-bot-draft"),
                 shape = RoundedCornerShape(19.dp),
             )
             Button(

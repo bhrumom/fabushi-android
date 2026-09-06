@@ -80,6 +80,7 @@ class MainActivity : ComponentActivity() {
                         accountName = state.accountName,
                         messagingState = messagingState,
                         botState = botState,
+                        appAgentSurface = appAgentSurface,
                         onOpenLegacy = { showLegacyShell = true },
                         onRefreshBots = botModel::refreshBots,
                         onCreateBot = botModel::createBot,
