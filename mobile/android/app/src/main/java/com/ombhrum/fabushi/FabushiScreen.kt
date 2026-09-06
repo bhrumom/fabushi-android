@@ -199,6 +199,7 @@ fun FabushiScreen(
     var showAgentChat by remember { mutableStateOf(false) }
     var showHomeSearch by remember { mutableStateOf(false) }
     var homeSearchQuery by remember { mutableStateOf("") }
+    var showComposeMenu by remember { mutableStateOf(false) }
 
     if (authGateEnabled && state.onboardingStep < 3) {
         MobileOnboarding(state.onboardingStep, onAdvanceOnboarding, onSkipOnboarding)
@@ -217,7 +218,7 @@ fun FabushiScreen(
         return
     }
 
-    LaunchedEffect(destination, showAddMenu, showHomeSearch, homeSearchQuery, state, updateState.phase, appAgentSurface) {
+    LaunchedEffect(destination, showAddMenu, showHomeSearch, homeSearchQuery, showComposeMenu, state, updateState.phase, appAgentSurface) {
         val elements = mutableListOf<FabushiAppAgentSurface.Element>()
         val actions = linkedMapOf<String, FabushiAppAgentSurface.Action>()
         fun element(
@@ -261,7 +262,7 @@ fun FabushiScreen(
                     )
                 }
                 element(TestTags.ProfileAvatar, "button", "个人菜单", action = FabushiAppAgentSurface.Action(setOf("invoke")) { showAddMenu = true })
-                element(TestTags.AddButton, "button", "新建对话")
+                element(TestTags.AddButton, "button", "新建对话", action = FabushiAppAgentSurface.Action(setOf("invoke")) { showComposeMenu = true })
                 if (showAddMenu) {
                     element(
                         TestTags.MarketplaceEntry,
@@ -393,6 +394,8 @@ fun FabushiScreen(
             onOpenRemoteComputer = { destination = MobileDestination.REMOTE_COMPUTER },
             showAddMenu = showAddMenu,
             onShowAddMenuChange = { showAddMenu = it },
+            showComposeMenu = showComposeMenu,
+            onShowComposeMenuChange = { showComposeMenu = it },
             showSearch = showHomeSearch,
             searchQuery = homeSearchQuery,
             onShowSearchChange = { visible ->
@@ -641,6 +644,8 @@ private fun ConversationHome(
     onOpenRemoteComputer: () -> Unit,
     showAddMenu: Boolean,
     onShowAddMenuChange: (Boolean) -> Unit,
+    showComposeMenu: Boolean,
+    onShowComposeMenuChange: (Boolean) -> Unit,
     showSearch: Boolean,
     searchQuery: String,
     onShowSearchChange: (Boolean) -> Unit,
@@ -679,7 +684,6 @@ private fun ConversationHome(
     onOpenAgentChat: () -> Unit,
     onLogout: () -> Unit,
 ) {
-    var showComposeMenu by remember { mutableStateOf(false) }
     var showContactPicker by remember { mutableStateOf(false) }
     var pendingKind by remember { mutableStateOf<ConversationKind?>(null) }
     var composeName by remember { mutableStateOf("") }
@@ -830,16 +834,16 @@ private fun ConversationHome(
         floatingActionButton = {
             if (!showSearch) Box {
                 FloatingActionButton(
-                    onClick = { showComposeMenu = true },
+                    onClick = { onShowComposeMenuChange(true) },
                     modifier = Modifier.testTag(TestTags.AddButton),
                     containerColor = homeAccent,
                     contentColor = Color.Black,
                 ) { PlusGlyph() }
-                DropdownMenu(expanded = showComposeMenu, onDismissRequest = { showComposeMenu = false }, containerColor = homeSurface) {
-                    DropdownMenuItem(text = { Text("新消息", color = homePrimaryText) }, onClick = { showComposeMenu = false; showContactPicker = true })
-                    DropdownMenuItem(text = { Text("新建群组", color = homePrimaryText) }, onClick = { showComposeMenu = false; pendingKind = ConversationKind.GROUP })
-                    DropdownMenuItem(text = { Text("新建频道", color = homePrimaryText) }, onClick = { showComposeMenu = false; pendingKind = ConversationKind.CHANNEL })
-                    DropdownMenuItem(text = { Text("联系人分组", color = homePrimaryText) }, onClick = { showComposeMenu = false })
+                DropdownMenu(expanded = showComposeMenu, onDismissRequest = { onShowComposeMenuChange(false) }, containerColor = homeSurface) {
+                    DropdownMenuItem(text = { Text("新消息", color = homePrimaryText) }, onClick = { onShowComposeMenuChange(false); showContactPicker = true })
+                    DropdownMenuItem(text = { Text("新建群组", color = homePrimaryText) }, onClick = { onShowComposeMenuChange(false); pendingKind = ConversationKind.GROUP })
+                    DropdownMenuItem(text = { Text("新建频道", color = homePrimaryText) }, onClick = { onShowComposeMenuChange(false); pendingKind = ConversationKind.CHANNEL })
+                    DropdownMenuItem(text = { Text("联系人分组", color = homePrimaryText) }, onClick = { onShowComposeMenuChange(false) })
                 }
             }
         },
