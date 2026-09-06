@@ -141,6 +141,7 @@ class MainActivity : ComponentActivity() {
                         onReopenBrowserLogin = model::reopenBrowserLogin,
                         onCancelBrowserLogin = model::cancelBrowserLogin,
                         onLogout = model::logout,
+                        onExitLegacy = { showLegacyShell = false },
                         onChatDraftChange = model::setChatDraft,
                         onSendChat = model::sendChat,
                         onStopChat = model::stopChat,

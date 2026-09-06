@@ -190,6 +190,7 @@ fun FabushiScreen(
     onReopenBrowserLogin: () -> Unit = {},
     onCancelBrowserLogin: () -> Unit = {},
     onLogout: () -> Unit = {},
+    onExitLegacy: () -> Unit = {},
     onChatDraftChange: (String) -> Unit = {},
     onSendChat: () -> Unit = {},
     onStopChat: () -> Unit = {},
@@ -243,7 +244,15 @@ fun FabushiScreen(
         }
         val screen = when (destination) {
             MobileDestination.HOME -> {
-                element(TestTags.AppShell, "application", "Fabushi")
+                element(
+                    TestTags.AppShell,
+                    "application",
+                    "Fabushi",
+                    action = FabushiAppAgentSurface.Action(setOf("pressKey")) { key ->
+                        require(key?.trim()?.equals("BACK", ignoreCase = true) == true) { "unsupported_app_surface_key" }
+                        onExitLegacy()
+                    },
+                )
                 element(
                     TestTags.HomeSearchButton,
                     "button",
