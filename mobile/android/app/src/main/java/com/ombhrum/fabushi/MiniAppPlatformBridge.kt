@@ -32,7 +32,8 @@ internal class MiniAppPlatformBridge(
     companion object {
         const val GLOBAL_DHARMA_ID = "global-dharma"
         const val PRAYER_WHEEL_CAPABILITY = "local.prayer-wheel.start"
-        const val PRAYER_WHEEL_LIFETIME_SKU = "prod.global-dharma.local-prayer-wheel.lifetime"
+        const val PRAYER_WHEEL_LIFETIME_SKU = "local-prayer-wheel.lifetime"
+        const val PRAYER_WHEEL_LIFETIME_PRODUCT_ID = "prod.global-dharma.local-prayer-wheel.lifetime"
         const val PRAYER_WHEEL_LIFETIME_CNY_MINOR = 108_000L
         private const val API_BASE = "https://api.ombhrum.com"
         private const val MCP_PROTOCOL = "2025-06-18"
@@ -123,9 +124,24 @@ internal class MiniAppPlatformBridge(
                     .put("params", JSONObject())
                 mcpPost(endpoint, token, sessionId, notification, expectJson = false)
 
-                val call = JSONObject()
+                val listRequest = JSONObject()
                     .put("jsonrpc", "2.0")
                     .put("id", 2)
+                    .put("method", "tools/list")
+                    .put("params", JSONObject())
+                val listResponse = mcpPost(endpoint, token, sessionId, listRequest, expectJson = true).body
+                    ?: error("Mini App MCP tools/list returned an empty response")
+                ensureNoMcpError(listResponse, "tools/list")
+                val tools = listResponse.optJSONObject("result")?.optJSONArray("tools")
+                    ?: error("Mini App MCP tools/list did not return tools")
+                check((0 until tools.length()).any { tools.optJSONObject(it)?.optString("name") == name }) {
+                    "Mini App MCP tool $name is not advertised by tools/list"
+                }
+                publishOperation(pluginId, operationId, name, "running", "WebMCP tools/list 已验证")
+
+                val call = JSONObject()
+                    .put("jsonrpc", "2.0")
+                    .put("id", 3)
                     .put("method", "tools/call")
                     .put(
                         "params",

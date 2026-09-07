@@ -70,10 +70,25 @@ internal fun globalDharmaHostShell(plugin: MarketplacePlugin): String? {
               const events=document.getElementById('events');
               function renderAccount(){const state=window.__fabushiMiniAppHost?.account;if(!state)return;const user=state.user||{};account.textContent=state.loggedIn?('Fabushi 已登录 · '+(user.nickname||user.username||user.email||user.id||'当前账号')):'Fabushi 未登录';}
               function appendEvent(event){if(event.pluginId&&event.pluginId!=='global-dharma'&&event.miniAppId!=='global-dharma')return;const row=document.createElement('div');row.className='event '+(event.status||'');const label=event.tool||event.title||event.type||'event';row.innerHTML='<b></b><span></span>';row.querySelector('b').textContent=label;row.querySelector('span').textContent=event.message||event.detail||event.status||'';events.prepend(row);while(events.childElementCount>12)events.lastElementChild.remove();if(event.status)status.textContent=(event.tool?event.tool+' · ':'')+event.status+(event.message?' · '+event.message:'');}
+              function renderResult(result){output.textContent=typeof result==='string'?result:JSON.stringify(result,null,2);}
+              async function restoreSharedRuntime(){
+                const tools=window.__fabushiWebMcp?.list?.()||[];
+                if(!tools.some(tool=>tool&&tool.name==='status'))return;
+                status.textContent='status · syncing · 正在恢复 Bot 共享状态';
+                try{
+                  const result=await window.__fabushiWebMcp.call('status',{});
+                  renderResult(result);
+                  status.textContent='status · synced · Bot / Web UI 同一共享状态';
+                  window.dispatchEvent(new CustomEvent('fabushi:shared-runtime-restored',{detail:result}));
+                }catch(error){
+                  status.textContent='status · failed · 共享状态恢复失败';
+                  output.textContent=String(error?.message||error);
+                }
+              }
               window.addEventListener('fabushi:miniapp-auth',renderAccount);
-              window.addEventListener('fabushi:webmcp-ready',renderAccount);
+              window.addEventListener('fabushi:webmcp-ready',()=>{renderAccount();restoreSharedRuntime();});
               window.addEventListener('fabushi:host-event',event=>appendEvent(event.detail||{}));
-              document.querySelectorAll('[data-tool]').forEach(button=>button.addEventListener('click',async()=>{const name=button.dataset.tool;button.disabled=true;status.textContent=name+' · running';output.textContent='';try{const result=await window.__fabushiWebMcp.call(name,{});output.textContent=typeof result==='string'?result:JSON.stringify(result,null,2);status.textContent=name+' · completed';}catch(error){status.textContent=name+' · failed';output.textContent=String(error?.message||error);}finally{button.disabled=false;}}));
+              document.querySelectorAll('[data-tool]').forEach(button=>button.addEventListener('click',async()=>{const name=button.dataset.tool;button.disabled=true;status.textContent=name+' · running';output.textContent='';try{const result=await window.__fabushiWebMcp.call(name,{});renderResult(result);status.textContent=name+' · completed';}catch(error){status.textContent=name+' · failed';output.textContent=String(error?.message||error);}finally{button.disabled=false;}}));
               renderAccount();
             })();
           </script>
