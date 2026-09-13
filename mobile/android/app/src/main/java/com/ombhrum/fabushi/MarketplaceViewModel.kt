@@ -27,6 +27,7 @@ data class MarketplacePlugin(
     val displayName: String,
     val description: String,
     val latestVersion: String?,
+    val sourceRef: String? = null,
     val tools: List<MiniAppToolContract> = emptyList(),
 )
 
@@ -415,12 +416,17 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
                             if (pluginId.isBlank()) continue
                             val commands = item.optJSONObject("source")?.optJSONArray("commands")
                                 ?: item.optJSONArray("commands")
+                            val install = item.optJSONObject("install")
+                                ?: item.optJSONObject("releaseManifest")?.optJSONObject("install")
+                            val sourceRef = install?.optJSONObject("source")?.optString("sourceRef")
+                                ?.takeIf(String::isNotBlank)
                             add(
                                 MarketplacePlugin(
                                     pluginId = pluginId,
                                     displayName = item.optString("displayName", pluginId),
                                     description = item.optString("description", "无描述"),
                                     latestVersion = item.optString("latestVersion").takeIf(String::isNotBlank),
+                                    sourceRef = sourceRef,
                                     tools = commands.toToolContracts(),
                                 ),
                             )
@@ -460,6 +466,20 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
                     )
                     val release = metadata.optJSONObject("releaseManifest")
                         ?: error("marketplace release has no releaseManifest")
+                    val install = metadata.optJSONObject("install")
+                        ?: release.optJSONObject("install")
+                        ?: error("marketplace release has no unified install contract")
+                    check(install.optString("protocol") == "fabushi.marketplace.install.v1") {
+                        "marketplace release has an unsupported install contract"
+                    }
+                    check(install.optString("strategy") == "github-immutable") {
+                        "marketplace release is not pinned to GitHub"
+                    }
+                    val source = install.optJSONObject("source")
+                        ?: error("marketplace release has no GitHub source")
+                    check(source.optString("sourceRef").isNotBlank() && !source.optBoolean("marketplaceHostsPackage")) {
+                        "marketplace release is missing an immutable GitHub source"
+                    }
                     val installed = host.request(
                         "feature.plugin.install",
                         JSONObject().put("release", release).put("platform", "android"),

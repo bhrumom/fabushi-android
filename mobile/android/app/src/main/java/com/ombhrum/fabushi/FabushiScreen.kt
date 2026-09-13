@@ -1700,7 +1700,7 @@ private fun MarketplaceContent(
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("本地插件市场", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                        Text("Android 主壳使用 Jetpack Compose；MiniApp 使用受控 WebMCP Surface；插件安装、权限与后台运行由共享 Mahayana Rust Host 管理。")
+                        Text("Android 主壳使用 Jetpack Compose；MiniApp 使用受控 WebMCP Surface；代码从 GitHub 固定版本拉取并由共享 Mahayana Rust Host 校验、安装、更新。")
                         OutlinedTextField(
                             value = state.query,
                             onValueChange = onQueryChange,
@@ -1742,7 +1742,12 @@ private fun MarketplaceContent(
                         Text(plugin.pluginId, style = MaterialTheme.typography.labelSmall)
                         Text(plugin.displayName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Text(plugin.description)
-                        plugin.latestVersion?.let { Text(it, style = MaterialTheme.typography.labelMedium) }
+                        plugin.latestVersion?.let { version ->
+                            Text(
+                                "$version · GitHub ${plugin.sourceRef?.take(9) ?: "待确认"}",
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                        }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(
                                 onClick = { onOpen(plugin) },
