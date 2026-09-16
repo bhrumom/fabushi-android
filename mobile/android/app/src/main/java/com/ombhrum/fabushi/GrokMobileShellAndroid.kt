@@ -564,7 +564,7 @@ private fun GrokBotChatAndroid(
                         Text(bot.name, color = GrokMobileMuted, fontSize = 11.sp, modifier = Modifier.padding(start = 29.dp, bottom = 2.dp))
                         Row(verticalAlignment = Alignment.Bottom) {
                             ClothGhostAvatarAndroid(bot.id, 20.dp)
-                            Text(entry.text, color = GrokMobileInk, fontSize = 16.sp, modifier = Modifier.padding(start = 7.dp).background(Color.Black.copy(alpha = 0.055f), RoundedCornerShape(18.dp)).padding(horizontal = 15.dp, vertical = 10.dp))
+                            Text(entry.text + if (entry.streaming) "▌" else "", color = GrokMobileInk, fontSize = 16.sp, modifier = Modifier.padding(start = 7.dp).background(Color.Black.copy(alpha = 0.055f), RoundedCornerShape(18.dp)).padding(horizontal = 15.dp, vertical = 10.dp))
                         }
                     }
                 }

@@ -37,7 +37,17 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
     private val host = MahayanaHost(application)
     private val miniApps = MiniAppPlatformBridge(host)
     private val mutableState = MutableStateFlow(MobileBotUiState())
+    private val messagesByBot = mutableMapOf<String, List<MobileChatMessage>>()
+    private val draftsByBot = mutableMapOf<String, String>()
     val state: StateFlow<MobileBotUiState> = mutableState.asStateFlow()
+
+    private fun commitState(next: MobileBotUiState) {
+        next.activeBot?.let { bot ->
+            messagesByBot[bot.id] = next.messages
+            draftsByBot[bot.id] = next.draft
+        }
+        mutableState.value = next
+    }
 
     fun refreshBots() {
         if (mutableState.value.busy) return
@@ -181,16 +191,23 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun openBot(bot: MobileBotSummaryAndroid) {
-        mutableState.value = mutableState.value.copy(activeBot = bot, draft = "", messages = emptyList(), error = null)
+        commitState(
+            mutableState.value.copy(
+                activeBot = bot,
+                draft = draftsByBot[bot.id].orEmpty(),
+                messages = messagesByBot[bot.id].orEmpty(),
+                error = null,
+            ),
+        )
     }
 
     fun closeBot() {
         if (mutableState.value.busy) return
-        mutableState.value = mutableState.value.copy(activeBot = null, draft = "", messages = emptyList(), error = null)
+        commitState(mutableState.value.copy(activeBot = null, draft = "", messages = emptyList(), error = null))
     }
 
     fun setDraft(value: String) {
-        mutableState.value = mutableState.value.copy(draft = value)
+        commitState(mutableState.value.copy(draft = value))
     }
 
     fun send() {
@@ -199,13 +216,13 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
         val text = snapshot.draft.trim()
         if (text.isBlank() || snapshot.busy) return
         val requestId = "android-mobile-bot-chat-${UUID.randomUUID()}"
-        mutableState.value = snapshot.copy(
+        commitState(snapshot.copy(
             draft = "",
             busy = true,
             error = null,
             operationId = requestId,
             messages = snapshot.messages + MobileChatMessage(requestId, MobileChatRole.USER, text),
-        )
+        ))
         val miniAppId = bot.miniAppId
         if (!miniAppId.isNullOrBlank()) {
             sendMiniApp(miniAppId, text, requestId)
@@ -215,6 +232,20 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     private fun sendMiniApp(pluginId: String, text: String, operationId: String) {
+        commitState(
+            mutableState.value.copy(
+                messages = mutableState.value.messages + MobileChatMessage(
+                    id = "thinking:$operationId",
+                    role = MobileChatRole.ASSISTANT,
+                    text = "",
+                    kind = MobileChatEntryKind.THINKING,
+                    operationId = operationId,
+                    actionTitle = "正在处理",
+                    actionDetail = "正在调用 Mini App…",
+                    actionStatus = "running",
+                ),
+            ),
+        )
         viewModelScope.launch {
             runCatching {
                 withContext(Dispatchers.IO) {
@@ -242,28 +273,28 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
                     mcpResultText(result)
                 }
             }.onSuccess { reply ->
-                mutableState.value = mutableState.value.copy(
+                commitState(mutableState.value.copy(
                     busy = false,
                     operationId = null,
-                    messages = mutableState.value.messages + MobileChatMessage(
+                    messages = mutableState.value.messages.filterNot { it.kind == MobileChatEntryKind.THINKING && it.operationId == operationId } + MobileChatMessage(
                         id = "assistant:$operationId",
                         role = MobileChatRole.ASSISTANT,
                         text = reply,
                         operationId = operationId,
                     ),
-                )
+                ))
             }.onFailure { error ->
-                mutableState.value = mutableState.value.copy(
+                commitState(mutableState.value.copy(
                     busy = false,
                     operationId = null,
                     error = error.message ?: "Mini App WebMCP call failed",
-                    messages = mutableState.value.messages + MobileChatMessage(
+                    messages = mutableState.value.messages.filterNot { it.kind == MobileChatEntryKind.THINKING && it.operationId == operationId } + MobileChatMessage(
                         id = "assistant:$operationId:error",
                         role = MobileChatRole.ASSISTANT,
                         text = "Mini App 调用失败：${error.message ?: "unknown error"}",
                         operationId = operationId,
                     ),
-                )
+                ))
             }
         }
     }
@@ -301,7 +332,7 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
                     )
                     accepted.optString("operationId").ifBlank { requestId }
                 }
-                mutableState.value = mutableState.value.copy(
+                commitState(mutableState.value.copy(
                     operationId = operationId,
                     messages = mutableState.value.messages + MobileChatMessage(
                         id = "thinking:$operationId",
@@ -312,10 +343,12 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
                         actionTitle = "Thinking",
                         actionStatus = "running",
                     ),
-                )
+                ))
                 pump(operationId)
             }.onFailure { error ->
-                mutableState.value = mutableState.value.copy(busy = false, operationId = null, error = error.message ?: "Bot run failed")
+                removeThinking(requestId)
+                finishAssistant(requestId)
+                commitState(mutableState.value.copy(busy = false, operationId = null, error = error.message ?: "Bot run failed"))
             }
         }
     }
@@ -334,7 +367,9 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
             val event = runCatching {
                 withContext(Dispatchers.IO) { host.request("feature.receive", JSONObject().put("timeoutMs", 250)) }
             }.getOrElse { error ->
-                mutableState.value = mutableState.value.copy(busy = false, operationId = null, error = error.message ?: "Message stream interrupted")
+                removeThinking(operationId)
+                finishAssistant(operationId)
+                commitState(mutableState.value.copy(busy = false, operationId = null, error = error.message ?: "Message stream interrupted"))
                 return
             }
             val type = event.optString("type")
@@ -346,11 +381,11 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
             when (type) {
                 "chat.message" -> if (event.optString("role") != "user") {
                     removeThinking(operationId)
-                    upsertAssistant(operationId, event.optString("text"), append = false)
+                upsertAssistant(operationId, event.optString("text"), append = false, streaming = false)
                 }
                 "chat.delta" -> {
                     removeThinking(operationId)
-                    upsertAssistant(operationId, event.optString("delta"), append = true)
+                    upsertAssistant(operationId, event.optString("delta"), append = true, streaming = true)
                 }
                 "agent.step" -> {
                     val id = "action:$operationId:${event.optString("stepId").ifBlank { UUID.randomUUID().toString() }}"
@@ -373,12 +408,14 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
                 }
                 "operation.completed", "operation.interrupted" -> {
                     removeThinking(operationId)
-                    mutableState.value = mutableState.value.copy(busy = false, operationId = null)
+                    finishAssistant(operationId)
+                    commitState(mutableState.value.copy(busy = false, operationId = null))
                     return
                 }
                 "operation.failed" -> {
                     removeThinking(operationId)
-                    mutableState.value = mutableState.value.copy(busy = false, operationId = null, error = event.optString("message").ifBlank { "Bot run failed" })
+                    finishAssistant(operationId)
+                    commitState(mutableState.value.copy(busy = false, operationId = null, error = event.optString("message").ifBlank { "Bot run failed" }))
                     return
                 }
             }
@@ -387,27 +424,38 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     private fun removeThinking(operationId: String) {
-        mutableState.value = mutableState.value.copy(messages = mutableState.value.messages.filterNot { it.kind == MobileChatEntryKind.THINKING && it.operationId == operationId })
+        commitState(mutableState.value.copy(messages = mutableState.value.messages.filterNot { it.kind == MobileChatEntryKind.THINKING && it.operationId == operationId }))
     }
 
-    private fun upsertAssistant(operationId: String, text: String, append: Boolean) {
+    private fun upsertAssistant(operationId: String, text: String, append: Boolean, streaming: Boolean) {
         if (text.isBlank()) return
         val rows = mutableState.value.messages.toMutableList()
         val index = rows.indexOfLast { it.role == MobileChatRole.ASSISTANT && it.kind == MobileChatEntryKind.MESSAGE && it.operationId == operationId }
         if (index >= 0) {
             val current = rows[index]
-            rows[index] = current.copy(text = if (append) current.text + text else text)
+            rows[index] = current.copy(text = if (append) current.text + text else text, streaming = streaming)
         } else {
-            rows += MobileChatMessage("assistant:$operationId", MobileChatRole.ASSISTANT, text, operationId = operationId)
+            rows += MobileChatMessage("assistant:$operationId", MobileChatRole.ASSISTANT, text, operationId = operationId, streaming = streaming)
         }
-        mutableState.value = mutableState.value.copy(messages = rows)
+        commitState(mutableState.value.copy(messages = rows))
+    }
+
+    private fun finishAssistant(operationId: String) {
+        val rows = mutableState.value.messages.map { message ->
+            if (message.role == MobileChatRole.ASSISTANT && message.operationId == operationId) {
+                message.copy(streaming = false)
+            } else {
+                message
+            }
+        }
+        commitState(mutableState.value.copy(messages = rows))
     }
 
     private fun upsert(message: MobileChatMessage) {
         val rows = mutableState.value.messages.toMutableList()
         val index = rows.indexOfFirst { it.id == message.id }
         if (index >= 0) rows[index] = message else rows += message
-        mutableState.value = mutableState.value.copy(messages = rows)
+        commitState(mutableState.value.copy(messages = rows))
     }
 
     override fun onCleared() {

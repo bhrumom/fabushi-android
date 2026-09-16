@@ -49,6 +49,7 @@ data class MobileChatMessage(
     val actionTitle: String? = null,
     val actionDetail: String? = null,
     val actionStatus: String? = null,
+    val streaming: Boolean = false,
 )
 
 data class MarketplaceUiState(
