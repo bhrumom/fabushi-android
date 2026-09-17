@@ -194,6 +194,7 @@ fun FabushiScreen(
     onChatDraftChange: (String) -> Unit = {},
     onSendChat: () -> Unit = {},
     onStopChat: () -> Unit = {},
+    onOpenGeneratedMiniApp: (MobileChatMessage) -> Unit = {},
 ) {
     var destination by remember { mutableStateOf(MobileDestination.HOME) }
     var showAddMenu by remember { mutableStateOf(false) }
@@ -215,7 +216,7 @@ fun FabushiScreen(
         return
     }
     if (showAgentChat) {
-        MobileAgentChat(state, onChatDraftChange, onSendChat, onStopChat) { showAgentChat = false }
+        MobileAgentChat(state, onChatDraftChange, onSendChat, onStopChat, onOpenGeneratedMiniApp) { showAgentChat = false }
         return
     }
 
@@ -594,6 +595,7 @@ private fun MobileAgentChat(
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
     onStop: () -> Unit,
+    onOpenGeneratedMiniApp: (MobileChatMessage) -> Unit,
     onClose: () -> Unit,
 ) {
     Scaffold(containerColor = homeBackground, modifier = Modifier.fillMaxSize().testTag(TestTags.MahayanaAgentChat)) { padding ->
@@ -613,7 +615,7 @@ private fun MobileAgentChat(
                         Text("真实的模型路由、工具调用和每一步工作会逐条显示在这里。", color = homeSecondaryText, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     }
                 }
-                items(state.chatMessages, key = { it.id }) { entry -> MobileAgentChatEntry(entry) }
+                items(state.chatMessages, key = { it.id }) { entry -> MobileAgentChatEntry(entry, onOpenGeneratedMiniApp) }
             }
             Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = state.chatDraft, onValueChange = onDraftChange, modifier = Modifier.weight(1f), enabled = !state.chatBusy, placeholder = { Text("消息大乘助手") }, maxLines = 5)
@@ -628,7 +630,7 @@ private fun MobileAgentChat(
 }
 
 @Composable
-private fun MobileAgentChatEntry(entry: MobileChatMessage) {
+private fun MobileAgentChatEntry(entry: MobileChatMessage, onOpenGeneratedMiniApp: (MobileChatMessage) -> Unit) {
     when {
         entry.kind == MobileChatEntryKind.THINKING -> Row(Modifier.fillMaxWidth().background(homeSurface, RoundedCornerShape(13.dp)).border(1.dp, Color(0xFF6F5BC6), RoundedCornerShape(13.dp)).padding(10.dp).testTag(TestTags.MahayanaThinking), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
             Box(Modifier.size(30.dp).background(homeBackground, CircleShape), contentAlignment = Alignment.Center) { Text("✦", color = homeAccent, fontSize = 18.sp) }
@@ -638,6 +640,10 @@ private fun MobileAgentChatEntry(entry: MobileChatMessage) {
             Box(Modifier.size(25.dp).background(homeBackground, CircleShape), contentAlignment = Alignment.Center) { Text("✦", color = homeAccent, fontSize = 15.sp) }
             Column(Modifier.weight(1f)) { Text(entry.actionTitle ?: "助手动作", color = homePrimaryText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold); entry.actionDetail?.let { if (it.isNotBlank()) Text(it, color = homeSecondaryText, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis) } }
             Text(if (entry.actionStatus == "failed") "失败" else if (entry.actionStatus == "running") "进行中" else "完成", color = if (entry.actionStatus == "failed") Color(0xFFFF6B6B) else if (entry.actionStatus == "running") homeAccent else Color(0xFF65D6A0), fontSize = 11.sp)
+        }
+        entry.kind == MobileChatEntryKind.MINI_APP -> Column(Modifier.fillMaxWidth().background(homeSurface, RoundedCornerShape(14.dp)).border(1.dp, Color(0xFF6F5BC6), RoundedCornerShape(14.dp)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Text("▦", color = homeAccent, fontSize = 20.sp); Column { Text(entry.miniAppName ?: "生成的小程序", color = homePrimaryText, fontWeight = FontWeight.SemiBold); Text(entry.miniAppDescription ?: "可直接运行的 Fabushi 小程序产物", color = homeSecondaryText, fontSize = 11.sp) } }
+            Button(onClick = { onOpenGeneratedMiniApp(entry) }, modifier = Modifier.testTag("mahayana-generated-miniapp-open"), colors = ButtonDefaults.buttonColors(containerColor = homeAccent, contentColor = Color.Black)) { Text("打开小程序", fontWeight = FontWeight.Bold) }
         }
         entry.role == MobileChatRole.USER -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { Text(entry.text, color = Color.White, modifier = Modifier.background(Color.Black, RoundedCornerShape(16.dp)).padding(horizontal = 13.dp, vertical = 10.dp)) }
         else -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.Top) { Text("✦", color = homeAccent, modifier = Modifier.padding(7.dp)); Text(entry.text, color = homePrimaryText, modifier = Modifier.background(homeSurface, RoundedCornerShape(16.dp)).padding(horizontal = 13.dp, vertical = 10.dp)) }
