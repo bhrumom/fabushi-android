@@ -38,7 +38,7 @@ data class PermissionRequest(
 )
 
 enum class MobileChatRole { USER, ASSISTANT }
-enum class MobileChatEntryKind { MESSAGE, ACTION, THINKING }
+enum class MobileChatEntryKind { MESSAGE, ACTION, THINKING, MINI_APP }
 
 data class MobileChatMessage(
     val id: String,
@@ -49,6 +49,8 @@ data class MobileChatMessage(
     val actionTitle: String? = null,
     val actionDetail: String? = null,
     val actionStatus: String? = null,
+    val miniAppName: String? = null,
+    val miniAppDescription: String? = null,
     val streaming: Boolean = false,
 )
 
