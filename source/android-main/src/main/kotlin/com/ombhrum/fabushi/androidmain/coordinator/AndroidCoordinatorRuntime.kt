@@ -23,6 +23,7 @@ class AndroidCoordinatorRuntime private constructor(application: Application) : 
     private val host = MahayanaHost(application)
 
     override fun authStatus() = host.request("feature.auth.status")
+    override fun authDeviceAgentSession() = host.request("feature.auth.deviceAgentSession")
     override fun authBrowserStart() = host.request("feature.auth.browserStart")
     override fun authBrowserReopen(params: JSONObject) = host.request("feature.auth.browserReopen", params)
     override fun authBrowserCancel(params: JSONObject) = host.request("feature.auth.browserCancel", params)

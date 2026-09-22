@@ -11,6 +11,7 @@ import org.json.JSONObject
  */
 interface AndroidCoordinatorPort {
     fun authStatus(): JSONObject
+    fun authDeviceAgentSession(): JSONObject
     fun authBrowserStart(): JSONObject
     fun authBrowserReopen(params: JSONObject): JSONObject
     fun authBrowserCancel(params: JSONObject): JSONObject

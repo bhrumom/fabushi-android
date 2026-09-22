@@ -1,7 +1,7 @@
 package com.ombhrum.fabushi
 
 import android.content.Context
-import com.ombhrum.fabushi.core.MahayanaHost
+import com.ombhrum.fabushi.androidpreload.runtime.AndroidCoordinatorPort
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit
  */
 internal class FabushiRemoteDeviceGateway(
     context: Context,
+    private val coordinator: AndroidCoordinatorPort,
     private val surface: FabushiAppAgentSurface,
     private val metadata: Map<String, String>,
     private val configuredDeviceName: String? = null,
@@ -48,7 +49,6 @@ internal class FabushiRemoteDeviceGateway(
         val accessTokenExpiresAt: Long,
     )
 
-    private val host = MahayanaHost(context.applicationContext)
     private val traceFile = File(context.getExternalFilesDir(null) ?: context.filesDir, "device-gateway-trace.jsonl")
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val client = OkHttpClient.Builder()
@@ -83,7 +83,7 @@ internal class FabushiRemoteDeviceGateway(
     private suspend fun refreshConnection() {
         if (!synchronized(stateLock) { desiredLoggedIn }) return
         runCatching {
-            parseAgentSession(host.request("feature.auth.deviceAgentSession"))
+            parseAgentSession(coordinator.authDeviceAgentSession())
         }.onSuccess { candidate ->
             val current = synchronized(stateLock) { activeSession }
             val stillUsable = synchronized(stateLock) {
@@ -310,7 +310,6 @@ internal class FabushiRemoteDeviceGateway(
         scope.cancel()
         client.dispatcher.executorService.shutdown()
         client.connectionPool.evictAll()
-        host.close()
     }
 
     private fun parseAgentSession(value: JSONObject): AgentSession {

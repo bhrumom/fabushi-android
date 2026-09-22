@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import com.ombhrum.fabushi.androidmain.coordinator.AndroidCoordinatorPorts
 import kotlinx.coroutines.flow.MutableSharedFlow
 
 /**
@@ -26,6 +27,7 @@ class MainActivity : ComponentActivity() {
         val ciBootstrapActive = FabushiCiBootstrap.prepare(this)
         remoteDeviceGateway = FabushiRemoteDeviceGateway(
             context = applicationContext,
+            coordinator = AndroidCoordinatorPorts.presentation(application),
             surface = appAgentSurface,
             metadata = FabushiCiBootstrap.gatewayMetadata(intent, ciBootstrapActive),
             configuredDeviceName = FabushiCiBootstrap.configuredDeviceName(intent, ciBootstrapActive),
