@@ -221,10 +221,17 @@ def run_checks(strict: bool) -> CheckResult:
             continue
         for path in root.rglob("*.kt"):
             text = path.read_text(encoding="utf-8")
-            if "AndroidCoordinatorRuntime" in text:
+            forbidden_runtime_types = [
+                name for name in ("AndroidCoordinatorRuntime", "FabushiRemoteDeviceGateway", "FabushiProcessRuntime")
+                if name in text
+            ]
+            if forbidden_runtime_types:
                 presentation_runtime_bypasses += 1
                 relative = path.relative_to(ROOT)
-                message = f"presentation file references concrete AndroidCoordinatorRuntime: {relative}"
+                message = (
+                    "presentation file references concrete runtime type(s) "
+                    f"{','.join(forbidden_runtime_types)}: {relative}"
+                )
                 if strict:
                     errors.append(message)
                 else:
