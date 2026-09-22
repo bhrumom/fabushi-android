@@ -15,7 +15,7 @@ mod tests {
     fn trace_roundtrip_and_safe_paths() {
         let row = TraceRecord { sequence: 4, role: "assistant".into(), kind: "delta".into(), payload: "hello".into() };
         assert_eq!(decode_record(&encode_record(&row)).unwrap(), row);
-        assert_eq!(transcript_file_name("session:/bad"), "session_-_bad.jsonl");
+        assert_eq!(transcript_file_name("session:/bad"), "session__bad.jsonl");
         assert_eq!(strip_context_fields("visible\n<context>secret</context>\nend"), "visible\n[context stripped]\nend");
     }
 }
