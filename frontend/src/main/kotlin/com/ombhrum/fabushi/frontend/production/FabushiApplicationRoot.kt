@@ -22,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.ombhrum.fabushi.androidmain.coordinator.AndroidCoordinatorPorts
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidPresentationRuntimePort
 import kotlinx.coroutines.flow.SharedFlow
 import org.json.JSONObject
@@ -90,7 +89,7 @@ internal fun FabushiApplicationRoot(
 
                 val active = openedMiniApp
                 if (active != null) {
-                    val coordinator = remember { AndroidCoordinatorPorts.presentation(application) }
+                    val coordinator = remember { CoordinatorClient.presentation() }
                     val miniAppPlatformBridge = remember(active.pluginId, coordinator) {
                         MiniAppPlatformBridge(coordinator)
                     }
