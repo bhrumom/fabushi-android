@@ -6,7 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import com.ombhrum.fabushi.androidmain.deeplink.AndroidDeepLinkRouter
+import com.ombhrum.fabushi.androidmain.deeplink.AndroidDeepLinkController
 import com.ombhrum.fabushi.androidpreload.deeplink.AndroidDeepLink
 import kotlinx.coroutines.flow.MutableSharedFlow
 
@@ -18,6 +18,9 @@ import kotlinx.coroutines.flow.MutableSharedFlow
  */
 class MainActivity : ComponentActivity() {
     private val deepLinks = MutableSharedFlow<AndroidDeepLink>(replay = 1, extraBufferCapacity = 31)
+    private val deepLinkController = AndroidDeepLinkController(
+        dispatch = deepLinks::tryEmit,
+    )
     private val updateModel: AndroidUpdateViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,6 +35,7 @@ class MainActivity : ComponentActivity() {
                 runtimePort = processRuntime,
             )
         }
+        deepLinkController.markReady()
         intent?.data?.let(::enqueueDeepLink)
     }
 
@@ -51,10 +55,15 @@ class MainActivity : ComponentActivity() {
         intent.data?.let(::enqueueDeepLink)
     }
 
+    override fun onDestroy() {
+        deepLinkController.markNotReady()
+        super.onDestroy()
+    }
+
     internal fun appAgentSurfaceForTesting(): FabushiAppAgentSurface =
         (application as FabushiApplication).requireProcessRuntime().appAgentSurface
 
     private fun enqueueDeepLink(uri: android.net.Uri) {
-        AndroidDeepLinkRouter.parse(uri.toString())?.let(deepLinks::tryEmit)
+        deepLinkController.handleCandidate(uri.toString(), "android-intent")
     }
 }
