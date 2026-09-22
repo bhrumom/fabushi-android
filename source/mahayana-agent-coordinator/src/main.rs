@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, VecDeque};
 use fabushi_android_internal::MonotonicSequence;
 use fabushi_android_shared::{
     CancelRequest, CoordinatorEvent, CoordinatorFailure, CoordinatorFailureCode, CoordinatorReply,
-    CoordinatorRequest, ResyncSnapshot,
+    CoordinatorRequest, ResyncRequest, ResyncSnapshot,
 };
 
 pub const DEFAULT_EVENT_REPLAY_LIMIT: usize = 512;
@@ -108,17 +108,32 @@ impl<H: HostPort> MahayanaCoordinator<H> {
         event
     }
 
-    pub fn resync_since(&self, after_sequence: u64) -> ResyncSnapshot {
-        ResyncSnapshot {
+    pub fn resync(&self, request: ResyncRequest) -> Result<ResyncSnapshot, CoordinatorFailure> {
+        if request.generation != self.generation {
+            return Err(CoordinatorFailure::new(
+                CoordinatorFailureCode::StaleGeneration,
+                format!(
+                    "client generation {} is stale; current generation is {}",
+                    request.generation, self.generation
+                ),
+            ));
+        }
+        Ok(ResyncSnapshot {
             generation: self.generation,
             latest_sequence: self.sequence.current(),
-            events: self.events.iter().filter(|event| event.sequence > after_sequence).cloned().collect(),
-        }
+            events: self.events.iter().filter(|event| event.sequence > request.after_sequence).cloned().collect(),
+        })
+    }
+
+    pub fn resync_since(&self, after_sequence: u64) -> ResyncSnapshot {
+        self.resync(ResyncRequest { generation: self.generation, after_sequence })
+            .expect("current coordinator generation must resync")
     }
 
     pub fn settle_host_crash(&mut self, detail: impl Into<String>) -> Vec<CoordinatorReply> {
         let detail = detail.into();
         self.generation = self.generation.saturating_add(1);
+        self.events.clear();
         std::mem::take(&mut self.pending).into_keys().map(|request_id| {
             CoordinatorReply::failed(
                 request_id,
@@ -191,5 +206,25 @@ mod tests {
         assert_eq!(settled.len(), 1);
         assert_eq!(coordinator.generation(), 2);
         assert_eq!(coordinator.active_request_count(), 0);
+        assert!(coordinator.resync(ResyncRequest { generation: 1, after_sequence: 0 }).is_err());
+        let fresh = coordinator.resync(ResyncRequest { generation: 2, after_sequence: 0 }).unwrap();
+        assert!(fresh.events.is_empty());
+    }
+
+    #[test]
+    fn streaming_replay_is_ordered_and_stale_generation_is_rejected() {
+        let mut coordinator = MahayanaCoordinator::with_replay_limit(FakeHost::default(), 8);
+        let generation = coordinator.generation();
+        coordinator.publish_event("session-a", "chat.delta", r#"{"delta":"a"}"#);
+        coordinator.publish_event("session-a", "chat.delta", r#"{"delta":"b"}"#);
+        coordinator.publish_event("session-a", "operation.completed", "{}");
+        let replay = coordinator.resync(ResyncRequest { generation, after_sequence: 1 }).unwrap();
+        assert_eq!(replay.events.iter().map(|event| event.sequence).collect::<Vec<_>>(), vec![2, 3]);
+
+        coordinator.settle_host_crash("host killed");
+        let error = coordinator.resync(ResyncRequest { generation, after_sequence: 0 }).unwrap_err();
+        assert_eq!(error.code, CoordinatorFailureCode::StaleGeneration);
+        let fresh = coordinator.resync(ResyncRequest { generation: coordinator.generation(), after_sequence: 0 }).unwrap();
+        assert!(fresh.events.is_empty());
     }
 }

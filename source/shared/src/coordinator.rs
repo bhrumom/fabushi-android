@@ -40,6 +40,12 @@ pub struct CancelRequest {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ResyncRequest {
+    pub generation: u64,
+    pub after_sequence: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CoordinatorFailureCode {
     ProtocolMismatch,
     ProtocolBreach,
@@ -49,6 +55,7 @@ pub enum CoordinatorFailureCode {
     Cancelled,
     HostUnavailable,
     HostCrashed,
+    StaleGeneration,
     GatewayUnavailable,
     Internal,
 }
@@ -64,6 +71,7 @@ impl fmt::Display for CoordinatorFailureCode {
             Self::Cancelled => "cancelled",
             Self::HostUnavailable => "host-unavailable",
             Self::HostCrashed => "host-crashed",
+            Self::StaleGeneration => "stale-generation",
             Self::GatewayUnavailable => "gateway-unavailable",
             Self::Internal => "internal",
         })
