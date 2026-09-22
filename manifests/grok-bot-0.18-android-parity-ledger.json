@@ -434,8 +434,8 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/production/coordinator-client.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored CoordinatorClient resolves only AndroidCoordinatorPort through AndroidCoordinatorBridge; architecture checker rejects frontend -> android-main imports and Android Gradle unit/compile CI covers the source. Exact-HEAD CI verification remains required before verified.",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
     },
     {
@@ -26677,9 +26677,7 @@
     }
   ],
   "status_summary": {
-    "mapped": 1986,
-    "implemented": 60,
-    "verified": 0,
-    "blocked": 0
+    "mapped": 1930,
+    "implemented": 116
   }
 }
