@@ -12,3 +12,7 @@ pub use coordinator::{
 pub use execution::{
     ExecutionCapability, ExecutionError, ExecutionRequest, ExecutionResult, ExecutionTarget,
 };
+
+pub mod auth;
+pub mod gateway_wire;
+pub mod media;
