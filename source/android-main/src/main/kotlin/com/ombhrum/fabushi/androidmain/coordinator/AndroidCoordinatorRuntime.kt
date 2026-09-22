@@ -13,6 +13,13 @@ import org.json.JSONObject
  * owner and is the insertion point for reconnect/resync and process-death recovery.
  */
 class AndroidCoordinatorRuntime private constructor(application: Application) : AndroidCoordinatorPort {
+    private val epochStore = object : CoordinatorEpochStore {
+        private val preferences = application.getSharedPreferences("fabushi-coordinator-runtime", 0)
+        override fun read(): Long = preferences.getLong("generation", 0L)
+        override fun write(value: Long) { preferences.edit().putLong("generation", value).apply() }
+    }
+    private val processRuntime = CoordinatorProcessRuntime(epochStore)
+    val processGeneration: Long = processRuntime.start()
     private val host = MahayanaHost(application)
 
     override fun authStatus() = host.request("feature.auth.status")
