@@ -237,6 +237,18 @@ def run_checks(strict: bool) -> CheckResult:
                 else:
                     warnings.append(message)
 
+    frontend_android_main_dependencies = 0
+    frontend_root = ROOT / "frontend"
+    if frontend_root.exists():
+        for path in frontend_root.rglob("*.kt"):
+            text = path.read_text(encoding="utf-8")
+            if "com.ombhrum.fabushi.androidmain." in text or "AndroidCoordinatorPorts" in text:
+                frontend_android_main_dependencies += 1
+                errors.append(
+                    "frontend must depend on android-preload contracts, not android-main: "
+                    f"{path.relative_to(ROOT)}"
+                )
+
     architecture_scope_markers = sorted(
         path for base in (ROOT / "frontend", ROOT / "source")
         if base.exists()
@@ -257,6 +269,7 @@ def run_checks(strict: bool) -> CheckResult:
         "legacy_android_product_files": len(legacy_android_product_files),
         "presentation_host_bypasses": bypass_count,
         "presentation_runtime_bypasses": presentation_runtime_bypasses,
+        "frontend_android_main_dependencies": frontend_android_main_dependencies,
         "architecture_scope_markers": len(architecture_scope_markers),
         "mode": "strict" if strict else "phase0",
     }
