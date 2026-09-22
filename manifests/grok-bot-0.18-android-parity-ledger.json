@@ -4851,11 +4851,11 @@
       "grok_size_bytes": 1161,
       "grok_responsibility": "Android platform-main responsibility corresponding to Grok electron-main/coordinator; source unit account-revoke.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/coordinator/account-revoke.ts#blob=751383358ea46f2a5adc89fda977806f9f95c7b9",
-      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/account-revoke.kt",
+      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/AccountRevoke.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
     },
     {
@@ -4864,11 +4864,11 @@
       "grok_size_bytes": 2261,
       "grok_responsibility": "Android platform-main responsibility corresponding to Grok electron-main/coordinator; source unit account-transition-cleanup.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/coordinator/account-transition-cleanup.ts#blob=f5734b4114866e02ff0a7fcc83d7128be6f9afa8",
-      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/account-transition-cleanup.kt",
+      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/AccountTransitionCleanup.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
     },
     {
@@ -4877,11 +4877,11 @@
       "grok_size_bytes": 13314,
       "grok_responsibility": "Android platform-main responsibility corresponding to Grok electron-main/coordinator; source unit coordinator-account-runtime.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/coordinator/coordinator-account-runtime.ts#blob=03d048882d1c282213f01a2a05f3420872cad6fd",
-      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/coordinator-account-runtime.kt",
+      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/CoordinatorAccountRuntime.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
     },
     {
@@ -4890,11 +4890,11 @@
       "grok_size_bytes": 3549,
       "grok_responsibility": "Android platform-main responsibility corresponding to Grok electron-main/coordinator; source unit coordinator-control-server.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/coordinator/coordinator-control-server.ts#blob=80ca9fda01a1675dd47f3201288ec6aa59ee8b15",
-      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/coordinator-control-server.kt",
+      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/CoordinatorControlServer.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
     },
     {
@@ -4903,11 +4903,11 @@
       "grok_size_bytes": 22323,
       "grok_responsibility": "Android platform-main responsibility corresponding to Grok electron-main/coordinator; source unit coordinator-executors.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/coordinator/coordinator-executors.ts#blob=f8a01046d70a70ba183c6f1678e077bad9cc338b",
-      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/coordinator-executors.kt",
+      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/CoordinatorExecutors.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
     },
     {
@@ -4916,11 +4916,11 @@
       "grok_size_bytes": 723,
       "grok_responsibility": "Android platform-main responsibility corresponding to Grok electron-main/coordinator; source unit coordinator-handoff-telemetry.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/coordinator/coordinator-handoff-telemetry.ts#blob=710b3a19756373643796b3f4acfa72d2c0002c75",
-      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/coordinator-handoff-telemetry.kt",
+      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/CoordinatorHandoffTelemetry.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
     },
     {
@@ -4929,11 +4929,11 @@
       "grok_size_bytes": 3669,
       "grok_responsibility": "Android platform-main responsibility corresponding to Grok electron-main/coordinator; source unit coordinator-launcher.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/coordinator/coordinator-launcher.ts#blob=a3fdc2aea0adba03aefb0c4a44b24383cc09fa09",
-      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/coordinator-launcher.kt",
+      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/CoordinatorLauncher.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
     },
     {
@@ -4942,11 +4942,11 @@
       "grok_size_bytes": 1881,
       "grok_responsibility": "Android platform-main responsibility corresponding to Grok electron-main/coordinator; source unit coordinator-main-legs.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/coordinator/coordinator-main-legs.ts#blob=52a924ad99d57cca64fbd23856d5eccf8655f137",
-      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/coordinator-main-legs.kt",
+      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/CoordinatorMainLegs.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
     },
     {
@@ -4955,11 +4955,11 @@
       "grok_size_bytes": 3780,
       "grok_responsibility": "Android platform-main responsibility corresponding to Grok electron-main/coordinator; source unit coordinator-main-port-client.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/coordinator/coordinator-main-port-client.ts#blob=80c74f9116b39b91b18cf6ca95f41ee88e7fed62",
-      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/coordinator-main-port-client.kt",
+      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/CoordinatorMainPortClient.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
     },
     {
@@ -4968,11 +4968,11 @@
       "grok_size_bytes": 1195,
       "grok_responsibility": "Android platform-main responsibility corresponding to Grok electron-main/coordinator; source unit coordinator-port-ipc-guard.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/coordinator/coordinator-port-ipc-guard.ts#blob=9a10a87548d98a304fad9c4d983a827d37f484dd",
-      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/coordinator-port-ipc-guard.kt",
+      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/CoordinatorPortIpcGuard.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
     },
     {
@@ -4981,11 +4981,11 @@
       "grok_size_bytes": 5321,
       "grok_responsibility": "Android platform-main responsibility corresponding to Grok electron-main/coordinator; source unit coordinator-resync.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/coordinator/coordinator-resync.ts#blob=3863ca3a3f933e611b4f58122ea6cd75274dd76c",
-      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/coordinator-resync.kt",
+      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/CoordinatorResync.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
     },
     {
@@ -4994,11 +4994,11 @@
       "grok_size_bytes": 7048,
       "grok_responsibility": "Android platform-main responsibility corresponding to Grok electron-main/coordinator; source unit coordinator-runtime.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/coordinator/coordinator-runtime.ts#blob=43e0769aeeb7c3f30f461a2044dd880cdaad002c",
-      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/coordinator-runtime.kt",
+      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/CoordinatorRuntime.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
     },
     {
@@ -5007,11 +5007,11 @@
       "grok_size_bytes": 5258,
       "grok_responsibility": "Android platform-main responsibility corresponding to Grok electron-main/coordinator; source unit coordinator-telemetry.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/coordinator/coordinator-telemetry.ts#blob=2b434b870aacc2ccf8683bec26bd1fc34f37a30d",
-      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/coordinator-telemetry.kt",
+      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/CoordinatorTelemetry.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
     },
     {
@@ -5020,11 +5020,11 @@
       "grok_size_bytes": 1266,
       "grok_responsibility": "Android platform-main responsibility corresponding to Grok electron-main/coordinator; source unit desktop-connectivity.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/coordinator/desktop-connectivity.ts#blob=c7aa2198a87aad256b2e3c35694f367d6e73ed36",
-      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/desktop-connectivity.kt",
+      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/DesktopConnectivity.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
     },
     {
@@ -5033,11 +5033,11 @@
       "grok_size_bytes": 26100,
       "grok_responsibility": "Android platform-main responsibility corresponding to Grok electron-main/coordinator; source unit production-provider.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/coordinator/production-provider.ts#blob=cc8ed401ba7c3c1747dbda785f6efbd0eecb5230",
-      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/production-provider.kt",
+      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/ProductionProvider.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
     },
     {
@@ -5046,11 +5046,11 @@
       "grok_size_bytes": 6937,
       "grok_responsibility": "Android platform-main responsibility corresponding to Grok electron-main/coordinator; source unit production-root-auxiliary-provider.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/coordinator/production-root-auxiliary-provider.ts#blob=f34585d2745d3d8aec4289837a4e8f8991e7ce63",
-      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/production-root-auxiliary-provider.kt",
+      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/ProductionRootAuxiliaryProvider.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
     },
     {
@@ -5059,11 +5059,11 @@
       "grok_size_bytes": 6159,
       "grok_responsibility": "Android platform-main responsibility corresponding to Grok electron-main/coordinator; source unit production-root-provider.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/coordinator/production-root-provider.ts#blob=24e924f3d52d41a0900314aa7c21d98804a9dc19",
-      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/production-root-provider.kt",
+      "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/ProductionRootProvider.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
     },
     {
@@ -6671,11 +6671,11 @@
       "grok_size_bytes": 651,
       "grok_responsibility": "Typed Android bridge responsibility corresponding to Grok preload unit box-vnc-clipboard-paste.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-preload/box-vnc-clipboard-paste.ts#blob=55cab9f0e773bf7bfcf9c1841723a2ab8e497379",
-      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/box-vnc-clipboard-paste.kt",
+      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/BoxVncClipboardPaste.kt",
       "target_language_runtime": "Kotlin / typed Android bridge",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/core/MahayanaHost.kt; MiniAppPlatformBridge.kt"
     },
     {
@@ -6684,11 +6684,11 @@
       "grok_size_bytes": 5644,
       "grok_responsibility": "Typed Android bridge responsibility corresponding to Grok preload unit box-vnc-liveness.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-preload/box-vnc-liveness.ts#blob=31cef9ca7502386a7af4bbf3066197c8ebb6545d",
-      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/box-vnc-liveness.kt",
+      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/BoxVncLiveness.kt",
       "target_language_runtime": "Kotlin / typed Android bridge",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/core/MahayanaHost.kt; MiniAppPlatformBridge.kt"
     },
     {
@@ -6697,11 +6697,11 @@
       "grok_size_bytes": 408,
       "grok_responsibility": "Typed Android bridge responsibility corresponding to Grok preload unit box-vnc-visibility-gate.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-preload/box-vnc-visibility-gate.ts#blob=3e827be67401d32040678b7eb482cb749d714633",
-      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/box-vnc-visibility-gate.kt",
+      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/BoxVncVisibilityGate.kt",
       "target_language_runtime": "Kotlin / typed Android bridge",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/core/MahayanaHost.kt; MiniAppPlatformBridge.kt"
     },
     {
@@ -6710,11 +6710,11 @@
       "grok_size_bytes": 2755,
       "grok_responsibility": "Typed Android bridge responsibility corresponding to Grok preload unit coordinator-port-bridge.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-preload/coordinator-port-bridge.ts#blob=df5be4813dc8068133db14e13916c3c7d31d64ce",
-      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/coordinator-port-bridge.kt",
+      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/CoordinatorPortBridge.kt",
       "target_language_runtime": "Kotlin / typed Android bridge",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/core/MahayanaHost.kt; MiniAppPlatformBridge.kt"
     },
     {
@@ -6723,11 +6723,11 @@
       "grok_size_bytes": 331,
       "grok_responsibility": "Typed Android bridge responsibility corresponding to Grok preload unit main-rpc-runtime.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-preload/main-rpc-runtime.ts#blob=90086ee55ab2adb5a69100267a66bfe240d7a4af",
-      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/main-rpc-runtime.kt",
+      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/MainRpcRuntime.kt",
       "target_language_runtime": "Kotlin / typed Android bridge",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/core/MahayanaHost.kt; MiniAppPlatformBridge.kt"
     },
     {
@@ -6736,11 +6736,11 @@
       "grok_size_bytes": 806,
       "grok_responsibility": "Typed Android bridge responsibility corresponding to Grok preload unit passkey-stall.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-preload/passkey-stall.ts#blob=688e9fc555a795a1bde57add4d6b13bafb53cf76",
-      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/passkey-stall.kt",
+      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/PasskeyStall.kt",
       "target_language_runtime": "Kotlin / typed Android bridge",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/core/MahayanaHost.kt; MiniAppPlatformBridge.kt"
     },
     {
@@ -6749,11 +6749,11 @@
       "grok_size_bytes": 8818,
       "grok_responsibility": "Typed Android bridge responsibility corresponding to Grok preload unit preload-browser-base.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-preload/preload-browser-base.ts#blob=6c9b84263938f9fbaba31c69205fca7179e42fae",
-      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/preload-browser-base.kt",
+      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/PreloadBrowserBase.kt",
       "target_language_runtime": "Kotlin / typed Android bridge",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/core/MahayanaHost.kt; MiniAppPlatformBridge.kt"
     },
     {
@@ -6762,11 +6762,11 @@
       "grok_size_bytes": 2895,
       "grok_responsibility": "Typed Android bridge responsibility corresponding to Grok preload unit preload-dev-controls.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-preload/preload-dev-controls.ts#blob=2cf4db30b61c20fa0caaf6a9be299420642eb782",
-      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/preload-dev-controls.kt",
+      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/PreloadDevControls.kt",
       "target_language_runtime": "Kotlin / typed Android bridge",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/core/MahayanaHost.kt; MiniAppPlatformBridge.kt"
     },
     {
@@ -6775,11 +6775,11 @@
       "grok_size_bytes": 21581,
       "grok_responsibility": "Typed Android bridge responsibility corresponding to Grok preload unit preload-vnc.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-preload/preload-vnc.ts#blob=10dfa1af010165d60d1d931868bfcc40ebf58b9c",
-      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/preload-vnc.kt",
+      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/PreloadVnc.kt",
       "target_language_runtime": "Kotlin / typed Android bridge",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/core/MahayanaHost.kt; MiniAppPlatformBridge.kt"
     },
     {
@@ -6788,11 +6788,11 @@
       "grok_size_bytes": 1938,
       "grok_responsibility": "Typed Android bridge responsibility corresponding to Grok preload unit preload-webview.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-preload/preload-webview.ts#blob=2cb24a7442cabc5f68b54e7ae7f41ab4f266ec0c",
-      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/preload-webview.kt",
+      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/PreloadWebview.kt",
       "target_language_runtime": "Kotlin / typed Android bridge",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/core/MahayanaHost.kt; MiniAppPlatformBridge.kt"
     },
     {
@@ -6801,11 +6801,11 @@
       "grok_size_bytes": 20498,
       "grok_responsibility": "Typed Android bridge responsibility corresponding to Grok preload unit preload.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-preload/preload.ts#blob=23b6a017604895700d6a6a9412474f2af9da0d7f",
-      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/preload.kt",
+      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/Preload.kt",
       "target_language_runtime": "Kotlin / typed Android bridge",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/core/MahayanaHost.kt; MiniAppPlatformBridge.kt"
     },
     {
@@ -6814,11 +6814,11 @@
       "grok_size_bytes": 2835,
       "grok_responsibility": "Typed Android bridge responsibility corresponding to Grok preload unit rpc-edge-runtime.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-preload/rpc-edge-runtime.ts#blob=5c0e651b2ccf8226432466649bd77c75a44670bb",
-      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/rpc-edge-runtime.kt",
+      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/RpcEdgeRuntime.kt",
       "target_language_runtime": "Kotlin / typed Android bridge",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/core/MahayanaHost.kt; MiniAppPlatformBridge.kt"
     },
     {
@@ -6827,11 +6827,11 @@
       "grok_size_bytes": 205,
       "grok_responsibility": "Typed Android bridge responsibility corresponding to Grok preload unit dev-controls.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-preload/runtime/dev-controls.ts#blob=cc885208f4b6f91e76fc38d59733271001778827",
-      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/runtime/dev-controls.kt",
+      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/runtime/DevControls.kt",
       "target_language_runtime": "Kotlin / typed Android bridge",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/core/MahayanaHost.kt; MiniAppPlatformBridge.kt"
     },
     {
@@ -6840,11 +6840,11 @@
       "grok_size_bytes": 176,
       "grok_responsibility": "Typed Android bridge responsibility corresponding to Grok preload unit primary.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-preload/runtime/primary.ts#blob=aef857f049542fde1900f0b6f5ebe4d1d92f23f3",
-      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/runtime/primary.kt",
+      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/runtime/Primary.kt",
       "target_language_runtime": "Kotlin / typed Android bridge",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/core/MahayanaHost.kt; MiniAppPlatformBridge.kt"
     },
     {
@@ -6853,11 +6853,11 @@
       "grok_size_bytes": 164,
       "grok_responsibility": "Typed Android bridge responsibility corresponding to Grok preload unit vnc.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-preload/runtime/vnc.ts#blob=92e87d35b332b84f56a3383df19459c956d1cfba",
-      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/runtime/vnc.kt",
+      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/runtime/Vnc.kt",
       "target_language_runtime": "Kotlin / typed Android bridge",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/core/MahayanaHost.kt; MiniAppPlatformBridge.kt"
     },
     {
@@ -6866,11 +6866,11 @@
       "grok_size_bytes": 184,
       "grok_responsibility": "Typed Android bridge responsibility corresponding to Grok preload unit webview.ts.",
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-preload/runtime/webview.ts#blob=73e6602ce8e8b8f251daaec4055bc9ae9514bc46",
-      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/runtime/webview.kt",
+      "android_target_path": "source/android-preload/src/main/kotlin/com/ombhrum/fabushi/androidpreload/runtime/Webview.kt",
       "target_language_runtime": "Kotlin / typed Android bridge",
       "parity_class": "android-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Android unit compile/tests in existing-android-regression plus CoordinatorArchitectureTest; exact-HEAD verification pending",
       "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/core/MahayanaHost.kt; MiniAppPlatformBridge.kt"
     },
     {
@@ -26622,8 +26622,8 @@
     }
   ],
   "status_summary": {
-    "mapped": 2019,
-    "implemented": 27,
+    "mapped": 1986,
+    "implemented": 60,
     "verified": 0,
     "blocked": 0
   }
