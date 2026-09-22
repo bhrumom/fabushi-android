@@ -7,7 +7,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import com.ombhrum.fabushi.androidmain.coordinator.AndroidCoordinatorPorts
 import kotlinx.coroutines.flow.MutableSharedFlow
 
 /**
@@ -19,19 +18,9 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 class MainActivity : ComponentActivity() {
     private val deepLinks = MutableSharedFlow<Uri>(replay = 1, extraBufferCapacity = 31)
     private val updateModel: AndroidUpdateViewModel by viewModels()
-    private val appAgentSurface = FabushiAppAgentSurface()
-    private lateinit var remoteDeviceGateway: FabushiRemoteDeviceGateway
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val ciBootstrapActive = FabushiCiBootstrap.prepare(this)
-        remoteDeviceGateway = FabushiRemoteDeviceGateway(
-            context = applicationContext,
-            coordinator = AndroidCoordinatorPorts.presentation(application),
-            surface = appAgentSurface,
-            metadata = FabushiCiBootstrap.gatewayMetadata(intent, ciBootstrapActive),
-            configuredDeviceName = FabushiCiBootstrap.configuredDeviceName(intent, ciBootstrapActive),
-        )
+        val processRuntime = (application as FabushiApplication).ensureProcessRuntime(intent)
         enableEdgeToEdge()
         setContent {
             FabushiApplicationRoot(
@@ -39,8 +28,8 @@ class MainActivity : ComponentActivity() {
                 application = application,
                 deepLinks = deepLinks,
                 updateModel = updateModel,
-                appAgentSurface = appAgentSurface,
-                remoteDeviceGateway = remoteDeviceGateway,
+                appAgentSurface = processRuntime.appAgentSurface,
+                remoteDeviceGateway = processRuntime.remoteDeviceGateway,
             )
         }
         intent?.data?.let(::enqueueDeepLink)
@@ -56,18 +45,14 @@ class MainActivity : ComponentActivity() {
         super.onStop()
     }
 
-    override fun onDestroy() {
-        if (::remoteDeviceGateway.isInitialized) remoteDeviceGateway.close()
-        super.onDestroy()
-    }
-
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         intent.data?.let(::enqueueDeepLink)
     }
 
-    internal fun appAgentSurfaceForTesting(): FabushiAppAgentSurface = appAgentSurface
+    internal fun appAgentSurfaceForTesting(): FabushiAppAgentSurface =
+        (application as FabushiApplication).requireProcessRuntime().appAgentSurface
 
     private fun enqueueDeepLink(uri: Uri) {
         if (uri.scheme != "fabushi") return

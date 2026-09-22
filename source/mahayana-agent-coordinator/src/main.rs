@@ -118,6 +118,17 @@ impl<H: HostPort> MahayanaCoordinator<H> {
                 ),
             ));
         }
+        if let Some(first) = self.events.front() {
+            if request.after_sequence.saturating_add(1) < first.sequence {
+                return Err(CoordinatorFailure::new(
+                    CoordinatorFailureCode::ReplayUnavailable,
+                    format!(
+                        "replay gap: requested after sequence {}, earliest retained sequence is {}",
+                        request.after_sequence, first.sequence
+                    ),
+                ));
+            }
+        }
         Ok(ResyncSnapshot {
             generation: self.generation,
             latest_sequence: self.sequence.current(),
@@ -199,7 +210,9 @@ mod tests {
         coordinator.publish_event("s", "delta", "1");
         coordinator.publish_event("s", "delta", "2");
         coordinator.publish_event("s", "delta", "3");
-        assert_eq!(coordinator.resync_since(0).events.iter().map(|e| e.sequence).collect::<Vec<_>>(), vec![2, 3]);
+        let gap = coordinator.resync(ResyncRequest { generation: coordinator.generation(), after_sequence: 0 }).unwrap_err();
+        assert_eq!(gap.code, CoordinatorFailureCode::ReplayUnavailable);
+        assert_eq!(coordinator.resync_since(1).events.iter().map(|e| e.sequence).collect::<Vec<_>>(), vec![2, 3]);
 
         coordinator.begin_request(&request("r2")).unwrap();
         let settled = coordinator.settle_host_crash("host exited");

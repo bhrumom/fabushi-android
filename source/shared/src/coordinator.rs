@@ -56,6 +56,7 @@ pub enum CoordinatorFailureCode {
     HostUnavailable,
     HostCrashed,
     StaleGeneration,
+    ReplayUnavailable,
     GatewayUnavailable,
     Internal,
 }
@@ -72,6 +73,7 @@ impl fmt::Display for CoordinatorFailureCode {
             Self::HostUnavailable => "host-unavailable",
             Self::HostCrashed => "host-crashed",
             Self::StaleGeneration => "stale-generation",
+            Self::ReplayUnavailable => "replay-unavailable",
             Self::GatewayUnavailable => "gateway-unavailable",
             Self::Internal => "internal",
         })
