@@ -1,0 +1,207 @@
+#!/usr/bin/env python3
+"""Architecture/parity gate for the Grok Bot 0.18 -> Fabushi Android migration."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import pathlib
+import sys
+from dataclasses import dataclass
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+INVENTORY = ROOT / "manifests/grok-bot-0.18-source-frontend-inventory.json"
+LEDGER = ROOT / "manifests/grok-bot-0.18-android-parity-ledger.json"
+
+ALLOWED_CLASSES = {"direct-equivalent", "android-adapted", "not-applicable"}
+ALLOWED_STATUS = {"mapped", "implemented", "verified", "blocked"}
+
+TARGET_PREFIX = {
+    "source/electron-main/": "source/android-main/",
+    "source/electron-preload/": "source/android-preload/",
+    "source/electron-dev-controls/": "source/android-dev-controls/",
+    "source/node-agent-coordinator/": "source/mahayana-agent-coordinator/",
+    "source/host/": "source/host/",
+    "source/local-exec-daemon/": "source/local-exec-daemon/",
+    "source/box-exec-daemon/": "source/box-exec-daemon/",
+    "source/internal/": "source/internal/",
+    "source/packages/": "source/packages/",
+    "source/shared/": "source/shared/",
+    "frontend/": "frontend/",
+}
+
+SCAFFOLD_MARKERS = [
+    "frontend/.architecture-root",
+    "source/android-main/.architecture-root",
+    "source/android-preload/.architecture-root",
+    "source/android-dev-controls/.architecture-root",
+    "source/mahayana-agent-coordinator/.architecture-root",
+    "source/host/.architecture-root",
+    "source/local-exec-daemon/.architecture-root",
+    "source/box-exec-daemon/.architecture-root",
+    "source/internal/.architecture-root",
+    "source/packages/.architecture-root",
+    "source/shared/.architecture-root",
+    "tests/.architecture-root",
+    "scripts/check_grok_android_parity.py",
+    "manifests/grok-bot-0.18-source-frontend-inventory.json",
+    "manifests/grok-bot-0.18-android-parity-ledger.json",
+]
+
+STRICT_FORBIDDEN_PATHS = [
+    "mobile/android/app/src/main/java/com/ombhrum/fabushi/GrokMobileShellAndroid.kt",
+    "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt",
+]
+
+PRESENTATION_HOST_BYPASS_FILES = [
+    "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt",
+    "mobile/android/app/src/main/java/com/ombhrum/fabushi/MobileBotViewModel.kt",
+    "mobile/android/app/src/main/java/com/ombhrum/fabushi/MessagingViewModel.kt",
+    "mobile/android/app/src/main/java/com/ombhrum/fabushi/MarketplaceViewModel.kt",
+]
+
+@dataclass
+class CheckResult:
+    errors: list[str]
+    warnings: list[str]
+    summary: dict[str, object]
+
+def load_json(path: pathlib.Path) -> dict:
+    with path.open("r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+def expected_target_prefix(grok_path: str) -> str | None:
+    for source_prefix, target_prefix in TARGET_PREFIX.items():
+        if grok_path.startswith(source_prefix):
+            return target_prefix
+    if grok_path in {"source/tsconfig.json", "source/mime-types.d.ts"}:
+        return "source/"
+    return None
+
+def run_checks(strict: bool) -> CheckResult:
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    inventory = load_json(INVENTORY)
+    ledger = load_json(LEDGER)
+
+    inventory_files = inventory.get("files", [])
+    rows = ledger.get("rows", [])
+    inventory_paths = [entry.get("path") for entry in inventory_files]
+    ledger_paths = [row.get("grok_path") for row in rows]
+
+    if inventory.get("file_count") != 2046:
+        errors.append(f"inventory file_count must be 2046, got {inventory.get('file_count')!r}")
+    if inventory.get("source_file_count") != 1724:
+        errors.append("inventory source_file_count must be 1724")
+    if inventory.get("frontend_file_count") != 322:
+        errors.append("inventory frontend_file_count must be 322")
+    if len(inventory_paths) != len(set(inventory_paths)):
+        errors.append("inventory contains duplicate paths")
+    if len(ledger_paths) != len(set(ledger_paths)):
+        errors.append("ledger contains duplicate grok_path rows")
+    if set(inventory_paths) != set(ledger_paths):
+        missing = sorted(set(inventory_paths) - set(ledger_paths))
+        extra = sorted(set(ledger_paths) - set(inventory_paths))
+        errors.append(f"ledger coverage mismatch: missing={len(missing)} extra={len(extra)}")
+
+    status_counts: dict[str, int] = {}
+    class_counts: dict[str, int] = {}
+    missing_targets = 0
+    for row in rows:
+        path = row.get("grok_path", "")
+        target = row.get("android_target_path", "")
+        parity_class = row.get("parity_class")
+        status = row.get("implementation_status")
+
+        class_counts[parity_class] = class_counts.get(parity_class, 0) + 1
+        status_counts[status] = status_counts.get(status, 0) + 1
+
+        if parity_class not in ALLOWED_CLASSES:
+            errors.append(f"{path}: invalid parity_class {parity_class!r}")
+        if status not in ALLOWED_STATUS:
+            errors.append(f"{path}: invalid implementation_status {status!r}")
+        if not target or target.startswith("unmapped/"):
+            errors.append(f"{path}: missing Android target path")
+        prefix = expected_target_prefix(path)
+        if prefix is None:
+            errors.append(f"{path}: checker has no source-to-target rule")
+        elif not target.startswith(prefix):
+            errors.append(f"{path}: target {target!r} must start with {prefix!r}")
+
+        if parity_class == "not-applicable":
+            if not row.get("not_applicable_reason"):
+                errors.append(f"{path}: not-applicable requires not_applicable_reason")
+            if row.get("not_applicable_reviewed") is not True:
+                errors.append(f"{path}: not-applicable requires not_applicable_reviewed=true")
+
+        if status in {"implemented", "verified"} and parity_class != "not-applicable":
+            if not (ROOT / target).is_file():
+                missing_targets += 1
+                errors.append(f"{path}: {status} target file does not exist: {target}")
+            evidence = str(row.get("test_evidence", "")).strip()
+            if not evidence or evidence.startswith("pending "):
+                errors.append(f"{path}: {status} row requires concrete test_evidence")
+
+        if strict and parity_class != "not-applicable" and status != "verified":
+            errors.append(f"{path}: strict gate requires verified, got {status!r}")
+
+    for marker in SCAFFOLD_MARKERS:
+        if not (ROOT / marker).exists():
+            errors.append(f"missing architecture scaffold marker: {marker}")
+
+    bypass_count = 0
+    for relative in PRESENTATION_HOST_BYPASS_FILES:
+        path = ROOT / relative
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8")
+        if "MahayanaHost" in text:
+            bypass_count += 1
+            message = f"presentation/platform file still references MahayanaHost directly: {relative}"
+            if strict:
+                errors.append(message)
+            else:
+                warnings.append(message)
+
+    legacy_count = 0
+    for relative in STRICT_FORBIDDEN_PATHS:
+        if (ROOT / relative).exists():
+            legacy_count += 1
+            message = f"legacy monolith still present: {relative}"
+            if strict:
+                errors.append(message)
+            else:
+                warnings.append(message)
+
+    summary = {
+        "inventory_files": len(inventory_paths),
+        "ledger_rows": len(rows),
+        "status_counts": status_counts,
+        "class_counts": class_counts,
+        "implemented_rows_missing_target": missing_targets,
+        "legacy_monoliths_present": legacy_count,
+        "presentation_host_bypasses": bypass_count,
+        "mode": "strict" if strict else "phase0",
+    }
+    return CheckResult(errors=errors, warnings=warnings, summary=summary)
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Require every applicable row verified and all legacy bypasses removed.",
+    )
+    args = parser.parse_args()
+
+    result = run_checks(strict=args.strict)
+    print(json.dumps(result.summary, indent=2, sort_keys=True))
+    for warning in result.warnings:
+        print(f"WARNING: {warning}", file=sys.stderr)
+    for error in result.errors:
+        print(f"ERROR: {error}", file=sys.stderr)
+    return 1 if result.errors else 0
+
+if __name__ == "__main__":
+    raise SystemExit(main())

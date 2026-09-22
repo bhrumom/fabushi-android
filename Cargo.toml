@@ -1,0 +1,15 @@
+[workspace]
+resolver = "2"
+members = [
+  "source/shared",
+  "source/internal",
+  "source/mahayana-agent-coordinator",
+  "source/host",
+  "source/local-exec-daemon",
+  "source/box-exec-daemon",
+]
+
+[workspace.package]
+edition = "2021"
+license = "UNLICENSED"
+version = "0.1.0"
