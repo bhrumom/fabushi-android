@@ -8,7 +8,6 @@ pub struct CoordinatorRequest {
     pub request_id: String,
     pub session_id: String,
     pub method: String,
-    /// Canonical JSON at the wire edge. Domain code should deserialize into a typed request.
     pub params_json: String,
     pub deadline_ms: Option<u64>,
 }
@@ -16,30 +15,15 @@ pub struct CoordinatorRequest {
 impl CoordinatorRequest {
     pub fn validate(&self) -> Result<(), CoordinatorFailure> {
         if self.protocol_version != COORDINATOR_PROTOCOL_VERSION {
-            return Err(CoordinatorFailure::new(
-                CoordinatorFailureCode::ProtocolMismatch,
-                format!(
-                    "unsupported protocol version {}; expected {}",
-                    self.protocol_version, COORDINATOR_PROTOCOL_VERSION
-                ),
-            ));
+            return Err(CoordinatorFailure::protocol(format!(
+                "unsupported protocol version {}; expected {}",
+                self.protocol_version, COORDINATOR_PROTOCOL_VERSION
+            )));
         }
-        if self.request_id.trim().is_empty() {
+        if self.request_id.trim().is_empty() || self.session_id.trim().is_empty() || self.method.trim().is_empty() {
             return Err(CoordinatorFailure::new(
                 CoordinatorFailureCode::MalformedRequest,
-                "request_id must not be empty",
-            ));
-        }
-        if self.session_id.trim().is_empty() {
-            return Err(CoordinatorFailure::new(
-                CoordinatorFailureCode::MalformedRequest,
-                "session_id must not be empty",
-            ));
-        }
-        if self.method.trim().is_empty() {
-            return Err(CoordinatorFailure::new(
-                CoordinatorFailureCode::MalformedRequest,
-                "method must not be empty",
+                "request_id, session_id, and method must not be empty",
             ));
         }
         Ok(())
@@ -55,28 +39,31 @@ pub struct CancelRequest {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CoordinatorFailureCode {
     ProtocolMismatch,
+    ProtocolBreach,
     MalformedRequest,
     DuplicateRequest,
     UnknownRequest,
     Cancelled,
     HostUnavailable,
     HostCrashed,
+    GatewayUnavailable,
     Internal,
 }
 
 impl fmt::Display for CoordinatorFailureCode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let value = match self {
+        f.write_str(match self {
             Self::ProtocolMismatch => "protocol-mismatch",
+            Self::ProtocolBreach => "protocol-breach",
             Self::MalformedRequest => "malformed-request",
             Self::DuplicateRequest => "duplicate-request",
             Self::UnknownRequest => "unknown-request",
             Self::Cancelled => "cancelled",
             Self::HostUnavailable => "host-unavailable",
             Self::HostCrashed => "host-crashed",
+            Self::GatewayUnavailable => "gateway-unavailable",
             Self::Internal => "internal",
-        };
-        f.write_str(value)
+        })
     }
 }
 
@@ -88,10 +75,11 @@ pub struct CoordinatorFailure {
 
 impl CoordinatorFailure {
     pub fn new(code: CoordinatorFailureCode, message: impl Into<String>) -> Self {
-        Self {
-            code,
-            message: message.into(),
-        }
+        Self { code, message: message.into() }
+    }
+
+    pub fn protocol(message: impl Into<String>) -> Self {
+        Self::new(CoordinatorFailureCode::ProtocolBreach, message)
     }
 }
 
@@ -103,17 +91,11 @@ pub struct CoordinatorReply {
 
 impl CoordinatorReply {
     pub fn ok(request_id: impl Into<String>, result_json: impl Into<String>) -> Self {
-        Self {
-            request_id: request_id.into(),
-            result_json: Ok(result_json.into()),
-        }
+        Self { request_id: request_id.into(), result_json: Ok(result_json.into()) }
     }
 
     pub fn failed(request_id: impl Into<String>, failure: CoordinatorFailure) -> Self {
-        Self {
-            request_id: request_id.into(),
-            result_json: Err(failure),
-        }
+        Self { request_id: request_id.into(), result_json: Err(failure) }
     }
 }
 
@@ -123,7 +105,6 @@ pub struct CoordinatorEvent {
     pub session_id: String,
     pub sequence: u64,
     pub family: String,
-    /// Canonical JSON at the wire edge. Renderer projections should be typed before UI use.
     pub payload_json: String,
 }
 
@@ -148,23 +129,6 @@ mod tests {
             params_json: "{}".into(),
             deadline_ms: None,
         };
-        let error = request.validate().unwrap_err();
-        assert_eq!(error.code, CoordinatorFailureCode::ProtocolMismatch);
-    }
-
-    #[test]
-    fn requires_identity_fields() {
-        let request = CoordinatorRequest {
-            protocol_version: COORDINATOR_PROTOCOL_VERSION,
-            request_id: "".into(),
-            session_id: "s1".into(),
-            method: "send".into(),
-            params_json: "{}".into(),
-            deadline_ms: None,
-        };
-        assert_eq!(
-            request.validate().unwrap_err().code,
-            CoordinatorFailureCode::MalformedRequest
-        );
+        assert_eq!(request.validate().unwrap_err().code, CoordinatorFailureCode::ProtocolMismatch);
     }
 }

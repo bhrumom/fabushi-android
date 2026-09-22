@@ -1,5 +1,6 @@
 import importlib.util
 import pathlib
+import sys
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -7,6 +8,7 @@ MODULE_PATH = ROOT / "scripts/check_grok_android_parity.py"
 SPEC = importlib.util.spec_from_file_location("check_grok_android_parity", MODULE_PATH)
 MODULE = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
+sys.modules[SPEC.name] = MODULE
 SPEC.loader.exec_module(MODULE)
 
 class ParityCheckerTest(unittest.TestCase):
