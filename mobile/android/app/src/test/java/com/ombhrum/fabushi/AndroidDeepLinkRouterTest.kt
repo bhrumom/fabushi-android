@@ -1,5 +1,6 @@
 package com.ombhrum.fabushi
 
+import com.ombhrum.fabushi.androidmain.deeplink.AndroidDeepLinkController
 import com.ombhrum.fabushi.androidmain.deeplink.AndroidDeepLinkRouter
 import com.ombhrum.fabushi.androidpreload.deeplink.AndroidDeepLink
 import com.ombhrum.fabushi.androidpreload.deeplink.AuthCompletionStatus
@@ -59,4 +60,60 @@ class AndroidDeepLinkRouterTest {
         assertEquals(AndroidDeepLink.AppSection("settings"), section)
         assertTrue(AndroidDeepLinkRouter.parse("fabushi://settings/extra") == null)
     }
+    @Test
+    fun controllerQueuesUntilReadyAndDedupesWithinWindow() {
+        var now = 1_000L
+        val delivered = mutableListOf<AndroidDeepLink>()
+        val controller = AndroidDeepLinkController(
+            dispatch = delivered::add,
+            nowMs = { now },
+        )
+
+        assertTrue(
+            controller.handleCandidate(
+                "fabushi://agent/agent-42",
+                "test",
+            ),
+        )
+        assertTrue(controller.hasPendingActivation())
+        assertTrue(
+            !controller.handleCandidate(
+                "fabushi://agent/agent-42",
+                "duplicate",
+            ),
+        )
+        assertTrue(delivered.isEmpty())
+
+        controller.markReady()
+        assertEquals(listOf(AndroidDeepLink.Agent("agent-42")), delivered)
+
+        now += 2_001L
+        assertTrue(
+            controller.handleCandidate(
+                "fabushi://agent/agent-42",
+                "after-window",
+            ),
+        )
+        assertEquals(2, delivered.size)
+    }
+
+    @Test
+    fun controllerCapsPendingActivationQueue() {
+        val controller = AndroidDeepLinkController(dispatch = {})
+        repeat(16) { index ->
+            assertTrue(
+                controller.handleCandidate(
+                    "fabushi://agent/agent-${index}",
+                    "test",
+                ),
+            )
+        }
+        assertTrue(
+            !controller.handleCandidate(
+                "fabushi://agent/overflow",
+                "test",
+            ),
+        )
+    }
+
 }
