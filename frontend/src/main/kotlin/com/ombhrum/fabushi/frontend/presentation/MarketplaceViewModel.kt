@@ -4,7 +4,8 @@ import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.ombhrum.fabushi.androidmain.coordinator.AndroidCoordinatorRuntime
+import com.ombhrum.fabushi.androidmain.coordinator.AndroidCoordinatorPorts
+import com.ombhrum.fabushi.androidpreload.runtime.AndroidCoordinatorPort
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -78,7 +79,7 @@ data class MarketplaceUiState(
 )
 
 class MarketplaceViewModel(application: Application) : AndroidViewModel(application) {
-    private val coordinator = AndroidCoordinatorRuntime.get(application)
+    private val coordinator: AndroidCoordinatorPort = AndroidCoordinatorPorts.presentation(application)
     private val miniApps = MiniAppPlatformBridge(coordinator)
     private val mutableState = MutableStateFlow(MarketplaceUiState())
     val state: StateFlow<MarketplaceUiState> = mutableState.asStateFlow()

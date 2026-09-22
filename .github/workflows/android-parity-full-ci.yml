@@ -1,0 +1,109 @@
+name: Android Parity Full CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  architecture-and-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Validate frozen inventory and current ledger
+        run: python scripts/check_grok_android_parity.py
+      - name: Test architecture checker
+        run: python -m unittest discover -s tests -p 'test_*.py'
+      - name: Run strict architecture gate and expose migration debt
+        id: strict
+        continue-on-error: true
+        run: python scripts/check_grok_android_parity.py --strict
+      - name: Record strict gate outcome
+        run: |
+          mkdir -p evidence
+          printf 'head=%s\nstrict_outcome=%s\n' "$GITHUB_SHA" "${{ steps.strict.outcome }}" > evidence/architecture-gate.txt
+      - name: Rust contract/runtime tests
+        run: cargo test --workspace --all-targets
+      - uses: actions/upload-artifact@v4
+        with:
+          name: architecture-contract-evidence-${{ github.sha }}
+          path: evidence/architecture-gate.txt
+          if-no-files-found: error
+
+  android-build-unit-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Compile, unit-test, lint, and compile instrumentation tests
+        working-directory: mobile/android
+        run: ./gradlew --no-daemon clean assembleDebug testDebugUnitTest lintDebug compileDebugAndroidTestKotlin
+      - name: Record exact-HEAD APK identity
+        working-directory: mobile/android
+        run: |
+          set -eu
+          cp app/build/outputs/apk/debug/app-debug.apk "fabushi-android-${GITHUB_SHA}.apk"
+          sha256sum "fabushi-android-${GITHUB_SHA}.apk" > "fabushi-android-${GITHUB_SHA}.apk.sha256"
+          printf 'head=%s\n' "$GITHUB_SHA" > artifact-identity.txt
+          cat "fabushi-android-${GITHUB_SHA}.apk.sha256" >> artifact-identity.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk-${{ github.sha }}
+          path: |
+            mobile/android/fabushi-android-${{ github.sha }}.apk
+            mobile/android/fabushi-android-${{ github.sha }}.apk.sha256
+            mobile/android/artifact-identity.txt
+          if-no-files-found: error
+
+  android-emulator-instrumentation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_7
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          working-directory: mobile/android
+          script: |
+            set -eu
+            ./gradlew --no-daemon connectedDebugAndroidTest installDebug
+            adb shell monkey -p com.ombhrum.fabushi.debug -c android.intent.category.LAUNCHER 1
+            sleep 3
+            adb shell am force-stop com.ombhrum.fabushi.debug
+            adb shell monkey -p com.ombhrum.fabushi.debug -c android.intent.category.LAUNCHER 1
+            sleep 3
+            mkdir -p ../../evidence/emulator
+            adb shell pidof com.ombhrum.fabushi.debug > ../../evidence/emulator/pid-after-relaunch.txt
+            adb logcat -d > ../../evidence/emulator/logcat.txt
+            adb exec-out screencap -p > ../../evidence/emulator/relaunch.png
+            printf 'head=%s\npackage=com.ombhrum.fabushi.debug\n' "$GITHUB_SHA" > ../../evidence/emulator/identity.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-emulator-evidence-${{ github.sha }}
+          path: evidence/emulator
+          if-no-files-found: warn

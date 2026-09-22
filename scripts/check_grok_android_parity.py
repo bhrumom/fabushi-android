@@ -51,6 +51,9 @@ SCAFFOLD_MARKERS = [
 STRICT_FORBIDDEN_PATHS = [
     "mobile/android/app/src/main/java/com/ombhrum/fabushi/GrokMobileShellAndroid.kt",
     "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt",
+    "mobile/android/app/src/main/java/com/ombhrum/fabushi/MobileBotViewModel.kt",
+    "mobile/android/app/src/main/java/com/ombhrum/fabushi/MessagingViewModel.kt",
+    "mobile/android/app/src/main/java/com/ombhrum/fabushi/MarketplaceViewModel.kt",
 ]
 
 PRESENTATION_HOST_BYPASS_FILES = [
@@ -174,6 +177,35 @@ def run_checks(strict: bool) -> CheckResult:
             else:
                 warnings.append(message)
 
+    presentation_runtime_bypasses = 0
+    presentation_roots = [
+        ROOT / "mobile/android/app/src/main/java/com/ombhrum/fabushi",
+        ROOT / "frontend/src/main/kotlin",
+    ]
+    for root in presentation_roots:
+        if not root.exists():
+            continue
+        for path in root.rglob("*.kt"):
+            text = path.read_text(encoding="utf-8")
+            if "AndroidCoordinatorRuntime" in text:
+                presentation_runtime_bypasses += 1
+                relative = path.relative_to(ROOT)
+                message = f"presentation file references concrete AndroidCoordinatorRuntime: {relative}"
+                if strict:
+                    errors.append(message)
+                else:
+                    warnings.append(message)
+
+    architecture_scope_markers = sorted(
+        path for base in (ROOT / "frontend", ROOT / "source")
+        if base.exists()
+        for path in base.rglob(".architecture-scope")
+    )
+    if strict and architecture_scope_markers:
+        errors.append(
+            f"strict gate forbids placeholder .architecture-scope files: {len(architecture_scope_markers)} remain"
+        )
+
     summary = {
         "inventory_files": len(inventory_paths),
         "ledger_rows": len(rows),
@@ -182,6 +214,8 @@ def run_checks(strict: bool) -> CheckResult:
         "implemented_rows_missing_target": missing_targets,
         "legacy_monoliths_present": legacy_count,
         "presentation_host_bypasses": bypass_count,
+        "presentation_runtime_bypasses": presentation_runtime_bypasses,
+        "architecture_scope_markers": len(architecture_scope_markers),
         "mode": "strict" if strict else "phase0",
     }
     return CheckResult(errors=errors, warnings=warnings, summary=summary)

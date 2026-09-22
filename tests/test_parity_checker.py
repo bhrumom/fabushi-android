@@ -17,11 +17,16 @@ class ParityCheckerTest(unittest.TestCase):
         self.assertEqual([], result.errors)
         self.assertEqual(2046, result.summary["inventory_files"])
         self.assertEqual(2046, result.summary["ledger_rows"])
+        self.assertEqual(0, result.summary["legacy_monoliths_present"])
+        self.assertEqual(0, result.summary["presentation_runtime_bypasses"])
 
-    def test_strict_gate_is_intentionally_not_green_during_migration(self):
+    def test_strict_gate_reports_remaining_real_migration_work(self):
         result = MODULE.run_checks(strict=True)
         self.assertGreater(len(result.errors), 0)
-        self.assertGreater(result.summary["legacy_monoliths_present"], 0)
+        self.assertEqual(0, result.summary["legacy_monoliths_present"])
+        self.assertEqual(0, result.summary["presentation_runtime_bypasses"])
+        self.assertGreater(result.summary["architecture_scope_markers"], 0)
+        self.assertGreater(result.summary["status_counts"].get("mapped", 0), 0)
 
 if __name__ == "__main__":
     unittest.main()
