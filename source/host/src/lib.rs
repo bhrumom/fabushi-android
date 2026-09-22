@@ -1,88 +1,42 @@
 //! Android-owned Mahayana Host boundary.
-//!
-//! The Host owns domain execution behind the Coordinator. It must not depend on Compose,
-//! Activity, ViewModel, or Android screen state.
+//! Host owns domain execution and durable runtime services behind the Coordinator.
+//! No Compose/Activity/ViewModel dependency is permitted here.
 
-use std::sync::{
-    mpsc::{self, Receiver, Sender},
-    Arc, Mutex,
-};
+pub mod attachment_paths;
+pub mod durable_file_policy;
+pub mod gateway_command_error;
+pub mod gateway_config;
+pub mod gateway_protocol;
+pub mod gateway_server;
+pub mod host_diagnostics;
+pub mod host_discovery;
+pub mod host_event_bus;
+pub mod host_gateway_api;
+pub mod host_initial_transcript_load;
+pub mod host_lock;
+pub mod host_paths;
+pub mod host_production_extensions;
+pub mod host_request_context;
+pub mod host_roster_bookkeeping;
+pub mod host_runner_composition;
+pub mod host_secret_store;
+#[allow(special_module_name)]
+pub mod main;
+pub mod notify_drain_gate;
+pub mod process_crash_guard;
+pub mod production_binding_providers;
+pub mod runner_context_production_provider;
+pub mod runner_production_bridge;
+pub mod sand_activity;
+pub mod sand_host;
+pub mod sand_multitask;
+pub mod sand_quiet_work_origin;
+pub mod sand_user_identity;
+pub mod selected_image_inputs;
+pub mod send_trace_host;
+pub mod sha256;
+pub mod transcript_mutation_events;
+pub mod watched_directory;
 
-use fabushi_android_shared::{CoordinatorFailure, CoordinatorRequest};
-
-pub trait HostRuntime {
-    fn execute(&mut self, request: &CoordinatorRequest) -> Result<String, CoordinatorFailure>;
-    fn cancel(&mut self, request_id: &str, reason: Option<&str>) -> Result<(), CoordinatorFailure>;
-}
-
-#[derive(Clone, Default)]
-pub struct HostEventBus {
-    subscribers: Arc<Mutex<Vec<Sender<HostEvent>>>>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct HostEvent {
-    pub family: String,
-    pub session_id: String,
-    pub payload_json: String,
-}
-
-impl HostEventBus {
-    pub fn subscribe(&self) -> Receiver<HostEvent> {
-        let (sender, receiver) = mpsc::channel();
-        self.subscribers
-            .lock()
-            .expect("host event subscribers lock poisoned")
-            .push(sender);
-        receiver
-    }
-
-    pub fn emit(&self, event: HostEvent) {
-        let mut subscribers = self
-            .subscribers
-            .lock()
-            .expect("host event subscribers lock poisoned");
-        subscribers.retain(|subscriber| subscriber.send(event.clone()).is_ok());
-    }
-
-    pub fn subscriber_count(&self) -> usize {
-        self.subscribers
-            .lock()
-            .expect("host event subscribers lock poisoned")
-            .len()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn event_bus_fans_out_without_competing_consumers() {
-        let bus = HostEventBus::default();
-        let first = bus.subscribe();
-        let second = bus.subscribe();
-        let event = HostEvent {
-            family: "transcript".into(),
-            session_id: "s".into(),
-            payload_json: "{}".into(),
-        };
-        bus.emit(event.clone());
-        assert_eq!(first.recv().unwrap(), event);
-        assert_eq!(second.recv().unwrap(), event);
-    }
-
-    #[test]
-    fn dropped_subscriber_is_removed_on_next_emit() {
-        let bus = HostEventBus::default();
-        let receiver = bus.subscribe();
-        assert_eq!(bus.subscriber_count(), 1);
-        drop(receiver);
-        bus.emit(HostEvent {
-            family: "health".into(),
-            session_id: "s".into(),
-            payload_json: "{}".into(),
-        });
-        assert_eq!(bus.subscriber_count(), 0);
-    }
-}
+pub use host_event_bus::{HostEvent, HostEventBus};
+pub use sand_host::{HostRuntime, SandHost, SandHostHealth};
