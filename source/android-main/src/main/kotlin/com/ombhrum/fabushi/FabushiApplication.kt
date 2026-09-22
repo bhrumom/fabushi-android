@@ -3,6 +3,7 @@ package com.ombhrum.fabushi
 import android.app.Application
 import android.content.Intent
 import com.ombhrum.fabushi.androidmain.coordinator.AndroidCoordinatorPorts
+import com.ombhrum.fabushi.androidpreload.runtime.AndroidCoordinatorBridge
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidPresentationRuntimePort
 
 /**
@@ -42,10 +43,13 @@ internal class FabushiProcessRuntime(
     intent: Intent?,
     ciBootstrapActive: Boolean,
 ) : AndroidPresentationRuntimePort, AutoCloseable {
+    private val coordinator = AndroidCoordinatorPorts.presentation(application).also {
+        AndroidCoordinatorBridge.installTrustedRuntime(it)
+    }
     override val appAgentSurface = FabushiAppAgentSurface()
     private val remoteDeviceGateway = FabushiRemoteDeviceGateway(
         context = application,
-        coordinator = AndroidCoordinatorPorts.presentation(application),
+        coordinator = coordinator,
         surface = appAgentSurface,
         metadata = FabushiCiBootstrap.gatewayMetadata(intent, ciBootstrapActive),
         configuredDeviceName = FabushiCiBootstrap.configuredDeviceName(intent, ciBootstrapActive),
