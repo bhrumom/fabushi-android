@@ -4,7 +4,6 @@ import android.app.Application
 import android.util.Base64
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.ombhrum.fabushi.androidmain.coordinator.AndroidCoordinatorPorts
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidCoordinatorPort
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -99,7 +98,7 @@ data class MessagingUiState(
 )
 
 internal class MessagingViewModel(application: Application) : AndroidViewModel(application) {
-    private val coordinator: AndroidCoordinatorPort = AndroidCoordinatorPorts.presentation(application)
+    private val coordinator: AndroidCoordinatorPort = CoordinatorClient.presentation()
     private val mutableState = MutableStateFlow(MessagingUiState())
     val state: StateFlow<MessagingUiState> = mutableState.asStateFlow()
     private var actorId = ""
