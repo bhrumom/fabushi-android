@@ -7,6 +7,7 @@ members = [
   "source/host",
   "source/local-exec-daemon",
   "source/box-exec-daemon",
+  "source/packages/agent-core",
 ]
 
 [workspace.package]

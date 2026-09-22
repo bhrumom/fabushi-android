@@ -13421,9 +13421,10 @@
       "android_target_path": "source/packages/agent-core/src/conversation_actions/context_injection.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "source/packages/agent-core/tests/agent_core.rs; exercised by cargo test --workspace --all-targets in Android Parity Full CI",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Fabushi Rust implementation derived from documented responsibility/path semantics; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/agent-core/conversation-actions/controlled.ts",
@@ -13434,9 +13435,10 @@
       "android_target_path": "source/packages/agent-core/src/conversation_actions/controlled.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "source/packages/agent-core/tests/agent_core.rs; exercised by cargo test --workspace --all-targets in Android Parity Full CI",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Fabushi Rust implementation derived from documented responsibility/path semantics; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/agent-core/conversation-actions/receiver-contract.ts",
@@ -13447,9 +13449,10 @@
       "android_target_path": "source/packages/agent-core/src/conversation_actions/receiver_contract.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "source/packages/agent-core/tests/agent_core.rs; exercised by cargo test --workspace --all-targets in Android Parity Full CI",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Fabushi Rust implementation derived from documented responsibility/path semantics; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/agent-core/conversation-actions/remote.ts",
@@ -13460,9 +13463,10 @@
       "android_target_path": "source/packages/agent-core/src/conversation_actions/remote.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "source/packages/agent-core/tests/agent_core.rs; exercised by cargo test --workspace --all-targets in Android Parity Full CI",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Fabushi Rust implementation derived from documented responsibility/path semantics; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/agent-core/conversation-actions/steer-outbox.ts",
@@ -13473,9 +13477,10 @@
       "android_target_path": "source/packages/agent-core/src/conversation_actions/steer_outbox.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "source/packages/agent-core/tests/agent_core.rs; exercised by cargo test --workspace --all-targets in Android Parity Full CI",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Fabushi Rust implementation derived from documented responsibility/path semantics; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/agent-core/domain-utils.ts",
@@ -13486,9 +13491,10 @@
       "android_target_path": "source/packages/agent-core/src/domain_utils.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "source/packages/agent-core/tests/agent_core.rs; exercised by cargo test --workspace --all-targets in Android Parity Full CI",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Fabushi Rust implementation derived from documented responsibility/path semantics; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/agent-core/goal-continuation.ts",
@@ -13499,9 +13505,10 @@
       "android_target_path": "source/packages/agent-core/src/goal_continuation.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "source/packages/agent-core/tests/agent_core.rs; exercised by cargo test --workspace --all-targets in Android Parity Full CI",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Fabushi Rust implementation derived from documented responsibility/path semantics; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/agent-core/goal-pursuit-guidelines.ts",
@@ -13512,9 +13519,10 @@
       "android_target_path": "source/packages/agent-core/src/goal_pursuit_guidelines.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "source/packages/agent-core/tests/agent_core.rs; exercised by cargo test --workspace --all-targets in Android Parity Full CI",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Fabushi Rust implementation derived from documented responsibility/path semantics; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/agent-core/index.ts",
@@ -13525,9 +13533,10 @@
       "android_target_path": "source/packages/agent-core/src/index.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "source/packages/agent-core/tests/agent_core.rs; exercised by cargo test --workspace --all-targets in Android Parity Full CI",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Fabushi Rust implementation derived from documented responsibility/path semantics; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/agent-core/interaction-listener.ts",
@@ -13538,9 +13547,10 @@
       "android_target_path": "source/packages/agent-core/src/interaction_listener.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "source/packages/agent-core/tests/agent_core.rs; exercised by cargo test --workspace --all-targets in Android Parity Full CI",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Fabushi Rust implementation derived from documented responsibility/path semantics; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/agent-core/interaction-queries.ts",
@@ -13551,9 +13561,10 @@
       "android_target_path": "source/packages/agent-core/src/interaction_queries.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "source/packages/agent-core/tests/agent_core.rs; exercised by cargo test --workspace --all-targets in Android Parity Full CI",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Fabushi Rust implementation derived from documented responsibility/path semantics; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/agent-core/interaction-updates.ts",
@@ -13564,9 +13575,10 @@
       "android_target_path": "source/packages/agent-core/src/interaction_updates.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "source/packages/agent-core/tests/agent_core.rs; exercised by cargo test --workspace --all-targets in Android Parity Full CI",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Fabushi Rust implementation derived from documented responsibility/path semantics; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/agent-core/mcp-auth-flow.ts",
@@ -13577,9 +13589,10 @@
       "android_target_path": "source/packages/agent-core/src/mcp_auth_flow.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "source/packages/agent-core/tests/agent_core.rs; exercised by cargo test --workspace --all-targets in Android Parity Full CI",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Fabushi Rust implementation derived from documented responsibility/path semantics; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/agent-core/redacted-interaction-listener.ts",
@@ -13590,9 +13603,10 @@
       "android_target_path": "source/packages/agent-core/src/redacted_interaction_listener.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "source/packages/agent-core/tests/agent_core.rs; exercised by cargo test --workspace --all-targets in Android Parity Full CI",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Fabushi Rust implementation derived from documented responsibility/path semantics; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/agent-core/redacted-interaction-updates.ts",
@@ -13603,9 +13617,10 @@
       "android_target_path": "source/packages/agent-core/src/redacted_interaction_updates.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "source/packages/agent-core/tests/agent_core.rs; exercised by cargo test --workspace --all-targets in Android Parity Full CI",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Fabushi Rust implementation derived from documented responsibility/path semantics; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/agent-exec/adopt.ts",
