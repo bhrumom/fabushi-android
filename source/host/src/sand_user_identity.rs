@@ -27,7 +27,7 @@ mod tests {
         assert_eq!(normalized, "Ada Lovelace");
         let prompt = render_user_identity_system_prompt(Some(&normalized));
         assert!(prompt.contains("speak as them"));
-        assert!(!prompt.contains("third person."));
+        assert!(prompt.contains("never refer to them in the third person."));
         assert_eq!(normalize_sand_user_full_name(&"x".repeat(250)).unwrap().chars().count(), 200);
     }
 }
