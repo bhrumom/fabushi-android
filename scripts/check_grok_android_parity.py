@@ -66,7 +66,7 @@ PRESENTATION_HOST_BYPASS_FILES = [
 ]
 
 HOST_IMPLEMENTATION_ALLOWLIST = {
-    "mobile/android/app/src/main/java/com/ombhrum/fabushi/core/MahayanaHost.kt",
+    "source/android-main/src/main/kotlin/com/ombhrum/fabushi/core/MahayanaHost.kt",
     "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/AndroidCoordinatorRuntime.kt",
 }
 

@@ -6,7 +6,10 @@ use fabushi_mahayana_agent_coordinator::{
         mcp_oauth_forwarder::OAuthForwarder,
         mcp_oauth_loopback_registry::OAuthLoopbackRegistry,
     },
-    routed_mcp_bridge::{RoutedMcpBridge, RoutedMcpTool},
+    routed_mcp_bridge::{
+        RoutedMcpBridge, RoutedMcpCall, RoutedMcpExecutor, RoutedMcpFailureCode,
+        RoutedMcpOutcome, RoutedMcpProviderError, RoutedMcpTool,
+    },
     webauthn::{
         provider::{WebAuthnCeremony, WebAuthnRequest},
         signer::{sign_challenge, ChallengeSigner},
@@ -36,6 +39,63 @@ fn routed_mcp_discovery_rejects_duplicate_names() {
     bridge.replace_tools([tool.clone()]).unwrap();
     assert_eq!(bridge.tool("files.read"), Some(&tool));
     assert!(bridge.replace_tools([tool.clone(), tool]).is_err());
+}
+
+struct RecordingMcpExecutor {
+    mode: u8,
+}
+
+impl RoutedMcpExecutor for RecordingMcpExecutor {
+    fn execute(
+        &mut self,
+        provider: &str,
+        remote_name: &str,
+        arguments_json: &str,
+    ) -> Result<String, RoutedMcpProviderError> {
+        assert_eq!(provider, "connector");
+        assert_eq!(remote_name, "read");
+        assert!(!arguments_json.is_empty());
+        match self.mode {
+            0 => Ok(r#"{"ok":true}"#.into()),
+            1 => Err(RoutedMcpProviderError::AuthorizationRequired {
+                authorization_url: "https://example.com/oauth".into(),
+                state: "0123456789abcdef".into(),
+            }),
+            _ => Err(RoutedMcpProviderError::Failed),
+        }
+    }
+}
+
+#[test]
+fn routed_mcp_call_result_auth_and_error_are_explicit() {
+    let mut bridge = RoutedMcpBridge::default();
+    bridge.replace_tools([RoutedMcpTool {
+        name: "files.read".into(),
+        provider: "connector".into(),
+        remote_name: "read".into(),
+        read_only: true,
+    }]).unwrap();
+
+    let call = || RoutedMcpCall {
+        call_id: "call-1".into(),
+        tool_name: "files.read".into(),
+        arguments_json: "{}".into(),
+    };
+
+    let result = bridge.execute(&mut RecordingMcpExecutor { mode: 0 }, call()).unwrap();
+    assert!(matches!(result, RoutedMcpOutcome::Result { .. }));
+
+    let auth = bridge.execute(&mut RecordingMcpExecutor { mode: 1 }, call()).unwrap();
+    assert!(matches!(auth, RoutedMcpOutcome::AuthorizationRequired { .. }));
+
+    let failure = bridge.execute(&mut RecordingMcpExecutor { mode: 2 }, call()).unwrap_err();
+    assert_eq!(failure.code, RoutedMcpFailureCode::ExecutionFailed);
+
+    let unknown = bridge.execute(
+        &mut RecordingMcpExecutor { mode: 0 },
+        RoutedMcpCall { call_id: "call-2".into(), tool_name: "missing".into(), arguments_json: "{}".into() },
+    ).unwrap_err();
+    assert_eq!(unknown.code, RoutedMcpFailureCode::UnknownTool);
 }
 
 struct RecordingSigner {

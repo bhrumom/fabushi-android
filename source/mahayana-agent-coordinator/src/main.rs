@@ -60,7 +60,12 @@ impl<H: HostPort> MahayanaCoordinator<H> {
     }
 
     pub fn complete_request(&mut self, request_id: &str, result: Result<String, CoordinatorFailure>) -> CoordinatorReply {
-        self.pending.remove(request_id);
+        if self.pending.remove(request_id).is_none() {
+            return CoordinatorReply::failed(
+                request_id,
+                CoordinatorFailure::new(CoordinatorFailureCode::UnknownRequest, "request is not active"),
+            );
+        }
         match result {
             Ok(value) => CoordinatorReply::ok(request_id, value),
             Err(error) => CoordinatorReply::failed(request_id, error),
@@ -92,6 +97,18 @@ impl<H: HostPort> MahayanaCoordinator<H> {
             ),
             Err(error) => CoordinatorReply::failed(cancel.request_id, error),
         }
+    }
+
+    pub fn emit_for_request(
+        &mut self,
+        request_id: &str,
+        family: impl Into<String>,
+        payload_json: impl Into<String>,
+    ) -> Result<CoordinatorEvent, CoordinatorFailure> {
+        let session_id = self.pending.get(request_id)
+            .map(|request| request.session_id.clone())
+            .ok_or_else(|| CoordinatorFailure::new(CoordinatorFailureCode::UnknownRequest, "request is not active"))?;
+        Ok(self.publish_event(session_id, family, payload_json))
     }
 
     pub fn publish_event(&mut self, session_id: impl Into<String>, family: impl Into<String>, payload_json: impl Into<String>) -> CoordinatorEvent {
@@ -144,6 +161,7 @@ impl<H: HostPort> MahayanaCoordinator<H> {
     pub fn settle_host_crash(&mut self, detail: impl Into<String>) -> Vec<CoordinatorReply> {
         let detail = detail.into();
         self.generation = self.generation.saturating_add(1);
+        self.sequence = MonotonicSequence::default();
         self.events.clear();
         std::mem::take(&mut self.pending).into_keys().map(|request_id| {
             CoordinatorReply::failed(
@@ -228,9 +246,16 @@ mod tests {
     fn streaming_replay_is_ordered_and_stale_generation_is_rejected() {
         let mut coordinator = MahayanaCoordinator::with_replay_limit(FakeHost::default(), 8);
         let generation = coordinator.generation();
-        coordinator.publish_event("session-a", "chat.delta", r#"{"delta":"a"}"#);
-        coordinator.publish_event("session-a", "chat.delta", r#"{"delta":"b"}"#);
-        coordinator.publish_event("session-a", "operation.completed", "{}");
+        coordinator.begin_request(&request("stream-1")).unwrap();
+        coordinator.emit_for_request("stream-1", "chat.delta", r#"{"delta":"a"}"#).unwrap();
+        coordinator.emit_for_request("stream-1", "chat.delta", r#"{"delta":"b"}"#).unwrap();
+        coordinator.emit_for_request("stream-1", "operation.completed", "{}").unwrap();
+        let completed = coordinator.complete_request("stream-1", Ok(r#"{"ok":true}"#.into()));
+        assert!(completed.result_json.is_ok());
+        assert_eq!(
+            coordinator.emit_for_request("stream-1", "chat.delta", "{}").unwrap_err().code,
+            CoordinatorFailureCode::UnknownRequest
+        );
         let replay = coordinator.resync(ResyncRequest { generation, after_sequence: 1 }).unwrap();
         assert_eq!(replay.events.iter().map(|event| event.sequence).collect::<Vec<_>>(), vec![2, 3]);
 
@@ -239,5 +264,6 @@ mod tests {
         assert_eq!(error.code, CoordinatorFailureCode::StaleGeneration);
         let fresh = coordinator.resync(ResyncRequest { generation: coordinator.generation(), after_sequence: 0 }).unwrap();
         assert!(fresh.events.is_empty());
+        assert_eq!(fresh.latest_sequence, 0);
     }
 }
