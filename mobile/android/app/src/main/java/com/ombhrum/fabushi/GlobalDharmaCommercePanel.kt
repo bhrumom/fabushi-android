@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.ombhrum.fabushi.core.MahayanaHost
+import com.ombhrum.fabushi.androidmain.coordinator.AndroidCoordinatorRuntime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,8 +42,8 @@ data class GlobalDharmaCommerceState(
 )
 
 class GlobalDharmaCommerceViewModel(application: Application) : AndroidViewModel(application) {
-    private val host = MahayanaHost(application)
-    private val bridge = MiniAppPlatformBridge(host)
+    private val coordinator = AndroidCoordinatorRuntime.get(application)
+    private val bridge = MiniAppPlatformBridge(coordinator)
     private val mutableState = MutableStateFlow(GlobalDharmaCommerceState())
     val state: StateFlow<GlobalDharmaCommerceState> = mutableState.asStateFlow()
     private var pendingLifetimePurchaseKey: String? = null
@@ -166,10 +166,6 @@ class GlobalDharmaCommerceViewModel(application: Application) : AndroidViewModel
         )
     }
 
-    override fun onCleared() {
-        host.close()
-        super.onCleared()
-    }
 }
 
 @Composable
