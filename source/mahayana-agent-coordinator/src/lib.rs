@@ -1,3 +1,5 @@
+#![allow(special_module_name)]
+
 pub mod carrier;
 pub mod client_side_tool_v2_relay;
 pub mod control_port_client;

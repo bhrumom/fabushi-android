@@ -1,6 +1,7 @@
 //! Android-owned Mahayana Host boundary.
 //! Host owns domain execution and durable runtime services behind the Coordinator.
 //! No Compose/Activity/ViewModel dependency is permitted here.
+#![allow(special_module_name)]
 
 pub mod attachment_paths;
 pub mod durable_file_policy;
