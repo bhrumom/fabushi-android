@@ -5,6 +5,7 @@
 
 pub mod attachment_paths;
 pub mod durable_file_policy;
+pub mod extensions;
 pub mod gateway_command_error;
 pub mod gateway_config;
 pub mod gateway_protocol;
