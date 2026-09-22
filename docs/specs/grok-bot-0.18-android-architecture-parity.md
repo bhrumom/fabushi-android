@@ -47,21 +47,7 @@ The Android repository owns its complete product implementation, including:
 
 Do not require runtime source from `bhrumom/fabushi-platform-core` or any other Fabushi platform repository to build or run the Android product. If useful code exists elsewhere, reimplement or deliberately import/vendor it into this repository under an explicit provenance/license decision; do not preserve a cross-repository runtime dependency merely to reduce duplication.
 
-Platform duplication is acceptable when it produces a cleaner, faster, more reliable, more Android-native result.
-
-### 2.2 Effect and quality over code reuse
-
-The priority order is:
-
-1. user-visible effect and responsiveness;
-2. correct Grok-equivalent architecture and lifecycle behavior;
-3. Android-native reliability, security, and process recovery;
-4. maintainable module boundaries;
-5. source reuse only when it does not compromise 1–4.
-
-DRY across desktop/iOS/Android is explicitly subordinate to the best result on Android.
-
-### 2.3 Language is not the goal
+### 2.2 Language is not the goal
 
 Use the language that best implements each boundary:
 
@@ -451,7 +437,7 @@ The local tree must cover the Android equivalents of:
 - WebAuthn gateway;
 - write epoch/versioning.
 
-These contracts may duplicate analogous desktop/iOS concepts. Android correctness and maintainability take priority over cross-platform source reuse.
+These contracts are Android-local and are governed by this repository.
 
 ### R11 — Android-local `source/packages/**`
 
@@ -791,9 +777,8 @@ Cancellation must settle through the same ownership chain.
 
 ## 9. Constraints and non-functional requirements
 
-- best Android effect takes priority over cross-platform reuse;
+- best Android effect is the primary implementation criterion;
 - primary UI is native Compose;
-- platform-local duplication is acceptable;
 - no runtime dependency on another Fabushi source repository;
 - no long-running blocking JNI call on main thread;
 - responses stream incrementally;
