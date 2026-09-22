@@ -4217,9 +4217,10 @@
       "android_target_path": "source/box-exec-daemon/src/cli.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt; FabushiRemoteDeviceGateway.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "source/box-exec-daemon/src/cli.rs; cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt; FabushiRemoteDeviceGateway.kt",
+      "provenance_review": "clean-room Fabushi Rust implementation; no reconstructed source copied"
     },
     {
       "grok_path": "source/box-exec-daemon/main.ts",
@@ -4230,9 +4231,10 @@
       "android_target_path": "source/box-exec-daemon/src/main.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt; FabushiRemoteDeviceGateway.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "source/box-exec-daemon/src/main.rs; cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt; FabushiRemoteDeviceGateway.kt",
+      "provenance_review": "clean-room Fabushi Rust implementation; no reconstructed source copied"
     },
     {
       "grok_path": "source/box-exec-daemon/server.ts",
@@ -4243,9 +4245,10 @@
       "android_target_path": "source/box-exec-daemon/src/server.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt; FabushiRemoteDeviceGateway.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "source/box-exec-daemon/src/server.rs; cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt; FabushiRemoteDeviceGateway.kt",
+      "provenance_review": "clean-room Fabushi Rust implementation; no reconstructed source copied"
     },
     {
       "grok_path": "source/electron-dev-controls/main.ts",
@@ -13005,9 +13008,10 @@
       "android_target_path": "source/internal/src/host_extensions.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "current mobile/android build/runtime support; migrate or retire during cutover"
+      "implementation_status": "implemented",
+      "test_evidence": "source/internal/src/host_extensions.rs; cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "current mobile/android build/runtime support; migrate or retire during cutover",
+      "provenance_review": "clean-room Fabushi Rust implementation; no reconstructed source copied"
     },
     {
       "grok_path": "source/internal/scheduling.ts",
@@ -13018,9 +13022,10 @@
       "android_target_path": "source/internal/src/scheduling.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "current mobile/android build/runtime support; migrate or retire during cutover"
+      "implementation_status": "implemented",
+      "test_evidence": "source/internal/src/scheduling.rs; cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "current mobile/android build/runtime support; migrate or retire during cutover",
+      "provenance_review": "clean-room Fabushi Rust implementation; no reconstructed source copied"
     },
     {
       "grok_path": "source/local-exec-daemon/invariant-violation-log.ts",
@@ -13031,9 +13036,10 @@
       "android_target_path": "source/local-exec-daemon/src/invariant_violation_log.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt; FabushiRemoteDeviceGateway.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "source/local-exec-daemon/src/invariant_violation_log.rs; cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt; FabushiRemoteDeviceGateway.kt",
+      "provenance_review": "clean-room Fabushi Rust implementation; no reconstructed source copied"
     },
     {
       "grok_path": "source/local-exec-daemon/main.ts",
@@ -13044,9 +13050,10 @@
       "android_target_path": "source/local-exec-daemon/src/main.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt; FabushiRemoteDeviceGateway.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "source/local-exec-daemon/src/main.rs; cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt; FabushiRemoteDeviceGateway.kt",
+      "provenance_review": "clean-room Fabushi Rust implementation; no reconstructed source copied"
     },
     {
       "grok_path": "source/local-exec-daemon/production-executor.ts",
@@ -13057,9 +13064,10 @@
       "android_target_path": "source/local-exec-daemon/src/production_executor.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt; FabushiRemoteDeviceGateway.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "source/local-exec-daemon/src/production_executor.rs; cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt; FabushiRemoteDeviceGateway.kt",
+      "provenance_review": "clean-room Fabushi Rust implementation; no reconstructed source copied"
     },
     {
       "grok_path": "source/mime-types.d.ts",

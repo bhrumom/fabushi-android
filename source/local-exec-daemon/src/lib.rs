@@ -1,3 +1,7 @@
+pub mod invariant_violation_log;
+pub mod main;
+pub mod production_executor;
+
 //! Android local Runner contract implementation.
 //!
 //! This layer advertises and validates capabilities. It intentionally does not expose an
@@ -21,26 +25,15 @@ pub struct AndroidLocalRunner {
 
 impl AndroidLocalRunner {
     pub fn new() -> Self {
-        Self {
-            capabilities: BTreeMap::new(),
-            active: BTreeSet::new(),
-        }
+        Self { capabilities: BTreeMap::new(), active: BTreeSet::new() }
     }
 
-    pub fn register(
-        &mut self,
-        capability: ExecutionCapability,
-        handler: Box<dyn LocalCapabilityHandler>,
-    ) -> Result<(), ExecutionError> {
+    pub fn register(&mut self, capability: ExecutionCapability, handler: Box<dyn LocalCapabilityHandler>) -> Result<(), ExecutionError> {
         if capability.target != ExecutionTarget::AndroidLocal {
-            return Err(ExecutionError::InvalidRequest(
-                "local runner accepts only AndroidLocal capabilities".into(),
-            ));
+            return Err(ExecutionError::InvalidRequest("local runner accepts only AndroidLocal capabilities".into()));
         }
         if capability.id.trim().is_empty() {
-            return Err(ExecutionError::InvalidRequest(
-                "capability id must not be empty".into(),
-            ));
+            return Err(ExecutionError::InvalidRequest("capability id must not be empty".into()));
         }
         self.capabilities.insert(capability.id.clone(), (capability, handler));
         Ok(())
@@ -49,30 +42,19 @@ impl AndroidLocalRunner {
     pub fn execute(&mut self, request: ExecutionRequest) -> Result<ExecutionResult, ExecutionError> {
         request.validate()?;
         if !self.active.insert(request.operation_id.clone()) {
-            return Err(ExecutionError::InvalidRequest(
-                "operation id is already active".into(),
-            ));
+            return Err(ExecutionError::InvalidRequest("operation id is already active".into()));
         }
         let result = match self.capabilities.get_mut(&request.capability_id) {
             Some((_, handler)) => handler.execute(&request),
-            None => Err(ExecutionError::CapabilityUnavailable(
-                request.capability_id.clone(),
-            )),
+            None => Err(ExecutionError::CapabilityUnavailable(request.capability_id.clone())),
         };
         self.active.remove(&request.operation_id);
         result
     }
 
     pub fn advertised_capabilities(&self) -> Vec<ExecutionCapability> {
-        self.capabilities
-            .values()
-            .map(|(capability, _)| capability.clone())
-            .collect()
+        self.capabilities.values().map(|(capability, _)| capability.clone()).collect()
     }
 }
 
-impl Default for AndroidLocalRunner {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+impl Default for AndroidLocalRunner { fn default() -> Self { Self::new() } }
