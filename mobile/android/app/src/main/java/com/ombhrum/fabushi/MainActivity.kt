@@ -28,8 +28,7 @@ class MainActivity : ComponentActivity() {
                 application = application,
                 deepLinks = deepLinks,
                 updateModel = updateModel,
-                appAgentSurface = processRuntime.appAgentSurface,
-                remoteDeviceGateway = processRuntime.remoteDeviceGateway,
+                runtimePort = processRuntime,
             )
         }
         intent?.data?.let(::enqueueDeepLink)
