@@ -9721,9 +9721,10 @@
       "android_target_path": "source/host/src/extensions/session/session_recovery.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust session recovery primitives in source/host/src/extensions/session/session_recovery.rs with unit tests for transcript behavioral matching, cached blob reads/writes, and atomic profile/settings recreation. Exact-HEAD cargo CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "clean-room Rust implementation from documented recovery behavior; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/extensions/session/session-roster.ts",
@@ -26712,7 +26713,7 @@
     }
   ],
   "status_summary": {
-    "mapped": 1893,
-    "implemented": 153
+    "mapped": 1892,
+    "implemented": 154
   }
 }
