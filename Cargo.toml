@@ -8,6 +8,12 @@ members = [
   "source/local-exec-daemon",
   "source/box-exec-daemon",
   "source/packages/agent-core",
+  "source/packages/agent-kv",
+  "source/packages/agent-transcript",
+  "source/packages/chat-inference-proto",
+  "source/packages/context",
+  "source/packages/mcp-core",
+  "source/packages/redaction",
 ]
 
 [workspace.package]
