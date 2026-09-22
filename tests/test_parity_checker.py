@@ -25,7 +25,7 @@ class ParityCheckerTest(unittest.TestCase):
         self.assertGreater(len(result.errors), 0)
         self.assertEqual(0, result.summary["legacy_monoliths_present"])
         self.assertEqual(0, result.summary["presentation_runtime_bypasses"])
-        self.assertGreater(result.summary["architecture_scope_markers"], 0)
+        self.assertEqual(0, result.summary["architecture_scope_markers"])
         self.assertGreater(result.summary["status_counts"].get("mapped", 0), 0)
 
 if __name__ == "__main__":
