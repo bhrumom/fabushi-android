@@ -1,7 +1,7 @@
 pub mod host_extensions;
 pub mod scheduling;
 
-//! Small Android-local runtime primitives that do not own product state.
+// Small Android-local runtime primitives that do not own product state.
 
 #[derive(Debug, Default)]
 pub struct MonotonicSequence { value:u64 }
