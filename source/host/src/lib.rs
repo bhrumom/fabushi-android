@@ -23,6 +23,7 @@ pub mod host_runner_composition;
 pub mod host_secret_store;
 #[allow(special_module_name)]
 pub mod main;
+pub mod mcp_auth;
 pub mod notify_drain_gate;
 pub mod process_crash_guard;
 pub mod production_binding_providers;
