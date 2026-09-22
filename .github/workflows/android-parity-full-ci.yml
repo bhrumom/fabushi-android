@@ -7,11 +7,16 @@ on:
 permissions:
   contents: read
 
+env:
+  SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
 jobs:
   architecture-and-contracts:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -27,12 +32,12 @@ jobs:
       - name: Record strict gate outcome
         run: |
           mkdir -p evidence
-          printf 'head=%s\nstrict_outcome=%s\n' "$GITHUB_SHA" "${{ steps.strict.outcome }}" > evidence/architecture-gate.txt
+          printf 'head=%s\nstrict_outcome=%s\n' "$SOURCE_SHA" "${{ steps.strict.outcome }}" > evidence/architecture-gate.txt
       - name: Rust contract/runtime tests
         run: cargo test --workspace --all-targets
       - uses: actions/upload-artifact@v4
         with:
-          name: architecture-contract-evidence-${{ github.sha }}
+          name: architecture-contract-evidence-${{ env.SOURCE_SHA }}
           path: evidence/architecture-gate.txt
           if-no-files-found: error
 
@@ -40,6 +45,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -54,14 +61,14 @@ jobs:
           set -eu
           cp app/build/outputs/apk/debug/app-debug.apk "fabushi-android-${GITHUB_SHA}.apk"
           sha256sum "fabushi-android-${GITHUB_SHA}.apk" > "fabushi-android-${GITHUB_SHA}.apk.sha256"
-          printf 'head=%s\n' "$GITHUB_SHA" > artifact-identity.txt
+          printf 'head=%s\n' "$SOURCE_SHA" > artifact-identity.txt
           cat "fabushi-android-${GITHUB_SHA}.apk.sha256" >> artifact-identity.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: android-debug-apk-${{ github.sha }}
+          name: android-debug-apk-${{ env.SOURCE_SHA }}
           path: |
-            mobile/android/fabushi-android-${{ github.sha }}.apk
-            mobile/android/fabushi-android-${{ github.sha }}.apk.sha256
+            mobile/android/fabushi-android-${{ env.SOURCE_SHA }}.apk
+            mobile/android/fabushi-android-${{ env.SOURCE_SHA }}.apk.sha256
             mobile/android/artifact-identity.txt
           if-no-files-found: error
 
@@ -70,6 +77,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -100,10 +109,10 @@ jobs:
             adb shell pidof com.ombhrum.fabushi.debug > ../../evidence/emulator/pid-after-relaunch.txt
             adb logcat -d > ../../evidence/emulator/logcat.txt
             adb exec-out screencap -p > ../../evidence/emulator/relaunch.png
-            printf 'head=%s\npackage=com.ombhrum.fabushi.debug\n' "$GITHUB_SHA" > ../../evidence/emulator/identity.txt
+            printf 'head=%s\npackage=com.ombhrum.fabushi.debug\n' "$SOURCE_SHA" > ../../evidence/emulator/identity.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: android-emulator-evidence-${{ github.sha }}
+          name: android-emulator-evidence-${{ env.SOURCE_SHA }}
           path: evidence/emulator
           if-no-files-found: warn
