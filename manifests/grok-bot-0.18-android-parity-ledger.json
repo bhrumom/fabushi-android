@@ -5078,9 +5078,10 @@
       "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/deep-link/deep-link-controller.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
+      "implementation_status": "implemented",
+      "test_evidence": "Android platform-adapted deep-link controller at the exact ledger target implements strict parsing, 16-entry pending queue, 2s dedupe, renderer-ready flush and fail-closed rejection; AndroidDeepLinkRouterTest covers allowlist/security/queue/dedupe. Exact-HEAD Android CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters",
+      "provenance_review": "clean-room Kotlin implementation from behavioral contract; no reconstructed source copied"
     },
     {
       "grok_path": "source/electron-main/desktop-edge-failures.ts",
@@ -26720,7 +26721,7 @@
     }
   ],
   "status_summary": {
-    "mapped": 1885,
-    "implemented": 161
+    "mapped": 1884,
+    "implemented": 162
   }
 }
