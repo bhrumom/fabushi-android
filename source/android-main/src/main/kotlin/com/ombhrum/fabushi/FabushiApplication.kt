@@ -3,6 +3,7 @@ package com.ombhrum.fabushi
 import android.app.Application
 import android.content.Intent
 import com.ombhrum.fabushi.androidmain.coordinator.AndroidCoordinatorPorts
+import com.ombhrum.fabushi.androidpreload.runtime.AndroidPresentationRuntimePort
 
 /**
  * Process owner for Android runtime services that must survive Activity recreation.
@@ -40,15 +41,19 @@ internal class FabushiProcessRuntime(
     application: Application,
     intent: Intent?,
     ciBootstrapActive: Boolean,
-) : AutoCloseable {
-    val appAgentSurface = FabushiAppAgentSurface()
-    val remoteDeviceGateway = FabushiRemoteDeviceGateway(
+) : AndroidPresentationRuntimePort, AutoCloseable {
+    override val appAgentSurface = FabushiAppAgentSurface()
+    private val remoteDeviceGateway = FabushiRemoteDeviceGateway(
         context = application,
         coordinator = AndroidCoordinatorPorts.presentation(application),
         surface = appAgentSurface,
         metadata = FabushiCiBootstrap.gatewayMetadata(intent, ciBootstrapActive),
         configuredDeviceName = FabushiCiBootstrap.configuredDeviceName(intent, ciBootstrapActive),
     )
+
+    override fun setLoggedIn(loggedIn: Boolean) {
+        remoteDeviceGateway.setLoggedIn(loggedIn)
+    }
 
     override fun close() {
         remoteDeviceGateway.close()
