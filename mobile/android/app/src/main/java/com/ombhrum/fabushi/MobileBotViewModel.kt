@@ -35,7 +35,7 @@ data class MobileBotUiState(
 
 class MobileBotViewModel(application: Application) : AndroidViewModel(application) {
     private val coordinator = AndroidCoordinatorRuntime.get(application)
-    private val miniApps = MiniAppPlatformBridge(host)
+    private val miniApps = MiniAppPlatformBridge(coordinator)
     private val mutableState = MutableStateFlow(MobileBotUiState())
     private val messagesByBot = mutableMapOf<String, List<MobileChatMessage>>()
     private val draftsByBot = mutableMapOf<String, String>()
@@ -89,8 +89,7 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
 
     private fun loadSurfaceBots(): List<MobileBotSummaryAndroid> {
         val requestId = "android-mobile-bot-list-${UUID.randomUUID()}"
-        host.request(
-            "feature.execute",
+        coordinator.featureExecute(
             JSONObject().put(
                 "command",
                 JSONObject().put("type", "bot.list").put("requestId", requestId),
@@ -168,8 +167,7 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
             runCatching {
                 withContext(Dispatchers.IO) {
                     val requestId = "android-mobile-bot-create-${UUID.randomUUID()}"
-                    host.request(
-                        "feature.execute",
+                    coordinator.featureExecute(
                         JSONObject().put(
                             "command",
                             JSONObject()
@@ -318,8 +316,7 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             runCatching {
                 val operationId = withContext(Dispatchers.IO) {
-                    val accepted = host.request(
-                        "feature.execute",
+                    val accepted = coordinator.featureExecute(
                         JSONObject().put(
                             "command",
                             JSONObject()

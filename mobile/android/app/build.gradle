@@ -20,7 +20,7 @@ android {
     }
 
     sourceSets {
-        main.java.srcDirs += [
+        main.kotlin.srcDirs += [
             '../../../source/android-main/src/main/kotlin',
             '../../../source/android-preload/src/main/kotlin'
         ]

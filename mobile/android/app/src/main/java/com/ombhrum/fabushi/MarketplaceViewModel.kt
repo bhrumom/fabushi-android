@@ -79,7 +79,7 @@ data class MarketplaceUiState(
 
 class MarketplaceViewModel(application: Application) : AndroidViewModel(application) {
     private val coordinator = AndroidCoordinatorRuntime.get(application)
-    private val miniApps = MiniAppPlatformBridge(host)
+    private val miniApps = MiniAppPlatformBridge(coordinator)
     private val mutableState = MutableStateFlow(MarketplaceUiState())
     val state: StateFlow<MarketplaceUiState> = mutableState.asStateFlow()
 
@@ -224,8 +224,7 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             runCatching {
                 withContext(Dispatchers.IO) {
-                    host.request(
-                        "feature.auth.browserPoll",
+                    coordinator.authBrowserPoll(
                         JSONObject().put("attemptId", attemptId),
                     )
                 }
@@ -299,8 +298,7 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             runCatching {
                 val accepted = withContext(Dispatchers.IO) {
-                    host.request(
-                        "feature.execute",
+                    coordinator.featureExecute(
                         JSONObject().put("command", JSONObject().put("type", "chat.send").put("requestId", requestId).put("text", text).put("agentId", "mahayana-assistant").put("mode", "agent")),
                     )
                 }
@@ -404,8 +402,7 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             runCatching {
                 withContext(Dispatchers.IO) {
-                    host.request(
-                        "feature.marketplace.browse",
+                    coordinator.marketplaceBrowse(
                         JSONObject().put("query", query.ifBlank { JSONObject.NULL }).put("platform", "android"),
                     )
                 }
@@ -463,8 +460,7 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             runCatching {
                 withContext(Dispatchers.IO) {
-                    val metadata = host.request(
-                        "feature.marketplace.release",
+                    val metadata = coordinator.marketplaceRelease(
                         JSONObject().put("pluginId", plugin.pluginId).put("version", version),
                     )
                     val release = metadata.optJSONObject("releaseManifest")
@@ -483,8 +479,7 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
                     check(source.optString("sourceRef").isNotBlank() && !source.optBoolean("marketplaceHostsPackage")) {
                         "marketplace release is missing an immutable GitHub source"
                     }
-                    val installed = host.request(
-                        "feature.plugin.install",
+                    val installed = coordinator.pluginInstall(
                         JSONObject().put("release", release).put("platform", "android"),
                     )
                     val installedPluginId = installed.optString("pluginId", plugin.pluginId)
@@ -524,8 +519,7 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
             runCatching {
                 withContext(Dispatchers.IO) {
                     for (permission in request.permissions) {
-                        host.request(
-                            "plugin.permission.grant",
+                        coordinator.pluginPermissionGrant(
                             JSONObject().put("pluginId", request.pluginId).put("permission", permission),
                         )
                     }
@@ -561,15 +555,13 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             runCatching {
                 withContext(Dispatchers.IO) {
-                    val compatibility = host.request(
-                        "plugin.compatibility",
+                    val compatibility = coordinator.pluginCompatibility(
                         JSONObject().put("pluginId", pluginId),
                     )
                     check(compatibility.optBoolean("portableCompatible")) {
                         "插件不满足移动端 portable runtime 约束"
                     }
-                    host.request(
-                        "runtime.start",
+                    coordinator.runtimeStart(
                         JSONObject().put("pluginId", pluginId).put("config", JSONObject()),
                     )
                 }
@@ -589,8 +581,7 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
 
     suspend fun loadLocalMiniAppHtml(pluginId: String): String? = withContext(Dispatchers.IO) {
         runCatching {
-            host.request(
-                "feature.plugin.uiDocument",
+            coordinator.pluginUiDocument(
                 JSONObject().put("pluginId", pluginId),
             ).optString("html").takeIf { it.isNotBlank() }
         }.getOrNull()
@@ -599,8 +590,7 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
     fun callRuntimeToolJson(pluginId: String, name: String, argumentsJson: String): String {
         require(Regex("^[A-Za-z0-9_.-]{1,128}$").matches(name)) { "Invalid WebMCP tool name" }
         val arguments = JSONObject(argumentsJson.ifBlank { "{}" })
-        val result = host.requestValue(
-            "runtime.call",
+        val result = coordinator.runtimeCallValue(
             JSONObject()
                 .put("pluginId", pluginId)
                 .put("name", name)
