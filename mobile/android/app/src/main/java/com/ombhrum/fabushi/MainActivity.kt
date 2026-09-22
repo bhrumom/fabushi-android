@@ -1,12 +1,13 @@
 package com.ombhrum.fabushi
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import com.ombhrum.fabushi.androidmain.deeplink.AndroidDeepLinkRouter
+import com.ombhrum.fabushi.androidpreload.deeplink.AndroidDeepLink
 import kotlinx.coroutines.flow.MutableSharedFlow
 
 /**
@@ -16,7 +17,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
  * out of the Activity so process recreation and renderer replacement can be tested independently.
  */
 class MainActivity : ComponentActivity() {
-    private val deepLinks = MutableSharedFlow<Uri>(replay = 1, extraBufferCapacity = 31)
+    private val deepLinks = MutableSharedFlow<AndroidDeepLink>(replay = 1, extraBufferCapacity = 31)
     private val updateModel: AndroidUpdateViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,8 +54,7 @@ class MainActivity : ComponentActivity() {
     internal fun appAgentSurfaceForTesting(): FabushiAppAgentSurface =
         (application as FabushiApplication).requireProcessRuntime().appAgentSurface
 
-    private fun enqueueDeepLink(uri: Uri) {
-        if (uri.scheme != "fabushi") return
-        deepLinks.tryEmit(uri)
+    private fun enqueueDeepLink(uri: android.net.Uri) {
+        AndroidDeepLinkRouter.parse(uri.toString())?.let(deepLinks::tryEmit)
     }
 }
