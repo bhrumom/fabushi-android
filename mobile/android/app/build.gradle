@@ -22,7 +22,8 @@ android {
     sourceSets {
         main.kotlin.srcDirs += [
             '../../../source/android-main/src/main/kotlin',
-            '../../../source/android-preload/src/main/kotlin'
+            '../../../source/android-preload/src/main/kotlin',
+            '../../../frontend/src/main/kotlin'
         ]
     }
 
