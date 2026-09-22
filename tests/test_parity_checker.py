@@ -21,12 +21,14 @@ class ParityCheckerTest(unittest.TestCase):
         self.assertEqual(0, result.summary["legacy_android_product_files"])
         self.assertEqual(0, result.summary["presentation_runtime_bypasses"])
         self.assertEqual(0, result.summary["presentation_host_bypasses"])
+        self.assertEqual(0, result.summary["frontend_android_main_dependencies"])
 
     def test_strict_gate_reports_remaining_real_migration_work(self):
         result = MODULE.run_checks(strict=True)
         self.assertGreater(len(result.errors), 0)
         self.assertEqual(0, result.summary["legacy_monoliths_present"])
         self.assertEqual(0, result.summary["presentation_runtime_bypasses"])
+        self.assertEqual(0, result.summary["frontend_android_main_dependencies"])
         self.assertEqual(0, result.summary["architecture_scope_markers"])
         self.assertGreater(result.summary["status_counts"].get("mapped", 0), 0)
 
