@@ -13,7 +13,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 INVENTORY = ROOT / "manifests/grok-bot-0.18-source-frontend-inventory.json"
 LEDGER = ROOT / "manifests/grok-bot-0.18-android-parity-ledger.json"
 
-ALLOWED_CLASSES = {"direct-equivalent", "android-adapted", "not-applicable"}
+ALLOWED_CLASSES = {"native-equivalent", "shared-core", "platform-adapted", "not-applicable"}
 ALLOWED_STATUS = {"mapped", "implemented", "verified", "blocked"}
 
 TARGET_PREFIX = {

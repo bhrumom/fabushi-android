@@ -1062,7 +1062,7 @@ Fabushi Android discovery baseline:
 | R13 | pending | canonical state audit pending |
 | R14 | pending | process-death acceptance pending |
 | R15 | pending | security review pending |
-| R16 | pending | rights/provenance review pending |
+| R16 | blocked | Rights review found no upstream source-code license grant in the pinned reconstruction; direct source/binary reuse is prohibited pending independent authorization. Clean-room behavior/contract reimplementation continues. See `docs/reviews/grok-bot-0.18-rights-provenance-review.md`. |
 | R17 | pending | legacy removal pending |
 | R18 | pending | standalone build acceptance pending |
 | AC-1 | passed | exact inventory: 1,724 `source/**` + 322 `frontend/**` = 2,046 rows; CI parity checker rejects omissions/duplicates |
@@ -1086,7 +1086,7 @@ Fabushi Android discovery baseline:
 | AC-19 | pending | folder/architecture checker pending |
 | AC-20 | pending | exact-HEAD CI pending |
 | AC-21 | pending | packaged acceptance pending |
-| AC-22 | pending | rights review pending |
+| AC-22 | blocked | Pinned reconstruction explicitly disclaims an upstream source-code license; release cannot mark provenance clearance passed without independent authorization/review. See `docs/reviews/grok-bot-0.18-rights-provenance-review.md`. |
 | AC-23 | pending | final compliance review pending |
 
 Allowed final statuses: `passed`, `blocked`, `not-applicable`.
