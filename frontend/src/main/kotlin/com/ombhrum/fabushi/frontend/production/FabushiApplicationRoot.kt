@@ -33,7 +33,7 @@ import org.json.JSONObject
  * composition and delegates domain operations through ViewModels / the typed coordinator bridge.
  */
 @Composable
-fun FabushiApplicationRoot(
+internal fun FabushiApplicationRoot(
     activity: ComponentActivity,
     application: Application,
     deepLinks: SharedFlow<Uri>,

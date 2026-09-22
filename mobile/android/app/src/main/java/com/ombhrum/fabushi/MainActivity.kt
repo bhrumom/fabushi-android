@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 /**
  * Android lifecycle shell.
  *
- * Product rendering lives under frontend/**. Runtime/domain orchestration is intentionally kept
+ * Product rendering lives under the frontend source tree. Runtime/domain orchestration is intentionally kept
  * out of the Activity so process recreation and renderer replacement can be tested independently.
  */
 class MainActivity : ComponentActivity() {
