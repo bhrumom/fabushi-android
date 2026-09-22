@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ombhrum.fabushi.androidpreload.deeplink.AndroidDeepLink
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidPresentationRuntimePort
 import kotlinx.coroutines.flow.SharedFlow
 import org.json.JSONObject
@@ -38,7 +39,7 @@ private enum class RendererRoute { GROK_HOME, MESSAGING }
 internal fun FabushiApplicationRoot(
     activity: ComponentActivity,
     application: Application,
-    deepLinks: SharedFlow<Uri>,
+    deepLinks: SharedFlow<AndroidDeepLink>,
     updateModel: AndroidUpdateViewModel,
     runtimePort: AndroidPresentationRuntimePort,
 ) {
@@ -60,7 +61,7 @@ internal fun FabushiApplicationRoot(
                 }
 
                 LaunchedEffect(model) {
-                    deepLinks.collect { uri -> model.handleDeepLink(uri) }
+                    deepLinks.collect { link -> model.handleDeepLink(link) }
                 }
                 LaunchedEffect(state.loggedIn) {
                     runtimePort.setLoggedIn(state.loggedIn)
