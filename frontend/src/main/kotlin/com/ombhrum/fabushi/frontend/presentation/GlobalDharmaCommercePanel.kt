@@ -20,7 +20,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.ombhrum.fabushi.androidmain.coordinator.AndroidCoordinatorPorts
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidCoordinatorPort
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,7 +42,7 @@ data class GlobalDharmaCommerceState(
 )
 
 class GlobalDharmaCommerceViewModel(application: Application) : AndroidViewModel(application) {
-    private val coordinator: AndroidCoordinatorPort = AndroidCoordinatorPorts.presentation(application)
+    private val coordinator: AndroidCoordinatorPort = CoordinatorClient.presentation()
     private val bridge = MiniAppPlatformBridge(coordinator)
     private val mutableState = MutableStateFlow(GlobalDharmaCommerceState())
     val state: StateFlow<GlobalDharmaCommerceState> = mutableState.asStateFlow()
