@@ -54,6 +54,8 @@ STRICT_FORBIDDEN_PATHS = [
     "mobile/android/app/src/main/java/com/ombhrum/fabushi/MobileBotViewModel.kt",
     "mobile/android/app/src/main/java/com/ombhrum/fabushi/MessagingViewModel.kt",
     "mobile/android/app/src/main/java/com/ombhrum/fabushi/MarketplaceViewModel.kt",
+    "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/production/GrokMobileShellAndroid.kt",
+    "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/production/FabushiScreen.kt",
 ]
 
 PRESENTATION_HOST_BYPASS_FILES = [

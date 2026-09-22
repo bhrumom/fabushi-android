@@ -23,7 +23,7 @@ class FabushiScreenTest {
     @Test
     fun homeMatchesConversationReferenceAndSearchesMessages() {
         compose.setContent {
-            FabushiScreen(
+            FabushiMessagingSurface(
                 state = MarketplaceUiState(),
                 onQueryChange = {},
                 onSearch = {},
@@ -50,7 +50,7 @@ class FabushiScreenTest {
     fun signedOutMobileSurfaceUsesSingleNativeLoginAction() {
         var loginRequests = 0
         compose.setContent {
-            FabushiScreen(
+            FabushiMessagingSurface(
                 state = MarketplaceUiState(
                     authResolved = true,
                     loggedIn = false,
@@ -83,7 +83,7 @@ class FabushiScreenTest {
         var opened: MarketplacePlugin? = null
         val plugin = MarketplacePlugin("example-plugin", "示例插件", "描述", "1.0.0")
         compose.setContent {
-            FabushiScreen(
+            FabushiMessagingSurface(
                 state = MarketplaceUiState(message = "ready", query = query, plugins = listOf(plugin)),
                 onQueryChange = { query = it },
                 onSearch = { searches += 1 },
@@ -114,7 +114,7 @@ class FabushiScreenTest {
     @Test
     fun addMenuOpensAndClosesRestrictedRemoteComputerSurface() {
         compose.setContent {
-            FabushiScreen(
+            FabushiMessagingSurface(
                 state = MarketplaceUiState(),
                 onQueryChange = {},
                 onSearch = {},
@@ -136,7 +136,7 @@ class FabushiScreenTest {
     fun availableUpdateAppearsOnHomeAndStartsInstall() {
         var installRequests = 0
         compose.setContent {
-            FabushiScreen(
+            FabushiMessagingSurface(
                 state = MarketplaceUiState(),
                 onQueryChange = {},
                 onSearch = {},
@@ -163,7 +163,7 @@ class FabushiScreenTest {
     @Test
     fun permissionDialogHasStableApproveAndDenyControls() {
         compose.setContent {
-            FabushiScreen(
+            FabushiMessagingSurface(
                 state = MarketplaceUiState(
                     permissionRequest = PermissionRequest(
                         pluginId = "example-plugin",
@@ -188,7 +188,7 @@ class FabushiScreenTest {
     fun appAgentSurfaceNavigatesWithStableSemanticIdsWithoutScreenshotCoordinates() {
         val surface = FabushiAppAgentSurface()
         compose.setContent {
-            FabushiScreen(
+            FabushiMessagingSurface(
                 state = MarketplaceUiState(message = "ready"),
                 onQueryChange = {},
                 onSearch = {},

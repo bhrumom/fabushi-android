@@ -137,7 +137,7 @@ internal val homeAccent = Color(0xFFFFB21A)
 internal val conversationAccent = Color(0xFFFF5A0A)
 
 @Composable
-fun FabushiScreen(
+fun FabushiMessagingSurface(
     state: MarketplaceUiState,
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
@@ -190,7 +190,7 @@ fun FabushiScreen(
     onReopenBrowserLogin: () -> Unit = {},
     onCancelBrowserLogin: () -> Unit = {},
     onLogout: () -> Unit = {},
-    onExitLegacy: () -> Unit = {},
+    onBackToGrokHome: () -> Unit = {},
     onChatDraftChange: (String) -> Unit = {},
     onSendChat: () -> Unit = {},
     onStopChat: () -> Unit = {},
@@ -251,7 +251,7 @@ fun FabushiScreen(
                     "Fabushi",
                     action = FabushiAppAgentSurface.Action(setOf("pressKey")) { key ->
                         require(key?.trim()?.equals("BACK", ignoreCase = true) == true) { "unsupported_app_surface_key" }
-                        onExitLegacy()
+                        onBackToGrokHome()
                     },
                 )
                 element(

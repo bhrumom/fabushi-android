@@ -59,12 +59,12 @@ internal val GrokMobileInk = Color(0xFF111111)
 internal val GrokMobileMuted = Color(0xFF8B8B8B)
 
 @Composable
-fun GrokMobileShellAndroid(
+fun GrokHomeSurface(
     accountName: String,
     messagingState: MessagingUiState,
     botState: MobileBotUiState,
     appAgentSurface: FabushiAppAgentSurface,
-    onOpenLegacy: () -> Unit,
+    onOpenMessaging: () -> Unit,
     onRefreshBots: () -> Unit,
     onCreateBot: (String, String, (() -> Unit)?) -> Unit,
     onOpenBot: (MobileBotSummaryAndroid) -> Unit,
@@ -160,10 +160,10 @@ fun GrokMobileShellAndroid(
             else -> {
                 element("grok-mobile-home", "application", "Fabushi")
                 element(
-                    "grok-mobile-legacy",
+                    "grok-mobile-messages",
                     "button",
-                    "打开完整 Fabushi",
-                    action = FabushiAppAgentSurface.Action(setOf("invoke")) { onOpenLegacy() },
+                    "打开消息与功能",
+                    action = FabushiAppAgentSurface.Action(setOf("invoke")) { onOpenMessaging() },
                 )
                 element(
                     "grok-mobile-search-toggle",
@@ -201,7 +201,7 @@ fun GrokMobileShellAndroid(
                             id,
                             "menuitem",
                             name,
-                            action = FabushiAppAgentSurface.Action(setOf("invoke")) { addOpen = false; onOpenLegacy() },
+                            action = FabushiAppAgentSurface.Action(setOf("invoke")) { addOpen = false; onOpenMessaging() },
                         )
                     }
                 }
@@ -272,7 +272,7 @@ fun GrokMobileShellAndroid(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(
-                        Modifier.size(38.dp).background(Color(0xFFFFC7D1), CircleShape).clickable(onClick = onOpenLegacy),
+                        Modifier.size(38.dp).background(Color(0xFFFFC7D1), CircleShape).clickable(onClick = onOpenMessaging),
                         contentAlignment = Alignment.Center,
                     ) { Text(accountName.take(1).uppercase().ifBlank { "F" }, color = GrokMobileInk, fontWeight = FontWeight.Bold) }
                     Spacer(Modifier.weight(1f))
@@ -281,9 +281,9 @@ fun GrokMobileShellAndroid(
                         Text("+", fontSize = 31.sp, color = GrokMobileInk, modifier = Modifier.padding(horizontal = 8.dp).clickable { addOpen = true }.testTag("grok-mobile-add"))
                         DropdownMenu(expanded = addOpen, onDismissRequest = { addOpen = false }) {
                             DropdownMenuItem(text = { Text("New Bot") }, onClick = { addOpen = false; createOpen = true })
-                            DropdownMenuItem(text = { Text("New message") }, onClick = { addOpen = false; onOpenLegacy() })
-                            DropdownMenuItem(text = { Text("New group") }, onClick = { addOpen = false; onOpenLegacy() })
-                            DropdownMenuItem(text = { Text("New channel") }, onClick = { addOpen = false; onOpenLegacy() })
+                            DropdownMenuItem(text = { Text("New message") }, onClick = { addOpen = false; onOpenMessaging() })
+                            DropdownMenuItem(text = { Text("New group") }, onClick = { addOpen = false; onOpenMessaging() })
+                            DropdownMenuItem(text = { Text("New channel") }, onClick = { addOpen = false; onOpenMessaging() })
                         }
                     }
                 }
@@ -340,7 +340,7 @@ fun GrokMobileShellAndroid(
                 item { SectionLabelAndroid("Projects  ${rows.size}") }
                 items(rows.take(10), key = { it.id }) { conversation ->
                     Row(
-                        Modifier.fillMaxWidth().clickable(onClick = onOpenLegacy).padding(horizontal = 18.dp, vertical = 9.dp),
+                        Modifier.fillMaxWidth().clickable(onClick = onOpenMessaging).padding(horizontal = 18.dp, vertical = 9.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         ClothGhostAvatarAndroid("conversation:${conversation.id}", 45.dp, badge = if (conversation.unreadCount > 0) Color(0xFF2A92FE) else null)

@@ -26,6 +26,8 @@ import com.ombhrum.fabushi.androidmain.coordinator.AndroidCoordinatorPorts
 import kotlinx.coroutines.flow.SharedFlow
 import org.json.JSONObject
 
+private enum class RendererRoute { GROK_HOME, MESSAGING }
+
 /**
  * Production Compose root migrated out of MainActivity.
  *
@@ -51,9 +53,11 @@ internal fun FabushiApplicationRoot(
                 val botState by botModel.state.collectAsState()
                 val updateState by updateModel.state.collectAsState()
                 var openedMiniApp by remember { mutableStateOf<MarketplacePlugin?>(null) }
-                var showLegacyShell by remember { mutableStateOf(false) }
+                var rendererRoute by remember { mutableStateOf(RendererRoute.GROK_HOME) }
 
-                BackHandler(enabled = showLegacyShell) { showLegacyShell = false }
+                BackHandler(enabled = rendererRoute == RendererRoute.MESSAGING && state.loggedIn) {
+                    rendererRoute = RendererRoute.GROK_HOME
+                }
 
                 LaunchedEffect(model) {
                     deepLinks.collect { uri -> model.handleDeepLink(uri) }
@@ -65,10 +69,10 @@ internal fun FabushiApplicationRoot(
                         model.refresh()
                         botModel.refreshBots()
                     }
-                    if (!state.loggedIn) showLegacyShell = false
+                    if (!state.loggedIn) rendererRoute = RendererRoute.GROK_HOME
                 }
-                LaunchedEffect(showLegacyShell, state.loggedIn) {
-                    if (!showLegacyShell && state.loggedIn) {
+                LaunchedEffect(rendererRoute, state.loggedIn) {
+                    if (rendererRoute == RendererRoute.GROK_HOME && state.loggedIn) {
                         model.refresh()
                         botModel.refreshBots()
                     }
@@ -117,7 +121,7 @@ internal fun FabushiApplicationRoot(
                             )
                         }
                     }
-                } else if (state.onboardingStep >= 3 && state.authResolved && state.loggedIn && !showLegacyShell) {
+                } else if (state.onboardingStep >= 3 && state.authResolved && state.loggedIn && rendererRoute == RendererRoute.GROK_HOME) {
                     val miniAppBot = botState.activeBot?.takeIf { !it.miniAppId.isNullOrBlank() }
                     val miniAppPlugin = miniAppBot?.miniAppId?.let { id -> state.plugins.firstOrNull { it.pluginId == id } }
                     LaunchedEffect(miniAppBot?.id, miniAppPlugin?.pluginId, miniAppBot?.menuButtonText) {
@@ -147,12 +151,12 @@ internal fun FabushiApplicationRoot(
                         }
                     }
                     Box {
-                        GrokMobileShellAndroid(
+                        GrokHomeSurface(
                             accountName = state.accountName,
                             messagingState = messagingState,
                             botState = botState,
                             appAgentSurface = appAgentSurface,
-                            onOpenLegacy = { showLegacyShell = true },
+                            onOpenMessaging = { rendererRoute = RendererRoute.MESSAGING },
                             onRefreshBots = botModel::refreshBots,
                             onCreateBot = botModel::createBot,
                             onOpenBot = botModel::openBot,
@@ -175,7 +179,7 @@ internal fun FabushiApplicationRoot(
                         }
                     }
                 } else {
-                    FabushiScreen(
+                    FabushiMessagingSurface(
                         state = state,
                         onQueryChange = model::setQuery,
                         onSearch = model::refresh,
@@ -225,7 +229,7 @@ internal fun FabushiApplicationRoot(
                         onReopenBrowserLogin = model::reopenBrowserLogin,
                         onCancelBrowserLogin = model::cancelBrowserLogin,
                         onLogout = model::logout,
-                        onExitLegacy = { showLegacyShell = false },
+                        onBackToGrokHome = { rendererRoute = RendererRoute.GROK_HOME },
                         onChatDraftChange = model::setChatDraft,
                         onSendChat = model::sendChat,
                         onStopChat = model::stopChat,
