@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ombhrum.fabushi.androidmain.coordinator.AndroidCoordinatorPorts
+import com.ombhrum.fabushi.androidpreload.runtime.AndroidPresentationRuntimePort
 import kotlinx.coroutines.flow.SharedFlow
 import org.json.JSONObject
 
@@ -40,9 +41,9 @@ internal fun FabushiApplicationRoot(
     application: Application,
     deepLinks: SharedFlow<Uri>,
     updateModel: AndroidUpdateViewModel,
-    appAgentSurface: FabushiAppAgentSurface,
-    remoteDeviceGateway: FabushiRemoteDeviceGateway,
+    runtimePort: AndroidPresentationRuntimePort,
 ) {
+            val appAgentSurface = runtimePort.appAgentSurface
 
             MaterialTheme {
                 val model: MarketplaceViewModel = viewModel()
@@ -63,7 +64,7 @@ internal fun FabushiApplicationRoot(
                     deepLinks.collect { uri -> model.handleDeepLink(uri) }
                 }
                 LaunchedEffect(state.loggedIn) {
-                    remoteDeviceGateway.setLoggedIn(state.loggedIn)
+                    runtimePort.setLoggedIn(state.loggedIn)
                     if (state.loggedIn) {
                         messagingModel.refresh()
                         model.refresh()
