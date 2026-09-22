@@ -831,7 +831,7 @@ Every path must end in a deterministic recoverable or terminal state.
 6. record provenance/rights classification;
 7. define critical behavioral fixtures.
 
-Exit gate: 100% file-level mapping and zero unexplained folder divergence.
+Exit gate: 100% file-level mapping and zero unexplained folder divergence.\n\nCurrent evidence: file-level mapping is complete (2,046/2,046) and major target roots/scopes are scaffolded; implementation remains tracked independently per row as `mapped`, `implemented`, `verified`, or `blocked`.
 
 ### Phase 1 — Local contracts/packages
 
@@ -1047,7 +1047,7 @@ Fabushi Android discovery baseline:
 
 | Requirement / AC | Status | Evidence / reason |
 | --- | --- | --- |
-| R1 | pending | complete file-level ledger not yet generated |
+| R1 | passed | 2,046/2,046 pinned Grok `source/**` + `frontend/**` files are captured in `manifests/grok-bot-0.18-android-parity-ledger.json`; phase-0 checker enforces exact inventory equality |
 | R2 | pending | target folder mapping specified; physical migration pending |
 | R3 | pending | implementation pending |
 | R4 | pending | Coordinator implementation pending |
@@ -1065,7 +1065,7 @@ Fabushi Android discovery baseline:
 | R16 | pending | rights/provenance review pending |
 | R17 | pending | legacy removal pending |
 | R18 | pending | standalone build acceptance pending |
-| AC-1 | pending | ledger pending |
+| AC-1 | passed | exact inventory: 1,724 `source/**` + 322 `frontend/**` = 2,046 rows; CI parity checker rejects omissions/duplicates |
 | AC-2 | pending | implementation mapping pending |
 | AC-3 | pending | physical root migration pending |
 | AC-4 | pending | android-main parity pending |

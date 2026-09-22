@@ -13083,8 +13083,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/carrier.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -13096,8 +13096,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/client_side_tool_v2_relay.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -13109,8 +13109,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/control_port_client.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -13122,8 +13122,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/gateway/box_vnc_proxy.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -13135,8 +13135,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/gateway/gateway_client.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -13148,8 +13148,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/gateway/gateway_dns_diagnostics.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -13161,8 +13161,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/gateway/gateway_errors.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -13174,8 +13174,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/gateway/gateway_event_families.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -13187,8 +13187,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/gateway/gateway_reachability.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -13200,8 +13200,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/gateway/gateway_request_dispatcher.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -13213,8 +13213,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/gateway/host_supervisor.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -13226,8 +13226,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/gateway/sse_block_decoder.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -13239,8 +13239,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/inference_router.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -13252,8 +13252,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/local_exec/daemon_files.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -13265,8 +13265,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/local_exec/supervisor.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -13278,8 +13278,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/main.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -13291,8 +13291,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/oauth/mcp_oauth_callback_listener.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -13304,8 +13304,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/oauth/mcp_oauth_forwarder.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -13317,8 +13317,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/oauth/mcp_oauth_loopback_registry.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -13330,8 +13330,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/renderer_port_server.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -13343,8 +13343,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/routed_mcp_bridge.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -13356,8 +13356,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/telemetry/transport_stage_recorder.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -13369,8 +13369,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/webauthn/provider.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -13382,8 +13382,8 @@
       "android_target_path": "source/mahayana-agent-coordinator/src/webauthn/signer.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "MobileBotViewModel.kt; MessagingViewModel.kt; MarketplaceViewModel.kt; core/MahayanaHost.kt orchestration"
     },
     {
@@ -26174,8 +26174,8 @@
       "android_target_path": "source/shared/src/rpc/client_side_tool_v2_transport.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
     },
     {
@@ -26200,8 +26200,8 @@
       "android_target_path": "source/shared/src/rpc/coordinator_port.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
     },
     {
@@ -26213,8 +26213,8 @@
       "android_target_path": "source/shared/src/rpc/coordinator.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "direct-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Rust workspace compile/unit coverage in .github/workflows/grok-android-architecture.yml; exact-HEAD verification pending for this commit",
       "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
     },
     {
@@ -26620,5 +26620,11 @@
       "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
       "legacy_android_path_replaced_or_removed": "current mobile/android build/runtime support; migrate or retire during cutover"
     }
-  ]
+  ],
+  "status_summary": {
+    "mapped": 2019,
+    "implemented": 27,
+    "verified": 0,
+    "blocked": 0
+  }
 }
