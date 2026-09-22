@@ -183,6 +183,24 @@ def run_checks(strict: bool) -> CheckResult:
             else:
                 warnings.append(message)
 
+    legacy_android_product_files = []
+    legacy_android_root = ROOT / "mobile/android/app/src/main/java/com/ombhrum/fabushi"
+    if legacy_android_root.exists():
+        legacy_android_product_files = sorted(
+            path.relative_to(ROOT).as_posix()
+            for path in legacy_android_root.rglob("*.kt")
+            if path.name != "MainActivity.kt"
+        )
+    if legacy_android_product_files:
+        message = (
+            "legacy Android production root must contain only MainActivity.kt; "
+            f"{len(legacy_android_product_files)} other Kotlin files remain"
+        )
+        if strict:
+            errors.append(message)
+        else:
+            warnings.append(message)
+
     legacy_count = 0
     for relative in STRICT_FORBIDDEN_PATHS:
         if (ROOT / relative).exists():
@@ -229,6 +247,7 @@ def run_checks(strict: bool) -> CheckResult:
         "class_counts": class_counts,
         "implemented_rows_missing_target": missing_targets,
         "legacy_monoliths_present": legacy_count,
+        "legacy_android_product_files": len(legacy_android_product_files),
         "presentation_host_bypasses": bypass_count,
         "presentation_runtime_bypasses": presentation_runtime_bypasses,
         "architecture_scope_markers": len(architecture_scope_markers),
