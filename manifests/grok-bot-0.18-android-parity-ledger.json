@@ -11519,8 +11519,8 @@
       "android_target_path": "source/host/src/mcp_auth/host_mcp_auth_completion.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust contract with focused unit tests under source/host/src/mcp_auth; cargo test --workspace --all-targets covers wait matching/TTL, cancellation, identity precedence, restart and transcript resume. Exact-HEAD CI is required before verified.",
       "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
     },
     {
@@ -11532,8 +11532,8 @@
       "android_target_path": "source/host/src/mcp_auth/mcp_auth_wait_registry.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust contract with focused unit tests under source/host/src/mcp_auth; cargo test --workspace --all-targets covers wait matching/TTL, cancellation, identity precedence, restart and transcript resume. Exact-HEAD CI is required before verified.",
       "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
     },
     {
@@ -26711,7 +26711,7 @@
     }
   ],
   "status_summary": {
-    "mapped": 1930,
-    "implemented": 116
+    "mapped": 1894,
+    "implemented": 152
   }
 }
