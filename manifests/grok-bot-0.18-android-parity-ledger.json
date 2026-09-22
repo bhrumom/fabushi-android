@@ -10033,9 +10033,10 @@
       "android_target_path": "source/host/src/extensions/telemetry/host_crash_marker.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust parser/store/forwarder in source/host/src/extensions/telemetry/host_crash_marker.rs with unit coverage for signal/error-class validation, successful delivery, invalid marker cleanup, and stale-marker delete protection. Exact-HEAD cargo CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "clean-room Rust behavior implementation from documented crash-marker contract; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/extensions/telemetry/host-diagnostic-telemetry.ts",
@@ -26711,7 +26712,7 @@
     }
   ],
   "status_summary": {
-    "mapped": 1894,
-    "implemented": 152
+    "mapped": 1893,
+    "implemented": 153
   }
 }
