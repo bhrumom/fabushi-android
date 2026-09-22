@@ -7080,9 +7080,10 @@
       "android_target_path": "source/host/src/attachment_paths.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/attachment_paths.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/automations/automation-id.ts",
@@ -7457,9 +7458,10 @@
       "android_target_path": "source/host/src/durable_file_policy.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/durable_file_policy.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/extensions/action-audit/action-audit-backend.ts",
@@ -11149,9 +11151,10 @@
       "android_target_path": "source/host/src/gateway_command_error.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/gateway_command_error.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/gateway-config.ts",
@@ -11162,9 +11165,10 @@
       "android_target_path": "source/host/src/gateway_config.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/gateway_config.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/gateway-protocol.ts",
@@ -11175,9 +11179,10 @@
       "android_target_path": "source/host/src/gateway_protocol.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/gateway_protocol.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/gateway-server.ts",
@@ -11188,9 +11193,10 @@
       "android_target_path": "source/host/src/gateway_server.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/gateway_server.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/groups/group-chat.ts",
@@ -11253,9 +11259,10 @@
       "android_target_path": "source/host/src/host_diagnostics.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/host_diagnostics.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/host-discovery.ts",
@@ -11266,9 +11273,10 @@
       "android_target_path": "source/host/src/host_discovery.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/host_discovery.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/host-event-bus.ts",
@@ -11279,9 +11287,10 @@
       "android_target_path": "source/host/src/host_event_bus.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/host_event_bus.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/host-gateway-api.ts",
@@ -11292,9 +11301,10 @@
       "android_target_path": "source/host/src/host_gateway_api.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/host_gateway_api.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/host-initial-transcript-load.ts",
@@ -11305,9 +11315,10 @@
       "android_target_path": "source/host/src/host_initial_transcript_load.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/host_initial_transcript_load.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/host-lock.ts",
@@ -11318,9 +11329,10 @@
       "android_target_path": "source/host/src/host_lock.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/host_lock.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/host-paths.ts",
@@ -11331,9 +11343,10 @@
       "android_target_path": "source/host/src/host_paths.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/host_paths.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/host-production-extensions.ts",
@@ -11344,9 +11357,10 @@
       "android_target_path": "source/host/src/host_production_extensions.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/host_production_extensions.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/host-request-context.ts",
@@ -11357,9 +11371,10 @@
       "android_target_path": "source/host/src/host_request_context.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/host_request_context.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/host-roster-bookkeeping.ts",
@@ -11370,9 +11385,10 @@
       "android_target_path": "source/host/src/host_roster_bookkeeping.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/host_roster_bookkeeping.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/host-runner-composition.ts",
@@ -11383,9 +11399,10 @@
       "android_target_path": "source/host/src/host_runner_composition.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/host_runner_composition.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/host-secret-store.ts",
@@ -11396,9 +11413,10 @@
       "android_target_path": "source/host/src/host_secret_store.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/host_secret_store.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/local-exec/local-exec-daemon-protocol.ts",
@@ -11487,9 +11505,10 @@
       "android_target_path": "source/host/src/main.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/main.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/mcp-auth/host-mcp-auth-completion.ts",
@@ -11526,9 +11545,10 @@
       "android_target_path": "source/host/src/notify_drain_gate.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/notify_drain_gate.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/ports/box.ts",
@@ -11630,9 +11650,10 @@
       "android_target_path": "source/host/src/process_crash_guard.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/process_crash_guard.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/production-binding-providers.ts",
@@ -11643,9 +11664,10 @@
       "android_target_path": "source/host/src/production_binding_providers.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/production_binding_providers.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/runner-context-production-provider.ts",
@@ -11656,9 +11678,10 @@
       "android_target_path": "source/host/src/runner_context_production_provider.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/runner_context_production_provider.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/runner-production-bridge.ts",
@@ -11669,9 +11692,10 @@
       "android_target_path": "source/host/src/runner_production_bridge.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/runner_production_bridge.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/runner/agent-adapters.ts",
@@ -12670,9 +12694,10 @@
       "android_target_path": "source/host/src/sand_activity.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/sand_activity.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/sand-host.ts",
@@ -12683,9 +12708,10 @@
       "android_target_path": "source/host/src/sand_host.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/sand_host.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/sand-multitask.ts",
@@ -12696,9 +12722,10 @@
       "android_target_path": "source/host/src/sand_multitask.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/sand_multitask.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/sand-quiet-work-origin.ts",
@@ -12709,9 +12736,10 @@
       "android_target_path": "source/host/src/sand_quiet_work_origin.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/sand_quiet_work_origin.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/sand-user-identity.ts",
@@ -12722,9 +12750,10 @@
       "android_target_path": "source/host/src/sand_user_identity.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/sand_user_identity.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/selected-image-inputs.ts",
@@ -12735,9 +12764,10 @@
       "android_target_path": "source/host/src/selected_image_inputs.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/selected_image_inputs.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/send-trace-host.ts",
@@ -12748,9 +12778,10 @@
       "android_target_path": "source/host/src/send_trace_host.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/send_trace_host.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/sha256.ts",
@@ -12761,9 +12792,10 @@
       "android_target_path": "source/host/src/sha256.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/sha256.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/storage/agent-paths.ts",
@@ -12943,9 +12975,10 @@
       "android_target_path": "source/host/src/transcript_mutation_events.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/transcript_mutation_events.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/watched-directory.ts",
@@ -12956,9 +12989,10 @@
       "android_target_path": "source/host/src/watched_directory.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "source/host/src/watched_directory.rs; exported by source/host/src/lib.rs and compiled by cargo test --workspace --all-targets",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "existing Fabushi clean-room Rust Host implementation reconciled to exact target; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/workflows/stat-keyed-parse-cache.ts",
