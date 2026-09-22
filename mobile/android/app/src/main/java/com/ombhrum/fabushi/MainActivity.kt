@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 class MainActivity : ComponentActivity() {
     private val deepLinks = MutableSharedFlow<AndroidDeepLink>(replay = 1, extraBufferCapacity = 31)
     private val deepLinkController = AndroidDeepLinkController(
-        dispatch = deepLinks::tryEmit,
+        dispatch = { deepLinks.tryEmit(it) },
     )
     private val updateModel: AndroidUpdateViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
