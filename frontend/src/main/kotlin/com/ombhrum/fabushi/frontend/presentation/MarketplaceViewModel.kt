@@ -1,9 +1,10 @@
 package com.ombhrum.fabushi
 
 import android.app.Application
-import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.ombhrum.fabushi.androidpreload.deeplink.AndroidDeepLink
+import com.ombhrum.fabushi.androidpreload.deeplink.AuthCompletionStatus
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidCoordinatorPort
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -183,39 +184,29 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
         mutableState.value = mutableState.value.copy(query = value)
     }
 
-    fun handleDeepLink(uri: Uri) {
-        if (uri.scheme != "fabushi" || uri.userInfo != null || uri.port != -1) return
-        val hostName = uri.host?.lowercase().orEmpty()
-        val path = uri.pathSegments.filter { it.isNotBlank() }
-        when (hostName) {
-            "auth" -> {
-                if (path.firstOrNull() != "complete" || path.size != 1) return
-                val allowedNames = setOf("attemptId", "status")
-                if (uri.queryParameterNames.any { it !in allowedNames }) return
-                val attemptIds = uri.getQueryParameters("attemptId")
-                val statuses = uri.getQueryParameters("status")
-                if (attemptIds.size != 1 || statuses.size > 1) return
-                val attemptId = attemptIds.single()
-                val status = statuses.singleOrNull()?.lowercase() ?: "completed"
-                if (!Regex("^[A-Za-z0-9_-]{8,96}$").matches(attemptId)) return
-                if (status !in setOf("completed", "cancelled", "failed")) return
+    fun handleDeepLink(link: AndroidDeepLink) {
+        when (link) {
+            is AndroidDeepLink.AuthCompletion -> {
                 mutableState.value = mutableState.value.copy(
-                    message = when (status) {
-                        "completed" -> "登录授权已完成，正在同步账号状态"
-                        "cancelled" -> "登录授权已取消"
-                        else -> "登录授权失败"
+                    message = when (link.status) {
+                        AuthCompletionStatus.COMPLETED -> "登录授权已完成，正在同步账号状态"
+                        AuthCompletionStatus.CANCELLED -> "登录授权已取消"
+                        AuthCompletionStatus.FAILED -> "登录授权失败"
                     },
                 )
-                if (status == "completed") completeBrowserLogin(attemptId)
-            }
-            "agent" -> {
-                val agentId = path.firstOrNull().orEmpty().take(200)
-                if (agentId.isNotBlank()) {
-                    mutableState.value = mutableState.value.copy(message = "已接收智能体链接：$agentId")
+                if (link.status == AuthCompletionStatus.COMPLETED) {
+                    completeBrowserLogin(link.attemptId)
                 }
             }
-            "settings", "feedback", "about", "widgets", "onboarding" -> {
-                mutableState.value = mutableState.value.copy(message = "已接收应用链接：$hostName")
+            is AndroidDeepLink.Agent -> {
+                mutableState.value = mutableState.value.copy(
+                    message = "已接收智能体链接：${link.agentId}",
+                )
+            }
+            is AndroidDeepLink.AppSection -> {
+                mutableState.value = mutableState.value.copy(
+                    message = "已接收应用链接：${link.section}",
+                )
             }
         }
     }
