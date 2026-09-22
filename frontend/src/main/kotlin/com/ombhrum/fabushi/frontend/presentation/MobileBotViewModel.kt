@@ -3,7 +3,6 @@ package com.ombhrum.fabushi
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.ombhrum.fabushi.androidmain.coordinator.AndroidCoordinatorPorts
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidCoordinatorPort
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -35,7 +34,7 @@ data class MobileBotUiState(
 )
 
 class MobileBotViewModel(application: Application) : AndroidViewModel(application) {
-    private val coordinator: AndroidCoordinatorPort = AndroidCoordinatorPorts.presentation(application)
+    private val coordinator: AndroidCoordinatorPort = CoordinatorClient.presentation()
     private val miniApps = MiniAppPlatformBridge(coordinator)
     private val mutableState = MutableStateFlow(MobileBotUiState())
     private val messagesByBot = mutableMapOf<String, List<MobileChatMessage>>()
