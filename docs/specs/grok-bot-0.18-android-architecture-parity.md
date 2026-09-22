@@ -1,122 +1,251 @@
-# Grok Bot 0.18 → Fabushi Android Architecture & Behavior Parity — Specification
+# Grok Bot 0.18 → Fabushi Android Standalone Architecture & Behavior Parity — Specification
 
 Status: active  
 Owner: Fabushi Android  
 Last updated: 2026-09-22  
-Related issue/task/PR: user-requested Android architecture parity migration; implementation PRs TBD
+Related issue/task/PR: PR #3; user-requested Android architecture parity migration
 
 ## 1. Context / problem
 
-Fabushi Android currently provides a native Android application under `mobile/android`, with Jetpack Compose UI, Android ViewModels, Android-specific platform integrations, and a JNI-backed `MahayanaHost`. Important product/runtime responsibilities are currently distributed across large Android surface files such as `MainActivity.kt`, `GrokMobileShellAndroid.kt`, `FabushiScreen.kt`, `MobileBotViewModel.kt`, `MessagingViewModel.kt`, `MarketplaceViewModel.kt`, `FabushiRemoteDeviceGateway.kt`, `FabushiAppAgentSurface.kt`, and `core/MahayanaHost.kt`.
+Fabushi Android is a native Android product currently rooted under `mobile/android`, with Jetpack Compose UI, Android ViewModels, Android-specific platform integrations, and a JNI-backed `MahayanaHost`. Important runtime and presentation responsibilities are currently mixed across large files such as `MainActivity.kt`, `GrokMobileShellAndroid.kt`, `FabushiScreen.kt`, `MobileBotViewModel.kt`, `MessagingViewModel.kt`, `MarketplaceViewModel.kt`, `FabushiRemoteDeviceGateway.kt`, `FabushiAppAgentSurface.kt`, and `core/MahayanaHost.kt`.
 
-The requested target is not merely a Grok-like skin. The Android product must adopt the same architectural separation and externally observable agent behavior represented by the pinned Grok Bot 0.18 reconstructed reference, while using Android-native platform primitives and the canonical shared Mahayana/Rust core where appropriate.
+The target is not a Grok-inspired UI and not a thin Android client around shared cross-platform code. The target is a **standalone Android implementation** that follows the Grok Bot 0.18 reconstructed architecture module-by-module and behavior-by-behavior, while selecting the best implementation language and Android primitive for each module.
 
-Reference baselines for this Spec:
+Reference baselines:
 
 - Grok reference repository: `b-nnett/grok-bot-0.18-reconstructed`
 - Grok pinned reference commit: `a9f633e09d49a85829b8236331b9e21f7e612634`
 - Fabushi Android repository: `bhrumom/fabushi-android`
 - Fabushi Android discovery baseline: `59f6fc8885ce1cb8d1ad4fc5d4ab36f690fb99a2`
 
-The Grok reference explicitly states that it is an unofficial reconstruction and that no upstream source-code license is asserted or granted. Therefore this project uses the reference as an architecture, protocol, behavior, and evidence baseline. It does not assume permission to verbatim-copy upstream or reconstructed implementation text.
+The Grok repository states that it is an unofficial reconstruction and that no upstream source-code license is asserted or granted. It is therefore an architecture, protocol, behavior, and evidence baseline. The migration must reproduce responsibilities and effects without assuming permission to bulk-copy reconstructed implementation text.
 
-## 2. Goal
+## 2. Architectural decision
 
-Rebuild Fabushi Android so that the complete Android product is architecturally isomorphic to the relevant Grok Bot 0.18 runtime model:
+### 2.1 Standalone platform ownership
+
+**Fabushi Android must be self-contained. Cross-platform source sharing is not an architectural goal.**
+
+The Android repository owns its complete product implementation, including:
+
+- UI/renderer;
+- Android main/platform lifecycle;
+- Android trusted bridge;
+- Mahayana Coordinator;
+- Mahayana Host;
+- Runner/local execution;
+- remote/box execution adapters;
+- `shared/**` contracts used by Android;
+- `packages/**` agent/runtime packages used by Android;
+- persistence;
+- transcript;
+- MCP/connectors;
+- auth/OAuth/WebAuthn;
+- inference routing;
+- telemetry/observability;
+- Android packaging, tests, scripts, and release logic.
+
+Do not require runtime source from `bhrumom/fabushi-platform-core` or any other Fabushi platform repository to build or run the Android product. If useful code exists elsewhere, reimplement or deliberately import/vendor it into this repository under an explicit provenance/license decision; do not preserve a cross-repository runtime dependency merely to reduce duplication.
+
+Platform duplication is acceptable when it produces a cleaner, faster, more reliable, more Android-native result.
+
+### 2.2 Effect and quality over code reuse
+
+The priority order is:
+
+1. user-visible effect and responsiveness;
+2. correct Grok-equivalent architecture and lifecycle behavior;
+3. Android-native reliability, security, and process recovery;
+4. maintainable module boundaries;
+5. source reuse only when it does not compromise 1–4.
+
+DRY across desktop/iOS/Android is explicitly subordinate to the best result on Android.
+
+### 2.3 Language is not the goal
+
+Use the language that best implements each boundary:
+
+- Jetpack Compose/Kotlin for native Android renderer and Android APIs;
+- Kotlin for Android lifecycle and platform adapters where native APIs dominate;
+- Rust for Coordinator/Host/Runner/runtime components when it provides the best correctness/performance/isolation;
+- C/C++ only when required by a native dependency or measurable platform need;
+- no Node.js or Electron requirement simply because the Grok reference uses them.
+
+The architecture must correspond to Grok even when language and platform primitives differ.
+
+## 3. Goal
+
+Rebuild Fabushi Android into a standalone architecture corresponding to Grok Bot 0.18:
 
 ```
-Android UI / renderer
-        │
-        ▼
-thin Android platform bridge
-        │
-        ▼
-Mahayana Coordinator
-        │
-        ▼
-Mahayana Host
-        │
-        ├── MCP / connectors / tools
-        ├── inference / agent execution
-        ├── transcript / workflow / automation
-        └── Runner / local-exec / remote-exec
+frontend/
+    │
+    ▼
+source/android-preload/
+    │
+    ▼
+source/android-main/
+    │
+    ▼
+source/mahayana-agent-coordinator/
+    │
+    ▼
+source/host/
+    │
+    ├── MCP / connectors / tools
+    ├── inference / agents
+    ├── transcript / workflows / automations
+    └── runner composition
+             │
+       ┌─────┴─────┐
+       ▼           ▼
+source/local-   source/box-
+exec-daemon/   exec-daemon/
 ```
 
 The migration must:
 
-1. enumerate every relevant module and source file in Grok `source/**` and `frontend/**`;
-2. assign every item an Android/Mahayana disposition;
-3. implement the same responsibility or behavior where it is relevant to Android;
-4. preserve strict Coordinator / Host / Runner / platform-bridge boundaries;
-5. make the Android UI consume coordinator state and commands instead of owning agent orchestration;
-6. remove superseded legacy orchestration after parity is proven;
-7. verify behavior from a fresh Android process, after process death/recreation, and through release packaging.
+1. enumerate every relevant Grok file under `source/**` and `frontend/**`;
+2. map it to an Android-local counterpart;
+3. preserve equivalent module responsibility and contract behavior;
+4. make the physical repository folder structure correspond to Grok's module tree;
+5. preserve Coordinator / Host / Runner / bridge separation;
+6. make renderer code consume coordinator projections rather than own agent orchestration;
+7. reproduce supported Grok interactions and runtime effects on Android;
+8. remove superseded legacy Android architecture after cutover;
+9. prove behavior on an exact-HEAD packaged Android build, including process death/recreation.
 
-The end state must feel like the same agent product adapted to Android rather than a separate mobile implementation with a Grok-inspired shell.
+The final product must behave as the Android edition of the same architecture, not as a separate mobile shell connected to unrelated runtime plumbing.
 
-## 3. Non-goals / out of scope
+## 4. Non-goals / out of scope
 
 - Do not embed Electron in Android.
-- Do not add Node.js merely to preserve Grok implementation language.
-- Do not duplicate shared Mahayana/Rust runtime code in this repository when `bhrumom/fabushi-platform-core` is the canonical owner.
-- Do not preserve desktop-only concepts literally when Android has no corresponding system primitive; implement the equivalent semantic behavior and record the mapping.
-- Do not claim pixel-perfect desktop layout on a phone-sized viewport. Functional, state, interaction, typography, animation intent, and information-architecture parity are required with Android-responsive layout.
-- Do not copy reconstructed source text where rights are unclear. Reimplement behavior/contracts from inspected evidence and preserve provenance.
-- Do not keep two production coordinators, two canonical transcript truths, two auth truths, or two agent execution paths after cutover.
-- Do not use a WebView as a shortcut for the primary native Android shell.
+- Do not add Node.js solely to match Grok's language.
+- Do not preserve a cross-platform shared-source architecture for its own sake.
+- Do not depend on another Fabushi product repository for core Android runtime implementation.
+- Do not retain the current `mobile/android` layout as the final architecture merely because it exists today.
+- Do not flatten Grok's modules into a small number of Android mega-files.
+- Do not preserve desktop-only system concepts literally when Android has no equivalent; preserve their responsibility/behavior through an Android-native counterpart.
+- Do not require pixel-identical desktop geometry on a phone viewport; interaction, information hierarchy, visual language, animation/state intent, and functional effect must correspond while remaining responsive.
+- Do not use a primary WebView shell as a shortcut for native Android UI parity.
+- Do not maintain two production coordinators, transcripts, auth truths, or execution paths after cutover.
+- Do not bulk-copy reconstructed source text without an explicit rights determination.
 
-## 4. Requirements
+## 5. Requirements
 
-### R1 — Mandatory complete module inventory
+### R1 — Complete file-level parity ledger
 
-Before product implementation begins, generate and maintain a parity ledger for every file under the pinned Grok reference:
+Before implementation changes beyond scaffolding, generate and maintain a parity ledger for every file under the pinned Grok reference:
 
 - `source/**`
 - `frontend/**`
 
-Each ledger row must contain:
+Each row must contain:
 
 - Grok path;
-- Grok role/responsibility;
-- evidence anchor or reason for role classification;
-- Android target path or shared-core target;
-- target language;
-- owner repository;
-- parity class: `native-equivalent`, `shared-core`, `platform-adapted`, `not-applicable`;
+- Grok responsibility;
+- relevant evidence/contract anchor;
+- Android target path;
+- target language/runtime;
+- parity class: `direct-equivalent`, `android-adapted`, or `not-applicable`;
 - implementation status;
-- tests/evidence;
-- removal/replacement of any legacy Fabushi path.
+- test/evidence;
+- legacy Android path replaced/removed.
 
-No Grok module may silently disappear. `not-applicable` requires a written Android-specific reason and reviewer acceptance.
+There is no `shared-core` disposition. Android implementation belongs to this repository.
 
-### R2 — Grok architectural boundary parity
+No Grok module may silently disappear. `not-applicable` requires an Android-specific technical reason and reviewer acceptance.
 
-The target architecture must preserve these logical Grok boundaries even when implementation languages differ:
+### R2 — Physical directory structure parity
+
+The final repository must mirror Grok's major source organization, with only explicit platform-name substitutions.
+
+Required top-level correspondence:
+
+| Grok Bot 0.18 | Fabushi Android target |
+| --- | --- |
+| `frontend/` | `frontend/` |
+| `source/electron-main/` | `source/android-main/` |
+| `source/electron-preload/` | `source/android-preload/` |
+| `source/electron-dev-controls/` | `source/android-dev-controls/` |
+| `source/node-agent-coordinator/` | `source/mahayana-agent-coordinator/` |
+| `source/host/` | `source/host/` |
+| `source/local-exec-daemon/` | `source/local-exec-daemon/` |
+| `source/box-exec-daemon/` | `source/box-exec-daemon/` |
+| `source/internal/` | `source/internal/` |
+| `source/packages/` | `source/packages/` |
+| `source/shared/` | `source/shared/` |
+| `tests/` | `tests/` |
+| `scripts/` | `scripts/` |
+| `manifests/` | `manifests/` |
+| `docs/` | `docs/` |
+
+The same principle applies recursively. Example:
+
+```
+Grok:
+source/electron-main/auth/
+source/electron-main/attachments/
+source/electron-main/coordinator/
+source/electron-main/mcp/
+source/electron-main/media/
+source/electron-main/notifications/
+source/electron-main/prefs/
+source/electron-main/secrets/
+source/electron-main/startup/
+source/electron-main/telemetry/
+source/electron-main/update/
+source/electron-main/vnc/
+
+Android:
+source/android-main/auth/
+source/android-main/attachments/
+source/android-main/coordinator/
+source/android-main/mcp/
+source/android-main/media/
+source/android-main/notifications/
+source/android-main/prefs/
+source/android-main/secrets/
+source/android-main/startup/
+source/android-main/telemetry/
+source/android-main/update/
+source/android-main/vnc/
+```
+
+Android/Gradle/Rust build conventions live **inside** these corresponding module folders. For example, a Compose module may contain its own `build.gradle.kts` and `src/main/kotlin`; a Rust runtime module may contain `Cargo.toml` and `src/`. Build tooling must adapt to the architecture, not force unrelated product responsibilities back into one `app/src/main/java` tree.
+
+Any deviation from the mapped structure requires a documented technical reason in the parity ledger.
+
+### R3 — Grok boundary parity
+
+The target must preserve these logical boundaries:
 
 - renderer/UI;
-- trusted platform bridge;
-- app/platform lifecycle owner;
+- trusted bridge;
+- platform/main lifecycle owner;
 - coordinator;
 - host;
 - runner/local execution;
 - remote/box execution;
-- shared protocol/contracts;
+- shared local contracts/policies;
 - MCP/connectors;
 - auth/OAuth/WebAuthn;
 - persistence/telemetry/observability.
 
-A layer may call the next defined layer through a contract, but must not bypass ownership boundaries for convenience.
+Layers communicate through explicit contracts. Direct bypasses are forbidden.
 
-### R3 — Mahayana Coordinator
+### R4 — Mahayana Coordinator
 
-The Grok `source/node-agent-coordinator/**` responsibility must have a first-class Mahayana Coordinator implementation. It must own at minimum:
+`source/mahayana-agent-coordinator/**` is the Android-local counterpart of Grok `source/node-agent-coordinator/**`.
 
-- UI/renderer port lifecycle;
+It must own:
+
+- renderer port lifecycle;
 - request/reply correlation;
-- event fan-out;
+- ordered event fan-out;
 - streaming turn activity;
 - cancellation;
-- reconnect and resync;
+- reconnect/resync;
 - transcript routing;
 - client-side tool relay;
 - gateway routing;
@@ -125,123 +254,148 @@ The Grok `source/node-agent-coordinator/**` responsibility must have a first-cla
 - routed MCP bridge;
 - OAuth forwarding;
 - WebAuthn/passkey forwarding where supported;
-- telemetry lineage;
+- telemetry/request lineage;
 - Host supervision;
 - crash settlement and deterministic terminal states.
 
-The Android UI and ViewModels must not independently reproduce coordinator behavior.
+The Android renderer/ViewModels must not duplicate these responsibilities.
 
-### R4 — Mahayana Host
+Initial direct submodule correspondence:
 
-The Grok `source/host/**` responsibility must exist behind the Coordinator and own agent-domain execution, including the Android-relevant equivalents of:
+| Grok | Android |
+| --- | --- |
+| `carrier.ts` | coordinator carrier/transport |
+| `client-side-tool-v2-relay.ts` | client-side tool relay |
+| `control-port-client.ts` | control-port client |
+| `gateway/**` | `gateway/**` |
+| `inference-router.ts` | inference router |
+| `local-exec/**` | `local-exec/**` |
+| `main.ts` | coordinator assembly/bootstrap |
+| `oauth/**` | `oauth/**` |
+| `renderer-port-server.ts` | Android renderer-port server |
+| `routed-mcp-bridge.ts` | routed MCP bridge |
+| `telemetry/**` | `telemetry/**` |
+| `webauthn/**` | Android Credential Manager/WebAuthn counterpart |
 
-- agents and agent isolation;
-- automations;
-- box/remote execution bindings;
-- cloud agents where supported;
-- connectors;
-- extensions;
-- groups;
-- gateway protocol/server API;
-- event bus;
+### R5 — Mahayana Host
+
+`source/host/**` is Android-owned and sits behind the Coordinator.
+
+It must cover Android-relevant equivalents of Grok Host areas, including:
+
+- `agent-isolation/**`;
+- `agents/**`;
+- `automations/**`;
+- `box/**`;
+- `cloud-agents/**`;
+- `connectors/**`;
+- `extensions/**`;
+- `groups/**`;
+- `local-exec/**`;
+- `mcp-auth/**`;
+- `ports/**`;
+- `runner/**`;
+- `storage/**`;
+- `transcript-mirror/**`;
+- `workflows/**`;
+- gateway protocol/server/API;
+- Host discovery/diagnostics/event bus;
 - initial transcript load;
-- host lock/single-owner semantics;
-- host paths and durable-file policy;
+- lock/single-owner semantics;
+- durable-file policy and paths;
 - roster bookkeeping;
 - secrets abstraction;
-- local exec;
-- MCP auth;
-- runner composition;
-- storage;
-- transcript mirror and mutation events;
-- workflows;
-- diagnostics and crash guards.
+- request context;
+- runner composition/bridge;
+- crash guards;
+- activity/user identity/trace behavior.
 
-The Host must not own Compose UI or Android Activity navigation.
+Host code must not own Compose UI, Activity navigation, or Android screen state.
 
-### R5 — Runner / local-exec / remote-exec
+### R6 — Runner / local-exec / remote-exec
 
-The Grok `source/local-exec-daemon/**`, `source/box-exec-daemon/**`, Host runner modules, and local-exec contracts must map to an explicit Runner architecture.
+The Grok `source/local-exec-daemon/**`, `source/box-exec-daemon/**`, Host runner modules, and local-exec contracts map to explicit Android-local modules with corresponding folders.
 
-Android implementation may use Rust, JNI, Android Service/Foreground Service, WorkManager, or remote execution as appropriate, but responsibilities must stay explicit:
+They must cover:
 
 - execution request validation;
-- lifecycle/identity;
-- permission checks;
+- process/session identity;
+- capability/permission checks;
 - cancellation;
 - output streaming;
 - timeout;
 - crash/error normalization;
 - capability advertisement;
+- Android-local execution where safe;
 - remote-device execution;
-- sandbox/remote-box routing where local Android execution is not appropriate.
+- remote/box routing where Android local execution is inappropriate.
 
-Arbitrary shell/reflection/credential access must not be introduced merely for parity.
+Use Rust, Android Service/Foreground Service, WorkManager, JNI, or remote execution according to best effect. Do not expose unrestricted shell/reflection/credential access merely for parity.
 
-### R6 — Thin Android platform bridge
+### R7 — Thin Android trusted bridge
 
-The Grok `source/electron-preload/**` boundary must map to a narrow typed Android bridge. It must expose only reviewed platform capabilities and coordinator APIs.
+`source/android-preload/**` is the Android counterpart of Grok `source/electron-preload/**`.
 
-The bridge must replace free-form `JSONObject` call sites at UI boundaries with typed Kotlin/Rust contracts over time. Raw JSON may remain only at explicitly defined wire/protocol boundaries.
+It must be narrow and typed. It must contain Android equivalents of:
 
-The bridge must cover Android equivalents of:
-
-- coordinator port bridge;
+- coordinator-port bridge;
 - main RPC runtime;
-- VNC/remote-computer liveness and visibility;
-- clipboard transfer where allowed;
-- WebView bridge where Mini Apps require it;
-- passkey/WebAuthn mediation;
-- debug/dev controls;
-- RPC edge/runtime failure settlement.
+- RPC edge runtime;
+- remote-computer/VNC liveness;
+- visibility gating;
+- clipboard transfer when permitted;
+- WebView/Mini App bridge;
+- passkey stall/settlement;
+- debug controls;
+- platform browser/base bridge.
 
-### R7 — Android platform lifecycle layer
+Free-form `JSONObject` must disappear from UI-facing boundaries. Raw JSON is allowed only at explicit wire edges.
 
-The Grok `source/electron-main/**` responsibility must be decomposed into Android platform modules rather than accumulated in `MainActivity`.
+### R8 — Android platform-main parity
 
-`MainActivity` final responsibility is limited to Activity lifecycle, Compose root hosting, intent/deep-link forwarding, permission/result forwarding, and platform window/system UI concerns.
+`source/android-main/**` is the Android counterpart of Grok `source/electron-main/**`.
 
-The Android platform layer must provide equivalents for Grok main-process modules including:
+`MainActivity` must cease to be the application coordinator. Its final responsibilities are Activity lifecycle, Compose root attachment, Android result/permission forwarding, Intent delivery, and system-window concerns.
 
-| Grok electron-main area | Android target responsibility |
+Required directory/responsibility correspondence includes:
+
+| Grok `electron-main` | Android `android-main` |
 | --- | --- |
-| `account/**` | account/session platform adapter |
+| `account/**` | account/session |
 | `adapters/**` | Android capability adapters |
-| `application-menu.ts` | app navigation/action menu semantics |
-| `attachments/**` | ContentResolver / picker / URI grant adapters |
-| `auth/**` | auth browser, Custom Tabs, Credential Manager/Keystore integration |
-| `box/**` | remote execution / remote computer connector |
-| `coordinator/**` | Mahayana Coordinator ownership/bootstrap |
+| `attachments/**` | ContentResolver/picker/URI grants |
+| `auth/**` | Custom Tabs/Credential Manager/Keystore auth |
+| `box/**` | remote execution/computer connector |
+| `coordinator/**` | Mahayana Coordinator bootstrap/ownership |
 | `deep-link/**` | Intent/deep-link router |
-| `dev/**`, `electron-dev-controls/**` | debug-only Android dev controls |
-| `downloads/**` | DownloadManager/WorkManager-backed downloads |
-| `experiments/**` | typed feature flags |
-| `feedback/**` | Android feedback surface |
-| `generated/**` | generated typed bindings |
-| `host-window-chords.ts` | keyboard/shortcut intent mapping where applicable |
+| `dev/**` | debug-only controls |
+| `downloads/**` | DownloadManager/WorkManager |
+| `experiments/**` | local typed feature flags |
+| `feedback/**` | Android feedback |
+| `generated/**` | generated local bindings |
 | `local-exec/**` | Android Runner integration |
 | `mcp/**` | MCP lifecycle/platform integration |
-| `media/**` | Android media playback/recording/viewing |
-| `models/**` | model/provider platform settings |
+| `media/**` | media record/play/view |
+| `models/**` | provider/model settings |
 | `notifications/**` | NotificationManager/channels |
-| `onepassword/**` | credential-provider equivalent if supported; otherwise reviewed N/A |
-| `prefs/**` | DataStore/typed settings |
+| `onepassword/**` | Android credential-provider counterpart or reviewed N/A |
+| `prefs/**` | DataStore/local typed settings |
 | `process-metrics/**` | Android process/runtime metrics |
-| production adapters/bindings/IPC | Kotlin/JNI typed production bindings |
-| `secrets/**` | Android Keystore-backed secrets abstraction |
-| `startup/**` | Application/process bootstrap |
-| `telemetry/**` | Android telemetry adapter |
-| `update/**` | Play/GitHub update channel integration |
-| `vnc/**` | RemoteComputer surface/liveness/input bridge |
-| window broadcast/chrome/shortcuts/state | Activity/multi-window/configuration/navigation equivalents |
+| production adapters/bindings/RPC | Android-local production bindings |
+| `secrets/**` | Android Keystore-backed secrets |
+| `startup/**` | Application/process startup |
+| `telemetry/**` | Android-local telemetry |
+| `update/**` | Play/GitHub update path |
+| `vnc/**` | remote-computer surface/liveness/input |
+| window/broadcast/shortcuts/state files | Activity/multi-window/input/navigation equivalents |
 
-Desktop-only window details may be `platform-adapted` or `not-applicable`, but the decision must be explicit in the ledger.
+Desktop window-specific details may be Android-adapted or N/A only with ledger evidence.
 
-### R8 — Native Android renderer parity
+### R9 — Native renderer parity in `frontend/**`
 
-Grok `frontend/**` is mapped to native Jetpack Compose rather than a primary WebView renderer.
+`frontend/**` remains the renderer module name, matching Grok's top-level structure, but is implemented as a native Android Compose module.
 
-The Android UI must provide Android-responsive equivalents for the reference's production/recovered renderer concepts, including at minimum:
+It must provide responsive Android equivalents of:
 
 - production renderer/root shell;
 - bot/agent roster/sidebar;
@@ -249,57 +403,61 @@ The Android UI must provide Android-responsive equivalents for the reference's p
 - composer;
 - streaming/thinking/running/completed states;
 - stop/cancel;
-- agent naming/edit/delete flows;
+- agent name/edit/delete;
 - row actions;
 - command palette/search/action dispatch;
 - settings and notices;
 - reactions;
-- group members;
+- groups/members;
 - attachments/media;
 - MCP/connector affordances;
-- remote-computer/context surfaces;
+- remote computer/context;
 - errors/retry/recovery;
 - onboarding/auth transitions.
 
-`GrokMobileShellAndroid.kt` and `FabushiScreen.kt` must not remain giant all-purpose renderer/controller files after migration. UI files render immutable state and emit typed user intents.
+`GrokMobileShellAndroid.kt` and `FabushiScreen.kt` must not remain giant renderer/controller files. UI renders immutable projections and emits typed intents.
 
-### R9 — Shared contracts parity
+### R10 — Android-local `source/shared/**`
 
-Grok `source/shared/**` responsibilities must map to canonical shared contracts, preferably in `bhrumom/fabushi-platform-core` when cross-platform.
+Grok `source/shared/**` must map to **Android-local `source/shared/**`**, not to another repository.
 
-The mapping must cover Android-relevant equivalents of:
+The local tree must cover the Android equivalents of:
 
 - agents;
 - auth;
 - automation schedule/automations;
 - box migration/runtime/secrets;
-- channels/channel messaging;
-- persistence;
-- errors and retry;
-- deep links;
+- channel messaging/channels;
+- client persistence;
+- errors/retry;
+- deep link;
 - gateway reachability/wire;
 - host settings;
-- inference router;
-- local exec gateway/process identity/permissions;
-- MCP instructions/auth/contracts;
+- inference router contracts;
+- local-exec gateway/process identity/permissions;
+- MCP contracts/instructions/OAuth;
 - media;
 - message references;
 - observability;
 - ordering;
 - notifications;
+- persistence;
 - RPC;
-- transcript/thread contracts;
-- workflow model;
+- transcript/threads;
+- transport types;
+- workflow model/workflows;
 - usage;
-- VNC/remote-computer liveness;
+- remote-computer/VNC liveness;
 - WebAuthn gateway;
-- write epochs/versioning.
+- write epoch/versioning.
 
-Platform-specific wrappers remain Android-owned; wire/domain truth must not diverge per platform.
+These contracts may duplicate analogous desktop/iOS concepts. Android correctness and maintainability take priority over cross-platform source reuse.
 
-### R10 — Packages parity
+### R11 — Android-local `source/packages/**`
 
-Every Grok module under `source/packages/**` must be represented in the parity ledger. The initial package set is:
+Every Grok package under `source/packages/**` must have an Android-local package/module disposition under the corresponding `source/packages/**` hierarchy.
+
+Initial required set:
 
 - `agent-analytics`
 - `agent-client`
@@ -333,230 +491,244 @@ Every Grok module under `source/packages/**` must be represented in the parity l
 - `shell-exec`
 - `utils`
 
-Each must be classified as shared-core, Android-native equivalent, platform-adapted, or reviewed N/A. Package semantics must not be collapsed into a single untestable monolith.
+A package may use Kotlin or Rust and may be Android-adapted, but it may not be silently collapsed into an unrelated monolith.
 
-### R11 — Feature-effect parity
+### R12 — Feature-effect parity
 
-For features supported on Android, externally observable behavior must match the Grok reference contract, not merely share names.
+For features supported on Android, parity is measured by observable effect and state behavior, not file naming alone.
 
-Required parity dimensions include:
+Required dimensions:
 
 - request lifecycle;
-- first-token/first-state progression;
-- streaming updates;
-- tool call presentation and settlement;
-- thinking/running/completed/failed/recovered states;
-- cancellation behavior;
-- reconnection;
+- first-state/first-token responsiveness;
+- incremental streaming;
+- tool-call presentation and settlement;
+- thinking/running/completed/failed/recovered;
+- cancellation;
+- reconnect/resync;
 - transcript restoration;
-- duplicate-event handling;
+- duplicate/out-of-order event handling;
 - reactions;
-- connector/MCP discovery and invocation;
-- OAuth return flow;
-- attachment upload/open;
+- MCP/connector discovery/auth/invocation;
+- OAuth return;
+- attachment open/upload;
 - remote-computer activity;
-- error and retry semantics;
+- error/retry;
 - settings persistence;
-- notification behavior;
-- background/foreground transition;
+- notifications;
+- background/foreground;
 - process recreation.
 
-### R12 — One canonical state truth
+### R13 — One Android-local canonical truth
 
-After cutover there must be exactly one canonical owner for each of:
+After cutover, exactly one Android-local owner exists for:
 
-- account/auth state;
+- auth/account;
 - agent/bot roster;
 - conversation/transcript;
-- active turn/operation;
+- active operation;
 - MCP/connector state;
 - installed Mini App/plugin state;
 - remote-device identity;
 - settings;
 - execution permissions.
 
-ViewModels are presentation adapters. They must not maintain durable competing product truths.
+Presentation/ViewModels may cache display state but may not create a second durable product truth.
 
-### R13 — Android process-death resilience
+### R14 — Android process-death resilience
 
-Unlike Electron desktop, Android may destroy the app process at any time. The target architecture must support:
+Android may kill the process. The architecture must support:
 
-- durable coordinator session identity where appropriate;
+- durable/resumable coordinator session semantics where appropriate;
 - safe recreation of Coordinator and Host;
-- reattachment/resync of renderer state;
-- no duplicate send after recreation;
-- deterministic settlement of in-flight turns;
-- restored transcript/draft/navigation state where product-appropriate;
-- remote gateway re-registration;
+- renderer reattachment and resync;
+- no duplicate send;
+- deterministic settlement/recovery of in-flight turns;
+- restored transcript/draft/navigation where product-appropriate;
+- gateway re-registration;
 - cancellation/timeout cleanup;
 - no leaked JNI/native handles.
 
-Process-death and recreation is a first-class parity extension required for Android correctness.
+A permanently stuck "thinking" state is a release-blocking failure.
 
-### R14 — Security boundaries
+### R15 — Security
 
-- Secrets use Android Keystore or the canonical protected secret provider; never UI state, logs, or plain files.
-- Platform bridge APIs are allowlisted and typed.
-- Mini App WebView bridges are origin/capability scoped.
-- Local-exec requires explicit capability and permission gates.
-- Remote-device control exposes reviewed semantic actions, not unrestricted shell/reflection/credential mutation.
-- OAuth/WebAuthn tokens must not be copied into transcript/UI logs.
-- External URLs/deep links must use an allowlisted policy equivalent to Grok shared policy.
-- Telemetry must scrub secrets and sensitive content.
+- secrets use Android Keystore or an Android-local protected provider;
+- trusted bridge APIs are allowlisted and typed;
+- Mini App bridges are origin/capability scoped;
+- local exec is capability/permission gated;
+- remote control exposes reviewed semantic capabilities rather than unrestricted credential/shell mutation;
+- OAuth/WebAuthn secrets are absent from transcript/UI logs;
+- external URL/deep-link policy is allowlisted;
+- telemetry/logs scrub sensitive data.
 
-### R15 — Provenance / rights
+### R16 — Provenance / rights
 
-Because the Grok reconstruction states that no upstream source-code license is granted:
+Because the reference repository states that no upstream source-code license is granted:
 
-- use Grok source as architecture/protocol/behavior reference;
-- do not represent reconstructed material as official upstream source;
-- do not bulk-copy implementation text into Fabushi without an explicit rights determination;
+- use it as architecture/protocol/behavior evidence;
+- do not claim reconstructed material is official source;
+- do not bulk-copy implementation text without explicit rights review;
 - record provenance for behavior-sensitive mappings;
-- preserve a rights-review gate before public redistribution of any directly derived material.
+- keep a release-blocking rights review for directly derived redistributed material.
 
-### R16 — Legacy removal
+Folder/module correspondence and independently implemented behavior parity are required; textual source copying is not.
 
-Once replacement paths pass parity acceptance:
+### R17 — Legacy removal
+
+After replacement paths pass acceptance:
 
 - remove superseded orchestration from `MainActivity.kt`;
-- split or remove monolithic responsibilities in `GrokMobileShellAndroid.kt` and `FabushiScreen.kt`;
-- remove duplicate event pumps and duplicate native-host ownership;
-- remove legacy direct Host calls from presentation code;
-- remove temporary adapters that bypass Coordinator;
-- remove unused compatibility state and dead feature flags.
+- split/remove monolithic responsibilities in `GrokMobileShellAndroid.kt` and `FabushiScreen.kt`;
+- remove duplicate Host ownership/event pumps;
+- remove presentation -> Host direct calls;
+- remove temporary Coordinator bypasses;
+- remove obsolete compatibility state/flags;
+- migrate or delete the old `mobile/android` tree as responsibilities move into the Grok-corresponding root structure.
 
-A migration is not complete while the old architecture remains the hidden fallback.
+The task is not complete while the old architecture remains a production fallback.
 
-## 5. Current state
+### R18 — Standalone build guarantee
 
-At baseline, Fabushi Android is a native Android application with Compose and ViewModels.
+A clean checkout of `bhrumom/fabushi-android` at the exact implementation SHA must be able to build, test, package, and run the Android app without checking out another Fabushi source repository.
 
-Observed architecture characteristics include:
+External third-party package dependencies are allowed. Cross-Fabushi source-repository runtime dependencies are not.
 
-- `MainActivity.kt` directly instantiates/coordinates Marketplace, Messaging, Bot, update, Mini App, remote-device gateway, login/deep-link, and shell-selection responsibilities.
-- `GrokMobileShellAndroid.kt` combines Compose UI with semantic agent-surface projection/action registration.
-- `MobileBotViewModel.kt` calls `MahayanaHost` directly and owns bot-specific presentation/cache behavior.
-- `MahayanaHost.kt` owns a process-shared JNI native host handle and fans out feature events to multiple Kotlin consumers.
-- `FabushiRemoteDeviceGateway.kt` owns a WebSocket lifecycle and directly instantiates `MahayanaHost`.
-- `app/build.gradle` currently expresses a single Android application module rather than explicit runtime/coordinator/platform/UI Gradle module boundaries.
+## 6. Current state
 
-These pieces provide useful existing functionality, but they do not yet express the full Grok Coordinator/Host/Runner/platform separation.
+At the discovery baseline:
 
-## 6. Target state
+- the Android source is concentrated in `mobile/android/app`;
+- `MainActivity.kt` directly coordinates Marketplace, Messaging, Bot, Mini App, update, remote-device, auth/deep-link and shell selection;
+- `GrokMobileShellAndroid.kt` combines Compose UI and semantic agent-surface registration;
+- `MobileBotViewModel.kt` calls `MahayanaHost` directly;
+- `MahayanaHost.kt` owns a process-shared JNI handle and fans feature events to multiple consumers;
+- `FabushiRemoteDeviceGateway.kt` owns its own WebSocket lifecycle and creates a `MahayanaHost`;
+- Gradle currently presents a single app-centric tree rather than Grok-corresponding module roots.
 
-Target logical flow:
+This is functional legacy input, not the target architecture.
 
-```
-Compose screens/components
-        │ user intents / immutable state
-        ▼
-Android Renderer Adapter
-        │ typed coordinator contract
-        ▼
-Android Platform Bridge
-        │ JNI / typed IPC
-        ▼
-Mahayana Coordinator
-        │
-        ├── renderer ports
-        ├── request/reply/event/cancel
-        ├── reconnect/resync
-        ├── inference router
-        ├── MCP/OAuth/WebAuthn relay
-        ├── gateway + local-exec routing
-        └── Host supervision
-        │
-        ▼
-Mahayana Host
-        │
-        ├── agents / workflows / automations
-        ├── transcript/storage
-        ├── tools/MCP/connectors
-        └── runner composition
-        │
-        ├──────────────┐
-        ▼              ▼
-Android Runner     Remote/Box Runner
-        │              │
-        └──── typed results/events ────┘
-```
+## 7. Target repository state
 
-The Android repository owns native UI and platform integration. Shared Coordinator/Host/contracts live in `bhrumom/fabushi-platform-core` when they are cross-platform canonical code, then are consumed here through versioned bindings. The requirement "all Grok modules are migrated for Android" means every Grok responsibility has an Android-product disposition and parity result; it does not authorize duplicating shared-core implementation into the Android repository.
-
-## 7. Architecture and ownership boundaries
-
-### 7.1 Target Android source organization
-
-The implementation should converge toward clear source boundaries such as:
+The repository root converges to:
 
 ```
-mobile/android/
-  app/
-    ... minimal application assembly ...
-  ui/
-    shell/
-    agents/
-    conversation/
-    composer/
-    commandpalette/
-    settings/
-    connectors/
-    remotecomputer/
-    miniapps/
-  presentation/
-    coordinator/
-    model/
-    agent-surface/
-  platform/
-    android/
-      lifecycle/
-      auth/
-      deeplink/
-      attachments/
-      media/
-      notifications/
-      downloads/
-      prefs/
-      secrets/
-      webview/
-      remotecomputer/
-      updates/
-      telemetry/
-      devcontrols/
-    bridge/
-  runner/
-    android/
-  bindings/
-    mahayana/
+fabushi-android/
+├── frontend/
+│   ├── build.gradle.kts
+│   └── src/
+│       ├── main/
+│       ├── production/
+│       └── recovered/          # only if useful as evidence-oriented Android reconstruction
+├── source/
+│   ├── android-dev-controls/
+│   ├── android-main/
+│   │   ├── account/
+│   │   ├── adapters/
+│   │   ├── attachments/
+│   │   ├── auth/
+│   │   ├── box/
+│   │   ├── coordinator/
+│   │   ├── deep-link/
+│   │   ├── dev/
+│   │   ├── downloads/
+│   │   ├── experiments/
+│   │   ├── feedback/
+│   │   ├── generated/
+│   │   ├── local-exec/
+│   │   ├── mcp/
+│   │   ├── media/
+│   │   ├── models/
+│   │   ├── notifications/
+│   │   ├── prefs/
+│   │   ├── process-metrics/
+│   │   ├── secrets/
+│   │   ├── startup/
+│   │   ├── telemetry/
+│   │   ├── update/
+│   │   └── vnc/
+│   ├── android-preload/
+│   │   └── runtime/
+│   ├── box-exec-daemon/
+│   ├── host/
+│   │   ├── agent-isolation/
+│   │   ├── agents/
+│   │   ├── automations/
+│   │   ├── box/
+│   │   ├── cloud-agents/
+│   │   ├── connectors/
+│   │   ├── extensions/
+│   │   ├── groups/
+│   │   ├── local-exec/
+│   │   ├── mcp-auth/
+│   │   ├── ports/
+│   │   ├── runner/
+│   │   ├── storage/
+│   │   ├── transcript-mirror/
+│   │   └── workflows/
+│   ├── internal/
+│   ├── local-exec-daemon/
+│   ├── mahayana-agent-coordinator/
+│   │   ├── gateway/
+│   │   ├── local-exec/
+│   │   ├── oauth/
+│   │   ├── telemetry/
+│   │   └── webauthn/
+│   ├── packages/
+│   │   └── <Grok-corresponding packages>
+│   └── shared/
+│       ├── agents/
+│       ├── errors/
+│       ├── media/
+│       ├── node/               # only if semantics remain useful; otherwise Android-adapted with ledger reason
+│       ├── observability/
+│       └── rpc/
+├── manifests/
+├── scripts/
+├── tests/
+├── docs/
+└── Gradle/Cargo/build assembly files
 ```
 
-Exact Gradle module boundaries may be introduced incrementally, but package dependency rules must match the logical layers from the first cutover PR.
+The exact Grok tree must be captured by the file-level ledger; this diagram is the minimum structural skeleton, not a substitute for the ledger.
 
-### 7.2 Dependency direction
+### 7.1 Dependency direction
 
 Allowed:
 
 ```
-UI -> presentation -> bridge -> coordinator -> host -> runner
-platform adapters -> bridge/coordinator through interfaces
-shared contracts <- all layers
+frontend
+   ↓
+android-preload
+   ↓
+android-main
+   ↓
+mahayana-agent-coordinator
+   ↓
+host
+   ↓
+local-exec-daemon / box-exec-daemon
+
+source/shared and source/packages provide local contracts/libraries
+to the layers that need them.
 ```
 
 Forbidden:
 
-- UI -> Host direct;
-- UI -> Runner direct;
-- Activity -> agent-domain state mutation;
-- Runner -> Compose UI;
+- renderer -> Host direct;
+- renderer -> Runner direct;
+- Activity -> agent-domain mutation;
+- Runner -> renderer;
 - Host -> Activity/ViewModel;
-- feature-specific ViewModel -> independent JNI host creation after cutover;
-- arbitrary bidirectional global singleton dependencies.
+- feature ViewModel -> independent native Host creation after cutover;
+- dependency on another Fabushi platform repository for product runtime source;
+- circular cross-layer ownership.
 
-## 8. Interfaces / contracts / schemas / data flow
+## 8. Interfaces / contracts / data flow
 
 ### 8.1 Coordinator envelope
 
-Define a versioned contract equivalent in capability to Grok coordinator-port/RPC contracts:
+Define an Android-local versioned contract equivalent in capability to Grok coordinator/RPC contracts:
 
 ```
 Request {
@@ -589,182 +761,194 @@ Cancel {
 }
 ```
 
-The exact schema belongs in canonical shared contracts and must support forward-compatible versioning.
+The schema is stored in this repository under the corresponding `source/shared/**` / `source/packages/**` location.
 
-### 8.2 Renderer state
+### 8.2 Renderer
 
-Compose consumes immutable state projections. All commands are typed intents. Rendering must not poll the Host directly.
+Compose consumes immutable projections and emits typed intents. Renderer code does not poll Host or parse arbitrary Host JSON.
 
 ### 8.3 Transcript ordering
 
-Coordinator/Host must define stable event IDs, sequence/order semantics, duplicate suppression, mutation handling, and resync snapshots.
+Coordinator/Host define stable event IDs, sequencing, deduplication, mutation behavior and resync snapshots.
 
 ### 8.4 Execution flow
 
 ```
 UI intent
- -> Coordinator request
- -> Host command
+ -> Android preload/bridge
+ -> Android main
+ -> Mahayana Coordinator
+ -> Host
  -> Runner/tool/MCP
  -> Host event
  -> Coordinator ordered event
- -> presentation projection
+ -> Android main/bridge
+ -> renderer projection
  -> Compose render
 ```
 
-Cancellation follows the same ownership path in reverse and must settle every layer.
+Cancellation must settle through the same ownership chain.
 
 ## 9. Constraints and non-functional requirements
 
-- Android min/target SDK constraints remain repository-defined.
-- Primary shell remains native Compose.
-- Shared runtime should prefer Rust where it improves cross-platform canonical behavior, safety, or performance, but language is not an architectural goal.
-- Android platform APIs remain Kotlin/Android where that is the native boundary.
-- No long-running blocking JNI call on the main thread.
-- Streaming must be incremental; do not buffer a full answer before UI update.
-- Background work must respect Android lifecycle and platform restrictions.
-- Idle UI animation must avoid unnecessary continuous high-frequency work.
-- Crash/restart must not corrupt transcript or duplicate commands.
-- Contracts require deterministic error codes rather than UI-parsed exception strings.
-- Logs and evidence must be privacy-scrubbed.
-- New architecture must be testable without a production network for contract/state-machine tests.
+- best Android effect takes priority over cross-platform reuse;
+- primary UI is native Compose;
+- platform-local duplication is acceptable;
+- no runtime dependency on another Fabushi source repository;
+- no long-running blocking JNI call on main thread;
+- responses stream incrementally;
+- background work respects Android lifecycle/restrictions;
+- process recreation cannot duplicate commands or corrupt transcript;
+- deterministic error codes replace UI parsing of arbitrary exception strings;
+- idle animations must not waste battery/CPU;
+- logs/evidence are privacy scrubbed;
+- architecture is testable without production network access;
+- folder/module parity is enforced by CI.
 
 ## 10. Failure modes and edge cases
 
-The implementation and tests must explicitly cover:
+Required coverage includes:
 
 - Coordinator starts but Host fails;
 - Host crashes mid-turn;
-- Runner crashes or times out;
-- MCP server disconnects/reconnects;
-- OAuth callback arrives after Activity recreation;
-- WebAuthn/passkey cancellation;
+- Runner crashes/times out;
+- MCP disconnect/reconnect;
+- OAuth callback after Activity recreation;
+- passkey cancellation;
 - network loss during streaming;
 - duplicate/out-of-order events;
-- renderer reconnects after backgrounding;
+- renderer reconnect after backgrounding;
 - Android process death;
 - native library load failure;
 - stale native handle;
 - multiple UI collectors;
-- double-send/double-cancel;
+- double send/cancel;
 - attachment URI permission expiry;
 - unavailable local-exec capability;
-- remote-device gateway token/session rollover;
-- Mini App WebView process failure;
-- storage full/read-only/corrupt state;
-- version/protocol mismatch between Android bindings and shared core;
-- incompatible migration data;
-- update/restart during an active operation.
+- remote gateway token/session rollover;
+- Mini App WebView failure;
+- storage full/read-only/corrupt;
+- local contract/protocol version mismatch;
+- migration incompatibility;
+- update/restart during active operation.
 
-Each failure must end in a deterministic recoverable or terminal state, never indefinite "thinking".
+Every path must end in a deterministic recoverable or terminal state.
 
 ## 11. Implementation strategy
 
-### Phase 0 — Evidence and inventory
+### Phase 0 — Inventory and exact folder map
 
-1. Pin Grok SHA and Android starting SHA.
-2. Generate complete file-level parity ledger.
-3. Capture Android current architecture/dependency map.
-4. Record Grok behavior evidence for critical flows.
-5. Resolve rights/provenance classification.
-6. Define acceptance fixtures before destructive cutover.
+1. pin Grok and Android SHAs;
+2. generate complete Grok file tree for `source/**` and `frontend/**`;
+3. generate the Android target path for every Grok file;
+4. create the physical root scaffolding matching Section 7;
+5. record current Android files and planned destination/removal;
+6. record provenance/rights classification;
+7. define critical behavioral fixtures.
 
-Exit gate: 100% of Grok `source/**` and `frontend/**` files classified.
+Exit gate: 100% file-level mapping and zero unexplained folder divergence.
 
-### Phase 1 — Shared contracts and bindings
+### Phase 1 — Local contracts/packages
 
-1. Define versioned coordinator/request/event/cancel contracts.
-2. Move/share cross-platform contracts in `fabushi-platform-core`.
-3. Generate or implement typed Kotlin bindings.
-4. Add contract compatibility tests.
+1. create Android-local `source/shared/**`;
+2. create Android-local `source/packages/**`;
+3. define coordinator request/reply/event/cancel contracts locally;
+4. add Kotlin/Rust local bindings as needed;
+5. add contract tests.
 
-Exit gate: Android can connect to a test Coordinator without direct feature JSON calls from UI.
+Exit gate: Android can build its contracts/packages from this repository alone.
 
 ### Phase 2 — Mahayana Coordinator
 
-Implement the complete logical equivalent of Grok `node-agent-coordinator/**`, including renderer ports, routing, MCP relay, OAuth/WebAuthn forwarding, local-exec routing, Host supervision, cancellation, reconnect/resync, and crash settlement.
+Implement the Grok coordinator counterpart in `source/mahayana-agent-coordinator/**`.
 
-Exit gate: deterministic coordinator state-machine tests cover normal, cancel, reconnect, duplicate, and crash paths.
+Exit gate: normal, streaming, tool, cancel, reconnect, duplicate, Host crash and resync state-machine tests pass.
 
-### Phase 3 — Host and Runner parity
+### Phase 3 — Host + Runner
 
-Map `host/**`, `local-exec-daemon/**`, `box-exec-daemon/**`, `internal/**`, and `packages/**` to shared core and Android adapters.
+Implement/migrate `source/host/**`, `source/local-exec-daemon/**`, `source/box-exec-daemon/**`, and `source/internal/**`.
 
-Exit gate: all agent-domain actions flow Coordinator -> Host -> Runner/tool and return ordered events.
+Exit gate: all domain execution flows Coordinator -> Host -> Runner/tool and returns ordered events.
 
-### Phase 4 — Android platform-main parity
+### Phase 4 — Android main/preload
 
-Extract Android platform ownership from `MainActivity` into lifecycle/auth/deeplink/media/notification/prefs/secrets/download/update/remote-computer adapters.
+Build `source/android-main/**`, `source/android-preload/**`, and `source/android-dev-controls/**`. Move responsibilities out of `MainActivity`.
 
-Exit gate: `MainActivity` is a thin lifecycle/Compose host.
+Exit gate: MainActivity is a thin platform entry point.
 
-### Phase 5 — Renderer/UI parity
+### Phase 5 — Frontend
 
-Rebuild UI around immutable coordinator projections. Split monolith screens. Reproduce relevant Grok behaviors using responsive native Compose.
+Move/rebuild Compose renderer in root `frontend/**` following the Grok frontend responsibility layout and renderer behavior.
 
-Exit gate: primary conversation, roster, composer, command palette, settings, connectors/MCP, attachments, remote computer, and recovery states all operate without direct Host access.
+Exit gate: roster, conversation, composer, streaming states, command palette, settings, MCP/connectors, attachments, remote computer and recovery operate through Coordinator only.
 
-### Phase 6 — Product feature parity
+### Phase 6 — Existing Fabushi features
 
-Complete Marketplace/Mini Apps, messaging, bot projection, account/entitlement, remote-device gateway, and Android-specific features through the new architecture.
+Move Marketplace, Mini Apps, messaging, bot projection, account/entitlement, update, remote gateway, and other Android product features into the corresponding Grok-aligned modules.
 
-Exit gate: no feature owns a competing durable truth.
+Exit gate: no feature maintains a second runtime architecture.
 
-### Phase 7 — Legacy cutover/removal
+### Phase 7 — Delete old architecture
 
-Remove direct Host calls, duplicate event pumps, legacy orchestration, fallback shell paths, and obsolete state stores.
+Remove obsolete `mobile/android` source paths or reduce them only to transitional build forwarding until the root structure fully owns production. Remove all direct presentation-to-Host access and compatibility fallbacks.
 
-Exit gate: architecture checker proves forbidden dependencies do not exist.
+Exit gate: architecture checker sees only the new module graph.
 
-### Phase 8 — Full verification and delivery
+### Phase 8 — Exact-HEAD verification and package
 
-Run exact-HEAD CI, Android device/emulator acceptance, process-death tests, release packaging, install/upgrade verification, and evidence collection.
-
-Exit gate: all ACs passed or explicitly blocked; no "complete" state while required AC is blocked.
+Run compile, unit, contract, architecture, instrumentation, process-death, packaged install/upgrade, and release-candidate acceptance from the exact implementation SHA.
 
 ## 12. Verification / test strategy
 
-### 12.1 Static architecture checks
+### 12.1 Folder parity checker
 
-Add automated rules that fail CI when:
+CI must compare the pinned Grok module/file inventory to the parity ledger and Android target tree.
 
-- Compose/UI imports Host/Runner implementation;
+Fail if:
+
+- a Grok file/module is unclassified;
+- a required counterpart path is missing;
+- an Android target drifts from the agreed directory mapping without ledger rationale;
+- an old monolithic path regains responsibilities already cut over.
+
+### 12.2 Architecture checker
+
+Fail CI if:
+
+- frontend imports Host/Runner implementation;
 - ViewModel creates `MahayanaHost` directly after cutover;
-- `MainActivity` regains feature orchestration;
-- presentation depends on Android secret/storage implementations;
-- duplicate coordinator implementations appear;
-- legacy forbidden paths are reintroduced.
+- MainActivity owns product orchestration;
+- Coordinator is bypassed;
+- duplicate coordinator implementations exist;
+- another Fabushi repository is required for runtime source/build;
+- a legacy path is reintroduced.
 
-### 12.2 Contract tests
+### 12.3 Contract/state tests
 
-Test request/reply/event/cancel compatibility across Kotlin and Rust/shared core.
+Cover request/reply/event/cancel and Coordinator state machine:
 
-### 12.3 Coordinator state-machine tests
-
-Minimum scenarios:
-
-- send -> streaming -> complete;
-- send -> tool call -> result -> complete;
-- send -> cancel -> settled;
-- disconnect -> reconnect -> resync;
-- duplicate event -> one UI effect;
-- Host crash -> terminal failure/recovery;
-- stale generation/session -> rejected/resynced.
+- send -> stream -> complete;
+- send -> tool -> result -> complete;
+- cancel;
+- reconnect/resync;
+- duplicate event;
+- Host crash/recovery;
+- stale session/generation.
 
 ### 12.4 Android lifecycle tests
 
-- rotate/configuration change;
+- configuration change;
 - background/foreground;
 - Activity recreation;
 - process kill/relaunch;
-- notification tap/deep link;
+- notification/deep link;
 - OAuth callback;
-- attachment picker result;
+- attachment picker;
 - remote gateway reconnect.
 
-### 12.5 UI parity tests
+### 12.5 UI/effect parity
 
-Use Compose tests and visual evidence for:
+Capture tests/evidence for:
 
 - agent list/row actions;
 - conversation;
@@ -773,77 +957,80 @@ Use Compose tests and visual evidence for:
 - command palette;
 - settings;
 - MCP/connectors;
-- reactions;
+- reactions/groups;
 - attachments/media;
-- Mini App entry;
+- Mini App;
 - remote computer;
-- errors/retry.
+- error/retry.
 
-### 12.6 Real packaged acceptance
+### 12.6 Packaged acceptance
 
-Acceptance must use a packaged Android artifact produced from the exact tested commit. Validate fresh install and upgrade paths, app-owned device registration where applicable, account login, normal chat, tool/MCP flow, background/recovery, logout, and relaunch.
+Use an exact-HEAD packaged artifact. Validate fresh install, upgrade, launch, login, normal chat, streaming, stop, tool/MCP, background/recovery, process recreation, remote-device registration where applicable, logout, and relaunch.
 
 ## 13. Acceptance criteria / Definition of Done
 
-- **AC-1**: A complete parity ledger covers 100% of pinned Grok `source/**` and `frontend/**` files with no unclassified item.
-- **AC-2**: All top-level Grok architecture responsibilities have an Android/shared-core equivalent or reviewed N/A rationale.
-- **AC-3**: A first-class Mahayana Coordinator owns renderer-port, request/reply/event, cancel, reconnect/resync, routing, relay, supervision, and crash settlement.
-- **AC-4**: Host and Runner are independent architectural boundaries; UI cannot invoke them directly.
-- **AC-5**: `MainActivity` is reduced to Android lifecycle/root UI/platform result forwarding and does not orchestrate product features.
-- **AC-6**: `GrokMobileShellAndroid` / `FabushiScreen` no longer combine primary UI rendering with agent runtime orchestration.
-- **AC-7**: Direct `MahayanaHost` construction is removed from product ViewModels/presentation paths except explicitly approved binding/bootstrap ownership.
-- **AC-8**: All user-visible supported Grok-equivalent flows stream and settle correctly, including cancellation and failure recovery.
-- **AC-9**: Android process death followed by relaunch restores/resyncs without duplicate sends, stuck turns, or leaked native handles.
-- **AC-10**: MCP/connector discovery, auth, invocation, tool result, and error states work through Coordinator/Host boundaries.
-- **AC-11**: Attachments, media, deep links, OAuth/WebAuthn where supported, notifications, and remote-computer flows use Android-native platform adapters.
-- **AC-12**: One canonical state truth exists for auth, roster, transcript, operation, MCP, Mini Apps, remote device, settings, and permissions.
-- **AC-13**: Legacy orchestration/fallback paths are removed after cutover.
-- **AC-14**: Architecture checks prevent regression to monolithic UI/Activity/Host coupling.
-- **AC-15**: Exact-HEAD CI is green for compile, unit, contract, architecture, and Android UI/instrumentation tests required by this Spec.
-- **AC-16**: Packaged artifact acceptance passes on a fresh Android environment, including background/process-recreation scenarios.
-- **AC-17**: Provenance/rights review has no unresolved release-blocking item for redistributed derived material.
-- **AC-18**: The final Spec compliance record marks every requirement and AC `passed`, `blocked`, or `not-applicable` with evidence; completion requires all mandatory items `passed`.
+- **AC-1**: 100% of pinned Grok `source/**` and `frontend/**` files exist in the parity ledger.
+- **AC-2**: Every relevant Grok module has an Android-local counterpart or reviewed N/A.
+- **AC-3**: The repository root physically follows the Grok-corresponding `frontend/source/tests/scripts/manifests/docs` structure.
+- **AC-4**: `source/electron-main` responsibilities correspond to `source/android-main` submodules.
+- **AC-5**: `source/electron-preload` responsibilities correspond to `source/android-preload`.
+- **AC-6**: `source/node-agent-coordinator` responsibilities correspond to a first-class `source/mahayana-agent-coordinator`.
+- **AC-7**: Host and Runner are independent boundaries and cannot be called directly by renderer code.
+- **AC-8**: Android-local `source/shared/**` and `source/packages/**` cover all required reference responsibilities.
+- **AC-9**: A clean checkout builds/runs without another Fabushi source repository.
+- **AC-10**: MainActivity is a thin Android entry point, not product orchestrator.
+- **AC-11**: `GrokMobileShellAndroid` / `FabushiScreen` monolithic runtime responsibilities are removed/split.
+- **AC-12**: Product ViewModels do not directly construct/use Host runtime except explicitly approved bootstrap/binding ownership outside presentation.
+- **AC-13**: Supported Grok-equivalent user flows stream and settle with equivalent behavior.
+- **AC-14**: Process death/relaunch resyncs without duplicate sends, stuck turns, or leaked native handles.
+- **AC-15**: MCP/connector discovery/auth/invocation/result/error work through Coordinator/Host.
+- **AC-16**: Android-native attachments, media, deep links, OAuth/WebAuthn, notifications and remote-computer adapters work.
+- **AC-17**: One canonical Android-local truth exists for auth, roster, transcript, operations, MCP, Mini Apps, remote-device state, settings and permissions.
+- **AC-18**: Old production orchestration/fallback architecture is removed.
+- **AC-19**: Folder and architecture checkers prevent regression.
+- **AC-20**: Exact-HEAD CI passes required compile/unit/contract/architecture/UI/instrumentation checks.
+- **AC-21**: Exact-HEAD packaged Android acceptance passes on fresh install and upgrade.
+- **AC-22**: Rights/provenance review has no release-blocking unresolved item.
+- **AC-23**: Final compliance table records every requirement/AC as `passed`, `blocked`, or `not-applicable`; mandatory completion requires all mandatory items `passed`.
 
 ## 14. Release / migration / rollback
 
-Migration must be staged behind explicit internal architecture cutover flags only while both paths are required for controlled transition. Such flags are temporary and must be removed by AC-13.
+Migration may use temporary cutover flags only while controlled transition requires both paths. All such flags and fallback paths must be removed before AC-18.
 
-Persistent data migrations must be versioned, idempotent, and reversible when feasible. Shared protocol versions must reject incompatible peers cleanly.
+Persistent data migrations must be versioned and idempotent. Rollback must preserve account and transcript integrity and must not silently select a second state store.
 
-Rollback must preserve user account/session safety and transcript integrity. Never roll back by silently selecting an old parallel state store.
-
-No release may be called architecture-complete from source tests alone; packaged Android acceptance is required.
+Architecture-complete cannot be declared from source tests alone. Packaged Android acceptance is required.
 
 ## 15. Observability / evidence
 
-Each implementation phase must produce evidence appropriate to the layer:
+Each phase must retain:
 
-- parity ledger diff;
+- file-level parity ledger;
+- folder-parity checker output;
 - architecture dependency report;
-- contract test report;
-- coordinator state-machine report;
-- Android lifecycle/process-death report;
+- contract/state-machine reports;
+- lifecycle/process-death report;
 - UI screenshots/video for critical flows;
 - MCP/connector trace with secrets scrubbed;
-- exact commit SHA;
-- CI workflow/run IDs;
+- exact SHA;
+- CI run IDs;
 - packaged artifact identity/checksum;
-- install/upgrade acceptance report;
+- fresh install/upgrade acceptance;
 - final Spec compliance table.
-
-Logs must include request/operation/session lineage without raw credentials or sensitive message content.
 
 ## 16. References / provenance
 
-Primary reference:
+Primary Grok baseline:
 
 - `b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634`
 - `README.md`
 - `NOTICE.md`
 - `PROVENANCE.md`
 - `docs/ARCHITECTURE.md`
+- `frontend/**`
 - `source/electron-main/**`
 - `source/electron-preload/**`
+- `source/electron-dev-controls/**`
 - `source/node-agent-coordinator/**`
 - `source/host/**`
 - `source/local-exec-daemon/**`
@@ -851,9 +1038,11 @@ Primary reference:
 - `source/internal/**`
 - `source/packages/**`
 - `source/shared/**`
-- `frontend/**`
+- `tests/**`
+- `scripts/**`
+- `manifests/**`
 
-Fabushi discovery baseline:
+Fabushi Android discovery baseline:
 
 - `bhrumom/fabushi-android@59f6fc8885ce1cb8d1ad4fc5d4ab36f690fb99a2`
 - `AGENTS.md`
@@ -869,80 +1058,50 @@ Fabushi discovery baseline:
 - `core/MahayanaHost.kt`
 - `mobile/android/app/build.gradle`
 
-### Initial top-level Grok module parity map
-
-| Grok reference | Required Android/Fabushi disposition |
-| --- | --- |
-| `frontend/**` | native Compose renderer + presentation projections |
-| `source/electron-main/**` | Android lifecycle/platform adapters + Coordinator bootstrap |
-| `source/electron-preload/**` | thin typed Android bridge |
-| `source/electron-dev-controls/**` | debug-only Android dev controls |
-| `source/node-agent-coordinator/**` | Mahayana Coordinator |
-| `source/host/**` | Mahayana Host + shared domain services |
-| `source/local-exec-daemon/**` | Android/local Runner |
-| `source/box-exec-daemon/**` | remote/box Runner adapter |
-| `source/internal/**` | shared internal host extensions/scheduling |
-| `source/packages/**` | classified package-by-package into shared core or Android adapters |
-| `source/shared/**` | canonical versioned shared contracts/policies |
-
-### Initial Coordinator submodule map
-
-| Grok coordinator module | Target |
-| --- | --- |
-| `carrier.ts` | coordinator transport/carrier contract |
-| `client-side-tool-v2-relay.ts` | client tool relay |
-| `control-port-client.ts` | typed control-port client |
-| `gateway/**` | gateway router/session |
-| `inference-router.ts` | provider/model inference routing |
-| `local-exec/**` | runner routing |
-| `main.ts` | Coordinator assembly/bootstrap |
-| `oauth/**` | OAuth forwarding/session settlement |
-| `renderer-port-server.ts` | Android renderer-port server/adapter |
-| `routed-mcp-bridge.ts` | MCP routing bridge |
-| `telemetry/**` | coordinator observability |
-| `webauthn/**` | Android Credential Manager/WebAuthn bridge where supported |
-
-### Initial Host area map
-
-Every one of these Grok Host areas requires a ledger disposition: `agent-isolation`, `agents`, `automations`, `box`, `cloud-agents`, `connectors`, `extensions`, `groups`, `local-exec`, `mcp-auth`, `ports`, `runner`, `storage`, `transcript-mirror`, `workflows`, plus Host gateway, event-bus, transcript-load, lock, paths, diagnostics, secrets, roster, crash guard, runner composition/bridges, activity, user identity, and trace responsibilities represented by top-level Host files.
-
 ## 17. Spec compliance record
 
 | Requirement / AC | Status | Evidence / reason |
 | --- | --- | --- |
-| R1 | pending | complete file-level parity ledger not yet created |
-| R2 | pending | implementation not started |
-| R3 | pending | Coordinator parity implementation not yet verified |
-| R4 | pending | Host parity implementation not yet verified |
-| R5 | pending | Runner parity implementation not yet verified |
-| R6 | pending | thin bridge cutover not yet verified |
-| R7 | pending | Android platform-main decomposition not yet verified |
-| R8 | pending | native renderer parity not yet verified |
-| R9 | pending | shared contract parity not yet verified |
-| R10 | pending | package-by-package disposition not yet complete |
-| R11 | pending | behavioral parity acceptance not yet run |
-| R12 | pending | canonical state ownership audit not yet complete |
-| R13 | pending | process-death acceptance not yet run |
-| R14 | pending | security review not yet complete |
-| R15 | pending | rights/provenance review required before release |
-| R16 | pending | legacy removal not yet complete |
-| AC-1 | pending | file-level ledger required |
-| AC-2 | pending | top-level parity mapping defined; implementation pending |
-| AC-3 | pending | implementation pending |
-| AC-4 | pending | implementation pending |
-| AC-5 | pending | current MainActivity still orchestrates features |
-| AC-6 | pending | current renderer files remain mixed |
-| AC-7 | pending | current ViewModels still construct/use MahayanaHost directly |
-| AC-8 | pending | acceptance pending |
-| AC-9 | pending | process-death acceptance pending |
-| AC-10 | pending | MCP/connector parity pending |
-| AC-11 | pending | platform adapter parity pending |
-| AC-12 | pending | state ownership audit pending |
-| AC-13 | pending | legacy cutover pending |
-| AC-14 | pending | architecture checker pending |
-| AC-15 | pending | exact-HEAD CI pending |
-| AC-16 | pending | packaged acceptance pending |
-| AC-17 | pending | rights review pending |
-| AC-18 | pending | final compliance review pending |
+| R1 | pending | complete file-level ledger not yet generated |
+| R2 | pending | target folder mapping specified; physical migration pending |
+| R3 | pending | implementation pending |
+| R4 | pending | Coordinator implementation pending |
+| R5 | pending | Host implementation pending |
+| R6 | pending | Runner implementation pending |
+| R7 | pending | Android trusted bridge pending |
+| R8 | pending | Android-main decomposition pending |
+| R9 | pending | frontend migration pending |
+| R10 | pending | Android-local shared tree pending |
+| R11 | pending | Android-local packages tree pending |
+| R12 | pending | effect-parity acceptance pending |
+| R13 | pending | canonical state audit pending |
+| R14 | pending | process-death acceptance pending |
+| R15 | pending | security review pending |
+| R16 | pending | rights/provenance review pending |
+| R17 | pending | legacy removal pending |
+| R18 | pending | standalone build acceptance pending |
+| AC-1 | pending | ledger pending |
+| AC-2 | pending | implementation mapping pending |
+| AC-3 | pending | physical root migration pending |
+| AC-4 | pending | android-main parity pending |
+| AC-5 | pending | android-preload parity pending |
+| AC-6 | pending | Coordinator parity pending |
+| AC-7 | pending | boundary enforcement pending |
+| AC-8 | pending | local shared/packages parity pending |
+| AC-9 | pending | standalone clean-checkout proof pending |
+| AC-10 | pending | MainActivity still orchestrates current product |
+| AC-11 | pending | current renderer files remain mixed |
+| AC-12 | pending | current ViewModels still access Host directly |
+| AC-13 | pending | behavioral acceptance pending |
+| AC-14 | pending | process-death acceptance pending |
+| AC-15 | pending | MCP/connector parity pending |
+| AC-16 | pending | Android platform adapter parity pending |
+| AC-17 | pending | state ownership audit pending |
+| AC-18 | pending | old architecture still exists |
+| AC-19 | pending | folder/architecture checker pending |
+| AC-20 | pending | exact-HEAD CI pending |
+| AC-21 | pending | packaged acceptance pending |
+| AC-22 | pending | rights review pending |
+| AC-23 | pending | final compliance review pending |
 
 Allowed final statuses: `passed`, `blocked`, `not-applicable`.
