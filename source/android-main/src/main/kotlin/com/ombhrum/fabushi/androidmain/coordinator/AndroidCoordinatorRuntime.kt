@@ -50,6 +50,7 @@ class AndroidCoordinatorRuntime private constructor(application: Application) : 
 
     override fun platformRequest(params: JSONObject) = host.request("platform.request", params)
     override fun publishFeatureEvent(event: JSONObject) = host.publishFeatureEvent(event)
+    override fun addFeatureEventListener(listener: (JSONObject) -> Unit): AutoCloseable = host.addFeatureEventListener(listener)
 
     companion object {
         @Volatile private var instance: AndroidCoordinatorRuntime? = null

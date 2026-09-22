@@ -38,4 +38,5 @@ interface AndroidCoordinatorPort {
 
     fun platformRequest(params: JSONObject): JSONObject
     fun publishFeatureEvent(event: JSONObject)
+    fun addFeatureEventListener(listener: (JSONObject) -> Unit): AutoCloseable
 }

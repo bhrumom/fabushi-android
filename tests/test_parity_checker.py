@@ -19,6 +19,7 @@ class ParityCheckerTest(unittest.TestCase):
         self.assertEqual(2046, result.summary["ledger_rows"])
         self.assertEqual(0, result.summary["legacy_monoliths_present"])
         self.assertEqual(0, result.summary["presentation_runtime_bypasses"])
+        self.assertEqual(0, result.summary["presentation_host_bypasses"])
 
     def test_strict_gate_reports_remaining_real_migration_work(self):
         result = MODULE.run_checks(strict=True)

@@ -30,7 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.ombhrum.fabushi.core.MahayanaHost
+import com.ombhrum.fabushi.androidpreload.runtime.AndroidCoordinatorPort
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URLEncoder
@@ -204,11 +204,11 @@ private fun injectLocalWebMcp(html: String, plugin: MarketplacePlugin, account: 
 fun MiniAppWebMcpSurface(
     plugin: MarketplacePlugin,
     loadLocalHtml: suspend (pluginId: String) -> String?,
+    coordinator: AndroidCoordinatorPort,
     callRuntimeToolJson: (pluginId: String, name: String, argumentsJson: String) -> String,
     onClose: () -> Unit,
 ) {
     val context = LocalContext.current
-    val host = remember(plugin.pluginId) { MahayanaHost(context.applicationContext) }
     var status by remember(plugin.pluginId) { mutableStateOf("正在解析本地 WebMCP…") }
     var localHtml by remember(plugin.pluginId) { mutableStateOf<String?>(null) }
     var accountProjection by remember(plugin.pluginId) { mutableStateOf(JSONObject().put("loggedIn", false).put("user", JSONObject())) }
@@ -218,7 +218,7 @@ fun MiniAppWebMcpSurface(
     val hostedUrl = "https://fabushi.ombhrum.com/miniapps/$encodedId/"
 
     LaunchedEffect(plugin.pluginId) {
-        accountProjection = runCatching { miniAppAccountProjection(host.request("feature.auth.status")) }
+        accountProjection = runCatching { miniAppAccountProjection(coordinator.authStatus()) }
             .getOrElse { JSONObject().put("loggedIn", false).put("user", JSONObject()) }
         localHtml = loadLocalHtml(plugin.pluginId)
         sourceResolved = true
@@ -294,7 +294,7 @@ fun MiniAppWebMcpSurface(
         }
 
         val eventListener = remember(plugin.pluginId, webView) {
-            host.addFeatureEventListener { event ->
+            coordinator.addFeatureEventListener { event ->
                 if (!localDocumentActive.get()) return@addFeatureEventListener
                 val projected = miniAppEventProjection(event)
                 if (projected.length() == 0) return@addFeatureEventListener
@@ -331,7 +331,7 @@ fun MiniAppWebMcpSurface(
             modifier = Modifier.fillMaxSize().testTag("miniapp-webmcp-webview"),
         )
 
-        DisposableEffect(webView, eventListener, host) {
+        DisposableEffect(webView, eventListener, coordinator) {
             onDispose {
                 eventListener.close()
                 localDocumentActive.set(false)
@@ -340,7 +340,6 @@ fun MiniAppWebMcpSurface(
                 webView.loadUrl("about:blank")
                 webView.removeAllViews()
                 webView.destroy()
-                host.close()
             }
         }
     }

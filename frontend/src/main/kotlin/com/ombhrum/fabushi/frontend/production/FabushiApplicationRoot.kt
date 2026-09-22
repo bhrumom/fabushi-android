@@ -92,6 +92,7 @@ internal fun FabushiApplicationRoot(
                     Box {
                         MiniAppWebMcpSurface(
                             plugin = active,
+                            coordinator = coordinator,
                             loadLocalHtml = { pluginId ->
                                 model.loadLocalMiniAppHtml(pluginId) ?: globalDharmaHostShell(active)
                             },

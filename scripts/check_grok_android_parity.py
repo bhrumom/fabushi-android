@@ -58,10 +58,15 @@ STRICT_FORBIDDEN_PATHS = [
 
 PRESENTATION_HOST_BYPASS_FILES = [
     "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt",
-    "mobile/android/app/src/main/java/com/ombhrum/fabushi/MobileBotViewModel.kt",
-    "mobile/android/app/src/main/java/com/ombhrum/fabushi/MessagingViewModel.kt",
-    "mobile/android/app/src/main/java/com/ombhrum/fabushi/MarketplaceViewModel.kt",
+    "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/presentation/MobileBotViewModel.kt",
+    "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/presentation/MessagingViewModel.kt",
+    "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/presentation/MarketplaceViewModel.kt",
 ]
+
+HOST_IMPLEMENTATION_ALLOWLIST = {
+    "mobile/android/app/src/main/java/com/ombhrum/fabushi/core/MahayanaHost.kt",
+    "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/coordinator/AndroidCoordinatorRuntime.kt",
+}
 
 @dataclass
 class CheckResult:
@@ -154,14 +159,23 @@ def run_checks(strict: bool) -> CheckResult:
             errors.append(f"missing architecture scaffold marker: {marker}")
 
     bypass_count = 0
-    for relative in PRESENTATION_HOST_BYPASS_FILES:
-        path = ROOT / relative
-        if not path.exists():
+    host_scan_roots = [
+        ROOT / "mobile/android/app/src/main/java",
+        ROOT / "frontend/src/main/kotlin",
+        ROOT / "source/android-main/src/main/kotlin",
+        ROOT / "source/android-preload/src/main/kotlin",
+    ]
+    for scan_root in host_scan_roots:
+        if not scan_root.exists():
             continue
-        text = path.read_text(encoding="utf-8")
-        if "MahayanaHost" in text:
+        for path in scan_root.rglob("*.kt"):
+            relative = path.relative_to(ROOT).as_posix()
+            if relative in HOST_IMPLEMENTATION_ALLOWLIST:
+                continue
+            if "MahayanaHost" not in path.read_text(encoding="utf-8"):
+                continue
             bypass_count += 1
-            message = f"presentation/platform file still references MahayanaHost directly: {relative}"
+            message = f"non-runtime Kotlin file references MahayanaHost directly: {relative}"
             if strict:
                 errors.append(message)
             else:
