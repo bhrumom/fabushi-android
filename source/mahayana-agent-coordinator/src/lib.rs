@@ -4,6 +4,7 @@ pub mod control_port_client;
 pub mod gateway;
 pub mod inference_router;
 pub mod local_exec;
+#[allow(special_module_name)]
 pub mod main;
 pub mod oauth;
 pub mod renderer_port_server;

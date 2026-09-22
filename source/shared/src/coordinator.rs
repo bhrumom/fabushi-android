@@ -15,10 +15,13 @@ pub struct CoordinatorRequest {
 impl CoordinatorRequest {
     pub fn validate(&self) -> Result<(), CoordinatorFailure> {
         if self.protocol_version != COORDINATOR_PROTOCOL_VERSION {
-            return Err(CoordinatorFailure::protocol(format!(
-                "unsupported protocol version {}; expected {}",
-                self.protocol_version, COORDINATOR_PROTOCOL_VERSION
-            )));
+            return Err(CoordinatorFailure::new(
+                CoordinatorFailureCode::ProtocolMismatch,
+                format!(
+                    "unsupported protocol version {}; expected {}",
+                    self.protocol_version, COORDINATOR_PROTOCOL_VERSION
+                ),
+            ));
         }
         if self.request_id.trim().is_empty() || self.session_id.trim().is_empty() || self.method.trim().is_empty() {
             return Err(CoordinatorFailure::new(
