@@ -1,6 +1,6 @@
 package com.ombhrum.fabushi
 
-import com.ombhrum.fabushi.core.MahayanaHost
+import com.ombhrum.fabushi.androidpreload.runtime.AndroidCoordinatorPort
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -27,7 +27,7 @@ private object CanonicalInstalledProjectionCache {
 }
 
 internal class MiniAppPlatformBridge(
-    private val host: MahayanaHost,
+    private val coordinator: AndroidCoordinatorPort,
 ) {
     companion object {
         const val GLOBAL_DHARMA_ID = "global-dharma"
@@ -206,7 +206,7 @@ internal class MiniAppPlatformBridge(
         status: String,
         message: String,
     ) {
-        host.publishFeatureEvent(
+        coordinator.publishFeatureEvent(
             JSONObject()
                 .put("type", "miniapp.operation")
                 .put("miniAppId", pluginId)
@@ -252,7 +252,7 @@ internal class MiniAppPlatformBridge(
             .put("path", path)
             .put("authenticated", true)
         if (body != null) params.put("body", body)
-        val response = host.request("platform.request", params)
+        val response = coordinator.platformRequest(params)
         if (!response.optBoolean("ok", false)) {
             val status = response.optInt("statusCode", 0)
             val data = response.opt("data")

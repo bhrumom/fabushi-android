@@ -4,7 +4,7 @@ import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.ombhrum.fabushi.core.MahayanaHost
+import com.ombhrum.fabushi.androidmain.coordinator.AndroidCoordinatorRuntime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -78,7 +78,7 @@ data class MarketplaceUiState(
 )
 
 class MarketplaceViewModel(application: Application) : AndroidViewModel(application) {
-    private val host = MahayanaHost(application)
+    private val coordinator = AndroidCoordinatorRuntime.get(application)
     private val miniApps = MiniAppPlatformBridge(host)
     private val mutableState = MutableStateFlow(MarketplaceUiState())
     val state: StateFlow<MarketplaceUiState> = mutableState.asStateFlow()
@@ -93,7 +93,7 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
         mutableState.value = mutableState.value.copy(authResolved = false)
         viewModelScope.launch {
             runCatching {
-                withContext(Dispatchers.IO) { host.request("feature.auth.status") }
+                withContext(Dispatchers.IO) { coordinator.authStatus() }
             }.onSuccess { result ->
                 val user = result.optJSONObject("user")
                 mutableState.value = mutableState.value.copy(
@@ -129,7 +129,7 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
         mutableState.value = mutableState.value.copy(loginBusy = true, loginError = null)
         viewModelScope.launch {
             runCatching {
-                withContext(Dispatchers.IO) { host.request("feature.auth.browserStart") }
+                withContext(Dispatchers.IO) { coordinator.authBrowserStart() }
             }.onSuccess { result ->
                 val attemptId = result.optString("attemptId")
                 val loginUrl = result.optString("loginUrl").ifBlank { result.optString("authorizationUrl") }
@@ -154,7 +154,7 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
         val attemptId = mutableState.value.browserLoginAttemptId ?: return
         viewModelScope.launch {
             runCatching {
-                withContext(Dispatchers.IO) { host.request("feature.auth.browserReopen", JSONObject().put("attemptId", attemptId)) }
+                withContext(Dispatchers.IO) { coordinator.authBrowserReopen( JSONObject().put("attemptId", attemptId)) }
             }.onSuccess { result ->
                 val loginUrl = result.optString("loginUrl").ifBlank { result.optString("authorizationUrl") }
                 val resolvedUrl = loginUrl.ifBlank { mutableState.value.browserLoginUrl.orEmpty() }
@@ -174,7 +174,7 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
     fun cancelBrowserLogin() {
         val attemptId = mutableState.value.browserLoginAttemptId ?: return
         viewModelScope.launch {
-            runCatching { withContext(Dispatchers.IO) { host.request("feature.auth.browserCancel", JSONObject().put("attemptId", attemptId)) } }
+            runCatching { withContext(Dispatchers.IO) { coordinator.authBrowserCancel( JSONObject().put("attemptId", attemptId)) } }
             mutableState.value = mutableState.value.copy(browserLoginAttemptId = null, browserLoginUrl = null, loginBusy = false, message = "登录授权已取消")
         }
     }
@@ -262,9 +262,9 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
         val operationId = mutableState.value.activeOperationId
         viewModelScope.launch {
             if (!operationId.isNullOrBlank()) {
-                runCatching { withContext(Dispatchers.IO) { host.request("feature.interrupt", JSONObject().put("operationId", operationId)) } }
+                runCatching { withContext(Dispatchers.IO) { coordinator.featureInterrupt( JSONObject().put("operationId", operationId)) } }
             }
-            runCatching { withContext(Dispatchers.IO) { host.request("feature.auth.logout") } }
+            runCatching { withContext(Dispatchers.IO) { coordinator.authLogout() } }
                 .onSuccess { result ->
                     val user = result.optJSONObject("user")
                     mutableState.value = mutableState.value.copy(
@@ -316,13 +316,13 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
 
     fun stopChat() {
         val operationId = mutableState.value.activeOperationId ?: return
-        viewModelScope.launch { runCatching { withContext(Dispatchers.IO) { host.request("feature.interrupt", JSONObject().put("operationId", operationId)) } } }
+        viewModelScope.launch { runCatching { withContext(Dispatchers.IO) { coordinator.featureInterrupt( JSONObject().put("operationId", operationId)) } } }
     }
 
     private suspend fun pumpChatEvents(operationId: String) {
         repeat(1800) {
             if (!mutableState.value.chatBusy) return
-            val event = runCatching { withContext(Dispatchers.IO) { host.request("feature.receive") } }.getOrElse {
+            val event = runCatching { withContext(Dispatchers.IO) { coordinator.featureReceive() } }.getOrElse {
                 mutableState.value = mutableState.value.copy(chatBusy = false, activeOperationId = null, message = "消息流中断：${it.message ?: it::class.java.simpleName}")
                 return
             }
@@ -610,7 +610,6 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     override fun onCleared() {
-        host.close()
         super.onCleared()
     }
 }

@@ -4,7 +4,7 @@ import android.app.Application
 import android.util.Base64
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.ombhrum.fabushi.core.MahayanaHost
+import com.ombhrum.fabushi.androidmain.coordinator.AndroidCoordinatorRuntime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -98,7 +98,7 @@ data class MessagingUiState(
 )
 
 internal class MessagingViewModel(application: Application) : AndroidViewModel(application) {
-    private val host = MahayanaHost(application)
+    private val coordinator = AndroidCoordinatorRuntime.get(application)
     private val mutableState = MutableStateFlow(MessagingUiState())
     val state: StateFlow<MessagingUiState> = mutableState.asStateFlow()
     private var actorId = ""
@@ -201,7 +201,7 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
                 val chunkSize = 1024 * 1024
                 while (offset < sizeBytes) {
                     val requested = minOf(chunkSize, sizeBytes - offset)
-                    val response = host.request("feature.messaging.blob.read", JSONObject().put("blobId", blobId).put("offset", offset).put("length", requested))
+                    val response = coordinator.messagingBlobRead( JSONObject().put("blobId", blobId).put("offset", offset).put("length", requested))
                     val encoded = response.optString("dataBase64")
                     val chunk = Base64.decode(encoded, Base64.DEFAULT)
                     check(chunk.isNotEmpty()) { "Blob read returned empty data" }
@@ -307,9 +307,9 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
 
     private fun ensureIdentity() {
         if (actorId.isNotEmpty()) return
-        val auth = host.request("feature.auth.status")
+        val auth = coordinator.authStatus()
         auth.optJSONObject("user")?.let { displayName = it.optString("nickname").ifBlank { it.optString("username").ifBlank { displayName } } }
-        val access = host.request("feature.messaging.access.issue", JSONObject().put("deviceId", deviceId).put("sessionId", sessionId)
+        val access = coordinator.messagingAccessIssue( JSONObject().put("deviceId", deviceId).put("sessionId", sessionId)
             .put("scopes", JSONArray(listOf("messaging", "calls", "blobsRead", "blobsWrite", "payments", "miniApps"))))
         actorId = access.optString("actorId")
         check(actorId.isNotBlank()) { "Messaging identity is unavailable" }
@@ -324,7 +324,7 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
         val envelope = JSONObject().put("protocolVersion", 2)
             .put("context", JSONObject().put("requestId", requestId).put("deviceId", deviceId).put("actorId", actorId).put("sessionId", sessionId).put("sentAtMs", System.currentTimeMillis()))
             .put("command", command)
-        val result = host.request("feature.messaging.execute", JSONObject().put("requestId", requestId).put("envelope", envelope))
+        val result = coordinator.messagingExecute( JSONObject().put("requestId", requestId).put("envelope", envelope))
         apply(result.optJSONArray("envelopes") ?: JSONArray())
     }
 
@@ -488,7 +488,7 @@ internal class MessagingViewModel(application: Application) : AndroidViewModel(a
 
     private fun timeLabel(ms: Long): String = if (ms <= 0) "" else java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(ms))
 
-    override fun onCleared() { host.close(); super.onCleared() }
+    override fun onCleared() { super.onCleared() }
 }
 
 private fun JSONArray.toStringSet(): Set<String> = buildSet { for (i in 0 until length()) optString(i).takeIf { it.isNotBlank() }?.let(::add) }

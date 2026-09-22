@@ -19,6 +19,13 @@ android {
         buildConfigField 'boolean', 'CI_ACCOUNT_SESSION_IMPORT_ENABLED', 'false'
     }
 
+    sourceSets {
+        main.java.srcDirs += [
+            '../../../source/android-main/src/main/kotlin',
+            '../../../source/android-preload/src/main/kotlin'
+        ]
+    }
+
     buildFeatures {
         compose true
         buildConfig true

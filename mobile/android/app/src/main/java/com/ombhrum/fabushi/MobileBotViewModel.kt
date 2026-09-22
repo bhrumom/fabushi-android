@@ -3,7 +3,7 @@ package com.ombhrum.fabushi
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.ombhrum.fabushi.core.MahayanaHost
+import com.ombhrum.fabushi.androidmain.coordinator.AndroidCoordinatorRuntime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,7 +34,7 @@ data class MobileBotUiState(
 )
 
 class MobileBotViewModel(application: Application) : AndroidViewModel(application) {
-    private val host = MahayanaHost(application)
+    private val coordinator = AndroidCoordinatorRuntime.get(application)
     private val miniApps = MiniAppPlatformBridge(host)
     private val mutableState = MutableStateFlow(MobileBotUiState())
     private val messagesByBot = mutableMapOf<String, List<MobileChatMessage>>()
@@ -97,7 +97,7 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
             ),
         )
         repeat(48) {
-            val event = host.request("feature.receive", JSONObject().put("timeoutMs", 120))
+            val event = coordinator.featureReceive( JSONObject().put("timeoutMs", 120))
             if (event.optString("type") == "bot.listed") {
                 val rows = event.optJSONArray("bots")
                 return buildList {
@@ -357,7 +357,7 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
         val operationId = mutableState.value.operationId ?: return
         if (mutableState.value.activeBot?.miniAppId != null) return
         viewModelScope.launch {
-            runCatching { withContext(Dispatchers.IO) { host.request("feature.interrupt", JSONObject().put("operationId", operationId)) } }
+            runCatching { withContext(Dispatchers.IO) { coordinator.featureInterrupt( JSONObject().put("operationId", operationId)) } }
         }
     }
 
@@ -365,7 +365,7 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
         repeat(1800) {
             if (!mutableState.value.busy || mutableState.value.operationId != operationId) return
             val event = runCatching {
-                withContext(Dispatchers.IO) { host.request("feature.receive", JSONObject().put("timeoutMs", 250)) }
+                withContext(Dispatchers.IO) { coordinator.featureReceive( JSONObject().put("timeoutMs", 250)) }
             }.getOrElse { error ->
                 removeThinking(operationId)
                 finishAssistant(operationId)
@@ -459,7 +459,6 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     override fun onCleared() {
-        host.close()
         super.onCleared()
     }
 }
