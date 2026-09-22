@@ -1,6 +1,6 @@
 package com.ombhrum.fabushi.androidpreload.deeplink
 
-internal sealed interface AndroidDeepLink {
+sealed interface AndroidDeepLink {
     data class AuthCompletion(
         val attemptId: String,
         val status: AuthCompletionStatus,
@@ -11,7 +11,7 @@ internal sealed interface AndroidDeepLink {
     data class AppSection(val section: String) : AndroidDeepLink
 }
 
-internal enum class AuthCompletionStatus {
+enum class AuthCompletionStatus {
     COMPLETED,
     CANCELLED,
     FAILED,
