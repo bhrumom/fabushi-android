@@ -7,7 +7,7 @@ pub mod rpc;
 
 pub use coordinator::{
     CancelRequest, CoordinatorEvent, CoordinatorFailure, CoordinatorFailureCode, CoordinatorReply,
-    CoordinatorRequest, ResyncSnapshot, COORDINATOR_PROTOCOL_VERSION,
+    CoordinatorRequest, ResyncRequest, ResyncSnapshot, COORDINATOR_PROTOCOL_VERSION,
 };
 pub use execution::{
     ExecutionCapability, ExecutionError, ExecutionRequest, ExecutionResult, ExecutionTarget,
