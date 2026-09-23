@@ -1,6 +1,9 @@
 package com.ombhrum.fabushi
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -41,10 +44,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        (application as FabushiApplication).requireProcessRuntime().setForeground(true)
         updateModel.setForeground(true)
+        ensureNotificationPermission()
     }
 
     override fun onStop() {
+        (application as FabushiApplication).requireProcessRuntime().setForeground(false)
         updateModel.setForeground(false)
         super.onStop()
     }
@@ -62,6 +68,15 @@ class MainActivity : ComponentActivity() {
 
     internal fun appAgentSurfaceForTesting(): FabushiAppAgentSurface =
         (application as FabushiApplication).requireProcessRuntime().appAgentSurface
+
+    private fun ensureNotificationPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return
+        val preferences = getSharedPreferences("fabushi.mobile", MODE_PRIVATE)
+        if (preferences.getBoolean("notification-permission-requested", false)) return
+        preferences.edit().putBoolean("notification-permission-requested", true).apply()
+        requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 4107)
+    }
 
     private fun enqueueDeepLink(uri: android.net.Uri) {
         deepLinkController.handleCandidate(uri.toString(), "android-intent")
