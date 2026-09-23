@@ -1,5 +1,6 @@
 package com.ombhrum.fabushi.androidpreload.runtime
 
+import androidx.activity.ComponentActivity
 import com.ombhrum.fabushi.FabushiAppAgentSurface
 
 /**
@@ -14,4 +15,8 @@ internal interface AndroidPresentationRuntimePort {
     fun setLoggedIn(loggedIn: Boolean)
 
     fun setForeground(foreground: Boolean)
+
+    fun attachInteractiveActivity(activity: ComponentActivity)
+
+    fun detachInteractiveActivity(activity: ComponentActivity)
 }
