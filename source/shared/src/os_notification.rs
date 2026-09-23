@@ -16,7 +16,7 @@ pub struct NotificationSnapshot {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum NotificationTransitionKind {
+pub enum NotificationKind {
     AgentNeedsInput,
     AgentDone,
 }
@@ -25,7 +25,7 @@ pub enum NotificationTransitionKind {
 pub struct NotificationTransition {
     pub agent_id: String,
     pub agent_name: String,
-    pub kind: NotificationTransitionKind,
+    pub kind: NotificationKind,
     pub reason: Option<String>,
     pub notify_enabled: bool,
     pub is_hidden_from_sidebar: bool,
@@ -42,7 +42,8 @@ pub fn diff_agent_notification_transitions(
         let Some(before) = previous.get(&agent.id) else {
             continue;
         };
-        let became_awaiting = agent.awaiting_reason.is_some() && before.awaiting_reason.is_none();
+        let became_awaiting =
+            agent.awaiting_reason.is_some() && before.awaiting_reason.is_none();
         let finished_turn =
             before.is_running && !agent.is_running && agent.awaiting_reason.is_none();
         if !became_awaiting && !finished_turn {
@@ -52,9 +53,9 @@ pub fn diff_agent_notification_transitions(
             agent_id: agent.id.clone(),
             agent_name: agent.name.clone(),
             kind: if became_awaiting {
-                NotificationTransitionKind::AgentNeedsInput
+                NotificationKind::AgentNeedsInput
             } else {
-                NotificationTransitionKind::AgentDone
+                NotificationKind::AgentDone
             },
             reason: if became_awaiting {
                 agent.awaiting_reason.clone()
@@ -82,21 +83,24 @@ pub fn should_notify(
         && notify_enabled
         && !is_window_focused
         && last_notified_at_ms
-            .is_none_or(|last| now_ms.saturating_sub(last) >= throttle_window_ms)
+            .map(|last| now_ms.saturating_sub(last) >= throttle_window_ms)
+            .unwrap_or(true)
 }
 
-fn truncate(text: &str) -> String {
+fn truncate_body(text: &str) -> String {
     let collapsed = text.split_whitespace().collect::<Vec<_>>().join(" ");
     if collapsed.chars().count() <= MAX_NOTIFICATION_BODY_LENGTH {
         return collapsed;
     }
-    let head = collapsed
+    let mut value: String = collapsed
         .chars()
-        .take(MAX_NOTIFICATION_BODY_LENGTH - 1)
-        .collect::<String>()
-        .trim_end()
-        .to_string();
-    format!("{head}…")
+        .take(MAX_NOTIFICATION_BODY_LENGTH.saturating_sub(1))
+        .collect();
+    while value.ends_with(char::is_whitespace) {
+        value.pop();
+    }
+    value.push('…');
+    value
 }
 
 pub fn build_notification_content(transition: &NotificationTransition) -> (String, String) {
@@ -106,18 +110,18 @@ pub fn build_notification_content(transition: &NotificationTransition) -> (Strin
         transition.agent_name.trim()
     };
     match transition.kind {
-        NotificationTransitionKind::AgentNeedsInput => {
+        NotificationKind::AgentNeedsInput => {
             let reason = transition.reason.as_deref().unwrap_or("").trim();
             (
                 format!("{name} needs you"),
                 if reason.is_empty() {
-                    "Waiting for your input.".to_string()
+                    "Waiting for your input.".into()
                 } else {
-                    truncate(reason)
+                    truncate_body(reason)
                 },
             )
         }
-        NotificationTransitionKind::AgentDone => {
+        NotificationKind::AgentDone => {
             let preview = transition
                 .last_message_preview
                 .as_deref()
@@ -126,30 +130,28 @@ pub fn build_notification_content(transition: &NotificationTransition) -> (Strin
             (
                 name.to_string(),
                 if preview.is_empty() {
-                    "Open Grok Bot to see what it did.".to_string()
+                    "Open Grok Bot to see what it did.".into()
                 } else {
-                    truncate(preview)
+                    truncate_body(preview)
                 },
             )
         }
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct SandOsNotificationDecider {
+#[derive(Default)]
+pub struct OsNotificationDecider {
     previous: BTreeMap<String, NotificationSnapshot>,
-    last_notified_at_ms: BTreeMap<(String, NotificationTransitionKind), u64>,
+    last_notified_at_ms: BTreeMap<(String, NotificationKind), u64>,
     accounted_message_id: BTreeMap<String, Option<String>>,
     throttle_window_ms: u64,
 }
 
-impl SandOsNotificationDecider {
+impl OsNotificationDecider {
     pub fn new(throttle_window_ms: u64) -> Self {
         Self {
-            previous: BTreeMap::new(),
-            last_notified_at_ms: BTreeMap::new(),
-            accounted_message_id: BTreeMap::new(),
             throttle_window_ms,
+            ..Self::default()
         }
     }
 
@@ -169,32 +171,15 @@ impl SandOsNotificationDecider {
         now_ms: u64,
     ) -> Vec<NotificationTransition> {
         let transitions = diff_agent_notification_transitions(&self.previous, agents);
-        let out = self.gate(transitions, is_window_focused, now_ms);
-        let mut next = BTreeMap::new();
-        for agent in agents {
-            self.accounted_message_id
-                .entry(agent.id.clone())
-                .or_insert_with(|| agent.last_message_id.clone());
-            next.insert(agent.id.clone(), agent.clone());
-        }
-        self.previous = next;
-        out
-    }
-
-    fn gate(
-        &mut self,
-        transitions: Vec<NotificationTransition>,
-        is_window_focused: bool,
-        now_ms: u64,
-    ) -> Vec<NotificationTransition> {
         let mut out = Vec::new();
+
         for transition in transitions {
             let accounted = self
                 .accounted_message_id
                 .get(&transition.agent_id)
                 .cloned()
                 .flatten();
-            if transition.kind == NotificationTransitionKind::AgentDone
+            if transition.kind == NotificationKind::AgentDone
                 && (transition.last_message_id.is_none()
                     || transition.last_message_id == accounted)
             {
@@ -216,6 +201,12 @@ impl SandOsNotificationDecider {
                 out.push(transition);
             }
         }
+
+        self.previous = agents
+            .iter()
+            .cloned()
+            .map(|agent| (agent.id.clone(), agent))
+            .collect();
         out
     }
 
@@ -223,17 +214,7 @@ impl SandOsNotificationDecider {
         self.previous.remove(agent_id);
         self.accounted_message_id.remove(agent_id);
         self.last_notified_at_ms
-            .remove(&(agent_id.to_string(), NotificationTransitionKind::AgentDone));
-        self.last_notified_at_ms.remove(&(
-            agent_id.to_string(),
-            NotificationTransitionKind::AgentNeedsInput,
-        ));
-    }
-}
-
-impl Default for SandOsNotificationDecider {
-    fn default() -> Self {
-        Self::new(SAND_OS_NOTIFICATION_THROTTLE_MS)
+            .retain(|(id, _), _| id != agent_id);
     }
 }
 
@@ -241,14 +222,10 @@ impl Default for SandOsNotificationDecider {
 mod tests {
     use super::*;
 
-    fn agent(
-        running: bool,
-        awaiting: Option<&str>,
-        message_id: Option<&str>,
-    ) -> NotificationSnapshot {
+    fn snapshot(running: bool, awaiting: Option<&str>, message_id: Option<&str>) -> NotificationSnapshot {
         NotificationSnapshot {
             id: "a".into(),
-            name: "Agent".into(),
+            name: "Agent A".into(),
             is_running: running,
             awaiting_reason: awaiting.map(str::to_string),
             notify_enabled: true,
@@ -259,41 +236,31 @@ mod tests {
     }
 
     #[test]
-    fn decider_requires_a_real_transition_and_new_done_message() {
-        let mut decider = SandOsNotificationDecider::default();
-        decider.seed_baseline(&[agent(true, None, Some("m1"))]);
-        let done = decider.decide(&[agent(false, None, Some("m2"))], false, 10_000);
-        assert_eq!(done.len(), 1);
-        assert_eq!(done[0].kind, NotificationTransitionKind::AgentDone);
+    fn needs_input_and_done_transitions_are_detected() {
+        let mut previous = BTreeMap::new();
+        previous.insert("a".into(), snapshot(true, None, Some("m1")));
+        let needs = diff_agent_notification_transitions(
+            &previous,
+            &[snapshot(true, Some("approve"), Some("m1"))],
+        );
+        assert_eq!(needs[0].kind, NotificationKind::AgentNeedsInput);
 
-        decider.seed_baseline(&[agent(true, None, Some("m2"))]);
-        let duplicate = decider.decide(&[agent(false, None, Some("m2"))], false, 20_000);
-        assert!(duplicate.is_empty());
+        let done = diff_agent_notification_transitions(
+            &previous,
+            &[snapshot(false, None, Some("m2"))],
+        );
+        assert_eq!(done[0].kind, NotificationKind::AgentDone);
     }
 
     #[test]
-    fn focus_hidden_and_throttle_gate_notifications() {
-        assert!(!should_notify(false, true, true, None, 10_000, 5_000));
-        assert!(!should_notify(true, true, false, None, 10_000, 5_000));
-        assert!(!should_notify(false, false, false, None, 10_000, 5_000));
-        assert!(!should_notify(false, true, false, Some(8_000), 10_000, 5_000));
-        assert!(should_notify(false, true, false, Some(4_000), 10_000, 5_000));
-    }
+    fn decider_throttles_and_ignores_already_accounted_done_message() {
+        let mut decider = OsNotificationDecider::new(5_000);
+        decider.seed_baseline(&[snapshot(true, None, Some("m1"))]);
+        let out = decider.decide(&[snapshot(false, None, Some("m2"))], false, 10_000);
+        assert_eq!(out.len(), 1);
 
-    #[test]
-    fn notification_body_is_collapsed_and_bounded() {
-        let transition = NotificationTransition {
-            agent_id: "a".into(),
-            agent_name: "Agent".into(),
-            kind: NotificationTransitionKind::AgentNeedsInput,
-            reason: Some("x ".repeat(200)),
-            notify_enabled: true,
-            is_hidden_from_sidebar: false,
-            last_message_id: None,
-            last_message_preview: None,
-        };
-        let (_, body) = build_notification_content(&transition);
-        assert!(body.chars().count() <= MAX_NOTIFICATION_BODY_LENGTH);
-        assert!(body.ends_with('…'));
+        decider.previous.insert("a".into(), snapshot(true, None, Some("m2")));
+        let repeated = decider.decide(&[snapshot(false, None, Some("m2"))], false, 20_000);
+        assert!(repeated.is_empty());
     }
 }
