@@ -3,6 +3,13 @@ package com.ombhrum.fabushi.androidpreload.runtime
 import org.json.JSONArray
 import org.json.JSONObject
 
+data class AndroidMcpOAuthCompletion(
+    val provider: String,
+    val state: String,
+    val code: String?,
+    val error: String?,
+)
+
 /**
  * Typed method surface exposed to Android presentation code.
  *
@@ -13,6 +20,12 @@ import org.json.JSONObject
 interface AndroidCoordinatorPort {
     fun coordinatorStatus(): JSONObject
     fun coordinatorResync(generation: Long, afterSequence: Long): JSONObject
+    fun mcpOAuthRegister(state: String, provider: String): Boolean
+    fun mcpOAuthComplete(
+        state: String,
+        code: String?,
+        error: String?,
+    ): AndroidMcpOAuthCompletion
 
     fun authStatus(): JSONObject
     fun authDeviceAgentSession(): JSONObject
