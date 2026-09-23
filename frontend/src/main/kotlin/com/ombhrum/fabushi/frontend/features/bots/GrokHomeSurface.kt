@@ -68,6 +68,12 @@ fun GrokHomeSurface(
     onRefreshBots: () -> Unit,
     onCreateBot: (String, String, (() -> Unit)?) -> Unit,
     onOpenBot: (MobileBotSummaryAndroid) -> Unit,
+    onRenameBot: (String, String) -> Unit,
+    onHideBot: (String) -> Unit,
+    onSetBotUnread: (String, Boolean) -> Unit,
+    onDuplicateBot: (String) -> Unit,
+    onDeleteBot: suspend (String) -> Unit,
+    onSetBotPinned: (String, Boolean) -> Unit,
     onCloseBot: () -> Unit,
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
@@ -85,6 +91,8 @@ fun GrokHomeSurface(
     var createOpen by remember { mutableStateOf(false) }
     var botName by remember { mutableStateOf("") }
     var botDescription by remember { mutableStateOf("") }
+    var editingBotId by remember { mutableStateOf<String?>(null) }
+    var deleteTarget by remember { mutableStateOf<AgentDeleteTarget?>(null) }
 
     LaunchedEffect(
         query,
@@ -323,7 +331,36 @@ fun GrokHomeSurface(
             val visibleBots = botState.bots.filter { query.isBlank() || it.name.contains(query.trim(), true) || it.description.contains(query.trim(), true) }
             if (visibleBots.isNotEmpty()) {
                 item { SectionLabelAndroid("Bots  ${visibleBots.size}") }
-                items(visibleBots, key = { it.id }) { bot -> GrokBotRowAndroid(bot, "Bot", onOpenBot) }
+                items(visibleBots, key = { it.id }) { bot ->
+                    GrokBotRowAndroid(
+                        bot = bot,
+                        badge = "Bot",
+                        onClick = onOpenBot,
+                        editingName = editingBotId == bot.id,
+                        onNameCommit = { nextName ->
+                            onRenameBot(bot.id, nextName)
+                        },
+                        onNameExit = {
+                            editingBotId = null
+                        },
+                        trailing = {
+                            AgentRowActions(
+                                agentId = bot.id,
+                                agentName = bot.name,
+                                isGroup = bot.isGroup,
+                                isPinned = bot.isPinned,
+                                hasUnread = bot.hasUnread,
+                                isHidden = bot.isHidden,
+                                onEditName = { editingBotId = it },
+                                onHideFromSidebar = onHideBot,
+                                onDuplicateAgent = onDuplicateBot,
+                                onTogglePin = onSetBotPinned,
+                                onSetAgentUnread = onSetBotUnread,
+                                onRequestDelete = { deleteTarget = it },
+                            )
+                        },
+                    )
+                }
             }
             botState.error?.takeIf { it.isNotBlank() }?.let { diagnostic ->
                 item {
@@ -357,6 +394,12 @@ fun GrokHomeSurface(
             }
             item { Spacer(Modifier.height(44.dp)) }
         }
+
+        AgentDeleteConfirmation(
+            agent = deleteTarget,
+            onClose = { deleteTarget = null },
+            onConfirm = onDeleteBot,
+        )
     }
 }
 
