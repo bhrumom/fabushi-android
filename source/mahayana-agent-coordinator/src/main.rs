@@ -11,12 +11,59 @@ pub const DEFAULT_EVENT_REPLAY_LIMIT: usize = 512;
 pub trait HostPort {
     fn execute(&mut self, request: &CoordinatorRequest) -> Result<String, CoordinatorFailure>;
     fn cancel(&mut self, request_id: &str, reason: Option<&str>) -> Result<(), CoordinatorFailure>;
+    #[test]
+    fn deferred_operation_streams_cancels_and_settles_by_operation_id() {
+        let mut coordinator = MahayanaCoordinator::with_generation(FakeHost::default(), 7, 8);
+        assert_eq!(coordinator.generation(), 7);
+
+        let accepted = coordinator.request_deferred(request("request-1"));
+        assert!(accepted.result_json.is_ok());
+        assert_eq!(coordinator.active_request_count(), 1);
+        coordinator.bind_operation("request-1", "operation-1").unwrap();
+
+        let first = coordinator.record_operation_event(
+            "session-a",
+            "chat.delta",
+            r#"{"operationId":"operation-1","delta":"a"}"#,
+            Some("operation-1"),
+            false,
+        );
+        assert_eq!(first.sequence, 1);
+        assert_eq!(coordinator.active_request_count(), 1);
+
+        let cancelled = coordinator.cancel_operation("operation-1", Some("user"));
+        assert_eq!(
+            cancelled.result_json.unwrap_err().code,
+            CoordinatorFailureCode::Cancelled
+        );
+        assert_eq!(coordinator.active_request_count(), 0);
+
+        coordinator.request_deferred(request("request-2"));
+        coordinator.bind_operation("request-2", "operation-2").unwrap();
+        coordinator.record_operation_event(
+            "session-a",
+            "operation.completed",
+            r#"{"operationId":"operation-2"}"#,
+            Some("operation-2"),
+            true,
+        );
+        assert_eq!(coordinator.active_request_count(), 0);
+        assert_eq!(coordinator.latest_sequence(), 2);
+
+        let replay = coordinator.resync(ResyncRequest {
+            generation: 7,
+            after_sequence: 0,
+        }).unwrap();
+        assert_eq!(replay.events.len(), 2);
+    }
+
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct PendingRequest {
     session_id: String,
     method: String,
+    operation_id: Option<String>,
 }
 
 pub struct MahayanaCoordinator<H: HostPort> {
@@ -29,12 +76,16 @@ pub struct MahayanaCoordinator<H: HostPort> {
 }
 
 impl<H: HostPort> MahayanaCoordinator<H> {
-    pub fn new(host: H) -> Self { Self::with_replay_limit(host, DEFAULT_EVENT_REPLAY_LIMIT) }
+    pub fn new(host: H) -> Self { Self::with_generation(host, 1, DEFAULT_EVENT_REPLAY_LIMIT) }
 
     pub fn with_replay_limit(host: H, replay_limit: usize) -> Self {
+        Self::with_generation(host, 1, replay_limit)
+    }
+
+    pub fn with_generation(host: H, generation: u64, replay_limit: usize) -> Self {
         Self {
             host,
-            generation: 1,
+            generation: generation.max(1),
             sequence: MonotonicSequence::default(),
             pending: BTreeMap::new(),
             events: VecDeque::new(),
@@ -55,6 +106,7 @@ impl<H: HostPort> MahayanaCoordinator<H> {
         self.pending.insert(request.request_id.clone(), PendingRequest {
             session_id: request.session_id.clone(),
             method: request.method.clone(),
+            operation_id: None,
         });
         Ok(())
     }
@@ -81,6 +133,129 @@ impl<H: HostPort> MahayanaCoordinator<H> {
         self.complete_request(&request_id, result)
     }
 
+    /// Dispatches a request whose accepted operation remains active until a terminal Host event
+    /// or explicit cancellation settles it.
+    pub fn request_deferred(&mut self, request: CoordinatorRequest) -> CoordinatorReply {
+        if let Err(error) = self.begin_request(&request) {
+            return CoordinatorReply::failed(request.request_id, error);
+        }
+        let request_id = request.request_id.clone();
+        match self.host.execute(&request) {
+            Ok(value) => CoordinatorReply::ok(request_id, value),
+            Err(error) => {
+                self.pending.remove(&request_id);
+                CoordinatorReply::failed(request_id, error)
+            }
+        }
+    }
+
+    pub fn bind_operation(
+        &mut self,
+        request_id: &str,
+        operation_id: &str,
+    ) -> Result<(), CoordinatorFailure> {
+        if operation_id.trim().is_empty() {
+            return Err(CoordinatorFailure::new(
+                CoordinatorFailureCode::MalformedRequest,
+                "operation id must not be empty",
+            ));
+        }
+        if self.pending.values().any(|pending| {
+            pending.operation_id.as_deref() == Some(operation_id)
+        }) {
+            return Err(CoordinatorFailure::new(
+                CoordinatorFailureCode::DuplicateRequest,
+                format!("operation {operation_id} is already active"),
+            ));
+        }
+        let pending = self.pending.get_mut(request_id).ok_or_else(|| {
+            CoordinatorFailure::new(
+                CoordinatorFailureCode::UnknownRequest,
+                "request is not active",
+            )
+        })?;
+        pending.operation_id = Some(operation_id.to_string());
+        Ok(())
+    }
+
+    pub fn complete_operation(
+        &mut self,
+        operation_id: &str,
+        result: Result<String, CoordinatorFailure>,
+    ) -> CoordinatorReply {
+        let request_id = self
+            .pending
+            .iter()
+            .find_map(|(request_id, pending)| {
+                (pending.operation_id.as_deref() == Some(operation_id)
+                    || request_id == operation_id)
+                    .then(|| request_id.clone())
+            });
+        match request_id {
+            Some(request_id) => self.complete_request(&request_id, result),
+            None => CoordinatorReply::failed(
+                operation_id,
+                CoordinatorFailure::new(
+                    CoordinatorFailureCode::UnknownRequest,
+                    "operation is not active",
+                ),
+            ),
+        }
+    }
+
+    pub fn record_operation_event(
+        &mut self,
+        session_id: impl Into<String>,
+        family: impl Into<String>,
+        payload_json: impl Into<String>,
+        operation_id: Option<&str>,
+        terminal: bool,
+    ) -> CoordinatorEvent {
+        let event = self.publish_event(session_id, family, payload_json);
+        if terminal {
+            if let Some(operation_id) = operation_id {
+                let _ = self.complete_operation(operation_id, Ok("{}".into()));
+            }
+        }
+        event
+    }
+
+    pub fn cancel_operation(
+        &mut self,
+        operation_id: &str,
+        reason: Option<&str>,
+    ) -> CoordinatorReply {
+        let request_id = self
+            .pending
+            .iter()
+            .find_map(|(request_id, pending)| {
+                (pending.operation_id.as_deref() == Some(operation_id)
+                    || request_id == operation_id)
+                    .then(|| request_id.clone())
+            });
+        let Some(request_id) = request_id else {
+            return CoordinatorReply::failed(
+                operation_id,
+                CoordinatorFailure::new(
+                    CoordinatorFailureCode::UnknownRequest,
+                    "operation is not active",
+                ),
+            );
+        };
+        let host_result = self.host.cancel(operation_id, reason);
+        self.pending.remove(&request_id);
+        match host_result {
+            Ok(()) => CoordinatorReply::failed(
+                request_id,
+                CoordinatorFailure::new(
+                    CoordinatorFailureCode::Cancelled,
+                    "request cancelled",
+                ),
+            ),
+            Err(error) => CoordinatorReply::failed(request_id, error),
+        }
+    }
+
     pub fn cancel(&mut self, cancel: CancelRequest) -> CoordinatorReply {
         if !self.pending.contains_key(&cancel.request_id) {
             return CoordinatorReply::failed(
@@ -88,7 +263,12 @@ impl<H: HostPort> MahayanaCoordinator<H> {
                 CoordinatorFailure::new(CoordinatorFailureCode::UnknownRequest, "request is not active"),
             );
         }
-        let host_result = self.host.cancel(&cancel.request_id, cancel.reason.as_deref());
+        let operation_id = self.pending
+            .get(&cancel.request_id)
+            .and_then(|pending| pending.operation_id.as_deref())
+            .unwrap_or(cancel.request_id.as_str())
+            .to_string();
+        let host_result = self.host.cancel(&operation_id, cancel.reason.as_deref());
         self.pending.remove(&cancel.request_id);
         match host_result {
             Ok(()) => CoordinatorReply::failed(
@@ -172,6 +352,8 @@ impl<H: HostPort> MahayanaCoordinator<H> {
     }
 
     pub fn active_request_count(&self) -> usize { self.pending.len() }
+
+    pub fn latest_sequence(&self) -> u64 { self.sequence.current() }
 
     pub fn active_request_metadata(&self, request_id: &str) -> Option<(&str, &str)> {
         self.pending.get(request_id).map(|request| (request.session_id.as_str(), request.method.as_str()))
