@@ -24837,9 +24837,10 @@
       "android_target_path": "source/shared/src/deep_link.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust deep-link parser/canonicalizer with strict credentials/fragment/path-traversal/percent-encoding/query rejection tests; exact-HEAD cargo CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room behavior/contract implementation from frozen baseline responsibilities; no reconstructed source copied"
     },
     {
       "grok_path": "source/shared/desktop.ts",
@@ -24954,9 +24955,10 @@
       "android_target_path": "source/shared/src/gateway_reachability.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust blocked/pause marker encoding and nested-message extraction contract with focused unit tests; exact-HEAD cargo CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room behavior/contract implementation from frozen baseline responsibilities; no reconstructed source copied"
     },
     {
       "grok_path": "source/shared/gateway-wire.ts",
@@ -25137,9 +25139,10 @@
       "android_target_path": "source/shared/src/mcp_oauth_callback_page.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust OAuth callback HTML renderer with untrusted server-name escaping test; exact-HEAD cargo CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room behavior/contract implementation from frozen baseline responsibilities; no reconstructed source copied"
     },
     {
       "grok_path": "source/shared/mcp.ts",
@@ -25150,9 +25153,10 @@
       "android_target_path": "source/shared/src/mcp.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust MCP account label, display, uninstall and untrusted connector-error sanitization contract with focused unit tests; exact-HEAD cargo CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room behavior/contract implementation from frozen baseline responsibilities; no reconstructed source copied"
     },
     {
       "grok_path": "source/shared/media/attachment-limits.ts",
@@ -26208,9 +26212,10 @@
       "android_target_path": "source/shared/src/os_notification.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust notification transition/visibility/throttle/message-dedupe/content state machine with unit tests; exact-HEAD cargo CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room behavior/contract implementation from frozen baseline responsibilities; no reconstructed source copied"
     },
     {
       "grok_path": "source/shared/persistence.ts",
@@ -26637,9 +26642,10 @@
       "android_target_path": "source/shared/src/webauthn_gateway.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust WebAuthn gateway paths/timing/origin classification/request-response frame contract with fail-closed origin tests; exact-HEAD cargo CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room behavior/contract implementation from frozen baseline responsibilities; no reconstructed source copied"
     },
     {
       "grok_path": "source/shared/webauthn-proxy-availability.ts",
@@ -26649,10 +26655,12 @@
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/shared/webauthn-proxy-availability.ts#blob=fa0effe29a959d97b67b9f9852efe54413ef9c3d",
       "android_target_path": "source/shared/src/webauthn_proxy_availability.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
-      "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "parity_class": "platform-adapted",
+      "implementation_status": "implemented",
+      "test_evidence": "Android platform adaptation uses explicit native signer capability (Android Credential Manager or remote signer) instead of Grok desktop darwin/win32 gating; unit tests cover enabled/disabled/unavailable cases; exact-HEAD cargo CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room behavior/contract implementation from frozen baseline responsibilities; no reconstructed source copied",
+      "android_adaptation_rationale": "Android does not ship the desktop WebAuthn signer binary; availability is driven by Android Credential Manager/native signer capability or an explicitly connected remote desktop signer."
     },
     {
       "grok_path": "source/shared/window-chrome.ts",
@@ -26721,7 +26729,7 @@
     }
   ],
   "status_summary": {
-    "mapped": 1884,
-    "implemented": 162
+    "mapped": 1877,
+    "implemented": 169
   }
 }
