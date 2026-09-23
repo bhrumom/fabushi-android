@@ -10,6 +10,9 @@ import org.json.JSONObject
  * typed Kotlin models.
  */
 interface AndroidCoordinatorPort {
+    fun coordinatorStatus(): JSONObject
+    fun coordinatorResync(generation: Long, afterSequence: Long): JSONObject
+
     fun authStatus(): JSONObject
     fun authDeviceAgentSession(): JSONObject
     fun authBrowserStart(): JSONObject
