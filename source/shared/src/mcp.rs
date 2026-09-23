@@ -81,12 +81,28 @@ pub fn uninstall_cleared_install_record(removed: bool, reason: Option<&str>) -> 
     removed || reason == Some("team-server")
 }
 
+fn strip_block_element(mut input: String, tag: &str) -> String {
+    let open = format!("<{tag}");
+    let close = format!("</{tag}>");
+    loop {
+        let lower = input.to_ascii_lowercase();
+        let Some(start) = lower.find(&open) else {
+            return input;
+        };
+        let end = lower[start..]
+            .find(&close)
+            .map(|offset| start + offset + close.len())
+            .unwrap_or(input.len());
+        input.replace_range(start..end, " ");
+    }
+}
+
 pub fn strip_markup_and_bound_connector_error(raw: &str) -> String {
     let bounded: String = raw.chars().take(MAX_UNTRUSTED_MARKUP_SCAN_LENGTH).collect();
+    let bounded = strip_block_element(strip_block_element(bounded, "script"), "style");
     let mut out = String::with_capacity(bounded.len());
-    let mut chars = bounded.chars().peekable();
     let mut in_tag = false;
-    while let Some(ch) = chars.next() {
+    for ch in bounded.chars() {
         if ch == '<' {
             in_tag = true;
             out.push(' ');
@@ -109,7 +125,7 @@ pub fn strip_markup_and_bound_connector_error(raw: &str) -> String {
         .chars()
         .take(MAX_CONNECTOR_ERROR_LENGTH.saturating_sub(1))
         .collect();
-    while truncated.ends_with(char::is_whitespace) {
+    while truncated.chars().last().is_some_and(char::is_whitespace) {
         truncated.pop();
     }
     truncated.push('…');
@@ -138,6 +154,14 @@ mod tests {
             "<div> failed <b>now</b> </div>",
         );
         assert_eq!(cleaned, "failed now");
+        assert_eq!(
+            strip_markup_and_bound_connector_error("<script>secret()</script><p>safe</p>"),
+            "safe"
+        );
+        assert_eq!(
+            strip_markup_and_bound_connector_error("<style>.x{display:none}</style>visible"),
+            "visible"
+        );
         let long = "x".repeat(MAX_CONNECTOR_ERROR_LENGTH + 50);
         let bounded = strip_markup_and_bound_connector_error(&long);
         assert_eq!(bounded.chars().count(), MAX_CONNECTOR_ERROR_LENGTH);
