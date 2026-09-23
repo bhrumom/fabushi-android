@@ -4,10 +4,12 @@ import android.app.Application
 import android.content.Intent
 import androidx.activity.ComponentActivity
 import com.ombhrum.fabushi.androidmain.adapters.AndroidAccountOAuthAdapter
+import com.ombhrum.fabushi.androidmain.adapters.AndroidMcpOAuthAdapter
 import java.lang.ref.WeakReference
 import com.ombhrum.fabushi.androidmain.coordinator.AndroidCoordinatorPorts
 import com.ombhrum.fabushi.androidmain.notifications.AndroidNotificationRuntime
 import com.ombhrum.fabushi.androidmain.webauthn.AndroidCredentialManagerWebAuthn
+import com.ombhrum.fabushi.androidpreload.deeplink.AndroidDeepLink
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidCoordinatorBridge
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidPresentationRuntimePort
 
@@ -56,6 +58,7 @@ internal class FabushiProcessRuntime(
         AndroidCoordinatorBridge.installTrustedRuntime(it)
     }
     private val accountOAuth = AndroidAccountOAuthAdapter()
+    private val mcpOAuth = AndroidMcpOAuthAdapter(coordinator)
     override val appAgentSurface = FabushiAppAgentSurface()
     private val notificationRuntime = AndroidNotificationRuntime(
         context = application,
@@ -67,6 +70,8 @@ internal class FabushiProcessRuntime(
     )
     private val notificationEventSubscription =
         coordinator.addFeatureEventListener(notificationRuntime.feed::handleFeatureEvent)
+    private val mcpOAuthEventSubscription =
+        coordinator.addFeatureEventListener(::handleRuntimeFeatureEvent)
     private val remoteDeviceGateway = FabushiRemoteDeviceGateway(
         context = application,
         coordinator = coordinator,
@@ -74,6 +79,27 @@ internal class FabushiProcessRuntime(
         metadata = FabushiCiBootstrap.gatewayMetadata(intent, ciBootstrapActive),
         configuredDeviceName = FabushiCiBootstrap.configuredDeviceName(intent, ciBootstrapActive),
     )
+
+    internal fun handlePlatformDeepLink(link: AndroidDeepLink): Boolean =
+        when (link) {
+            is AndroidDeepLink.McpOAuthCallback -> {
+                runCatching { mcpOAuth.handleCallback(link) }
+                true
+            }
+            else -> false
+        }
+
+    private fun handleRuntimeFeatureEvent(event: org.json.JSONObject) {
+        if (event.optString("type") != "mcp.authorization.required") return
+        val authorizationUrl = event.optString("authorizationUrl").trim()
+        val provider = event.optString("provider").trim()
+        if (authorizationUrl.isBlank() || provider.isBlank()) return
+        mcpOAuth.beginAuthorization(
+            activity = interactiveActivityOrNull(),
+            authorizationUrl = authorizationUrl,
+            provider = provider,
+        )
+    }
 
     override fun setLoggedIn(loggedIn: Boolean) {
         remoteDeviceGateway.setLoggedIn(loggedIn)
@@ -105,6 +131,7 @@ internal class FabushiProcessRuntime(
     override fun close() {
         interactiveActivityRef = null
         webAuthnRuntime.close()
+        mcpOAuthEventSubscription.close()
         notificationEventSubscription.close()
         notificationRuntime.reset()
         remoteDeviceGateway.close()
