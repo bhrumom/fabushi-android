@@ -362,9 +362,10 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/production/command-palette-model.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Kotlin palette model at the exact target is used by the shipping CommandPalette and covered by FrontendProductionModelParityTest for fuzzy search, tab filtering, activation and highlight movement. Exact-HEAD Android compile/UI CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "provenance_review": "clean-room Compose/Kotlin implementation from documented renderer behavior; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/production/command-palette-provider.ts",
@@ -388,9 +389,10 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/production/command-palette-root-commands.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Shipping ProductionRenderer consumes commandPaletteRootCommands at the exact target; actions are current-chat scoped and injected by renderer. FrontendProductionModelParityTest covers fail-closed no-agent behavior and group/channels/settings projection. Exact-HEAD Android compile/UI CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "provenance_review": "clean-room Compose/Kotlin implementation from documented renderer behavior; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/production/command-palette-search-provider.ts",
@@ -427,9 +429,10 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/production/CommandPalette_view.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Shipping ProductionRenderer renders the exact CommandPalette_view.kt target; Home and Bot Chat expose explicit Android palette affordances and palette entries activate Coordinator-backed agent navigation or renderer-owned actions. Exact-HEAD Android compile/UI CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "provenance_review": "clean-room Compose/Kotlin implementation from documented renderer behavior; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/production/coordinator-client.ts",
@@ -26750,7 +26753,7 @@
     }
   ],
   "status_summary": {
-    "mapped": 1858,
-    "implemented": 188
+    "mapped": 1855,
+    "implemented": 191
   }
 }
