@@ -400,16 +400,37 @@ internal fun ConversationDetail(
     onTogglePin: () -> Unit,
     onArchive: () -> Unit,
 ) {
-    var draft by remember(conversation.id, sharedDraft?.updatedAtMs) { mutableStateOf(sharedDraft?.text.orEmpty()) }
-    var showMenu by remember { mutableStateOf(false) }
+    val draftSnapshot = remember(conversation.id, sharedDraft?.updatedAtMs) {
+        coordinatorComposerDraftSnapshot(conversation.id, sharedDraft)
+    }
+    var draft by remember(conversation.id, draftSnapshot.updatedAtMs) {
+        mutableStateOf(draftSnapshot.text)
+    }
     var selectedMessage by remember { mutableStateOf<ChatMessage?>(null) }
-    var replyTarget by remember(conversation.id, sharedDraft?.replyToMessageId) { mutableStateOf(sharedDraft?.replyToMessageId?.let { replyId -> messages.firstOrNull { it.id == replyId } }) }
+    var replyTarget by remember(conversation.id, draftSnapshot.updatedAtMs) {
+        mutableStateOf(
+            draftSnapshot.replyToMessageId?.let { replyId ->
+                messages.firstOrNull { it.id == replyId }
+            },
+        )
+    }
     var editingMessage by remember { mutableStateOf<ChatMessage?>(null) }
     var forwardingMessage by remember { mutableStateOf<ChatMessage?>(null) }
     var mediaViewerMessage by remember { mutableStateOf<ChatMessage?>(null) }
     var showConversationInfo by remember { mutableStateOf(false) }
     var showChatSearch by remember { mutableStateOf(false) }
     var chatSearchQuery by remember { mutableStateOf("") }
+    var chatSearchIndex by remember(conversation.id) { mutableStateOf(0) }
+    val chatSearchMatches = remember(messages, chatSearchQuery) {
+        findInChatMatches(messages, chatSearchQuery)
+    }
+    LaunchedEffect(chatSearchQuery, chatSearchMatches.size) {
+        chatSearchIndex = when {
+            chatSearchMatches.isEmpty() -> -1
+            chatSearchIndex !in chatSearchMatches.indices -> 0
+            else -> chatSearchIndex
+        }
+    }
     var showSendModes by remember { mutableStateOf(false) }
     var showContactShare by remember { mutableStateOf(false) }
     var showPollComposer by remember { mutableStateOf(false) }
@@ -429,9 +450,20 @@ internal fun ConversationDetail(
         recordingSeconds = 0
         while (isRecordingVoice) { delay(1000); if (isRecordingVoice) recordingSeconds += 1 }
     }
-    LaunchedEffect(conversation.id, draft, replyTarget?.id, editingMessage?.id) {
+    LaunchedEffect(
+        conversation.id,
+        draft,
+        replyTarget?.id,
+        editingMessage?.id,
+        draftSnapshot.updatedAtMs,
+    ) {
         delay(350)
-        if (editingMessage == null) onDraftChanged(draft, replyTarget?.id)
+        if (
+            editingMessage == null &&
+            shouldPersistCoordinatorDraft(draftSnapshot, draft, replyTarget?.id)
+        ) {
+            onDraftChanged(draft, replyTarget?.id)
+        }
     }
     var showLocationShare by remember { mutableStateOf(false) }
     var currentLocation by remember { mutableStateOf<Pair<Double, Double>?>(null) }
@@ -580,22 +612,22 @@ internal fun ConversationDetail(
 
     Scaffold(containerColor = homeBackground) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("‹", color = homePrimaryText, fontSize = 34.sp, modifier = Modifier.clickable(onClick = onBack).padding(8.dp))
-                Column(Modifier.weight(1f).clickable { showConversationInfo = true }.padding(vertical = 4.dp)) {
-                    Text(conversation.title, color = homePrimaryText, fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
-                    Text("${conversation.participants.size} 位成员 · ${conversation.kind.label}", color = homeSecondaryText, style = MaterialTheme.typography.bodySmall)
-                }
-                Text("⌕", color = homePrimaryText, fontSize = 23.sp, modifier = Modifier.clickable { showChatSearch = !showChatSearch; if (!showChatSearch) chatSearchQuery = "" }.padding(8.dp))
-                Box {
-                    Text("⋯", color = homePrimaryText, fontSize = 28.sp, modifier = Modifier.clickable { showMenu = true }.padding(8.dp))
-                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }, containerColor = homeSurface) {
-                        DropdownMenuItem(text = { Text(if (conversation.isMuted) "取消静音" else "静音", color = homePrimaryText) }, onClick = { showMenu = false; onToggleMute() })
-                        DropdownMenuItem(text = { Text(if (conversation.isPinned) "取消置顶" else "置顶", color = homePrimaryText) }, onClick = { showMenu = false; onTogglePin() })
-                        DropdownMenuItem(text = { Text("归档", color = homePrimaryText) }, onClick = { showMenu = false; onArchive() })
+            ConversationChatHeader(
+                conversation = conversation,
+                searchOpen = showChatSearch,
+                onBack = onBack,
+                onOpenInfo = { showConversationInfo = true },
+                onToggleSearch = {
+                    showChatSearch = !showChatSearch
+                    if (!showChatSearch) {
+                        chatSearchQuery = ""
+                        chatSearchIndex = -1
                     }
-                }
-            }
+                },
+                onToggleMute = onToggleMute,
+                onTogglePin = onTogglePin,
+                onArchive = onArchive,
+            )
             val pinnedMessage = conversation.pinnedMessageIds.lastOrNull()?.let { pinnedId -> messages.firstOrNull { it.id == pinnedId } }
             if (pinnedMessage != null) {
                 Row(Modifier.fillMaxWidth().background(homeSurface).padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -605,11 +637,33 @@ internal fun ConversationDetail(
                 }
             }
             if (showChatSearch) {
-                OutlinedTextField(
-                    value = chatSearchQuery, onValueChange = { chatSearchQuery = it }, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-                    singleLine = true, placeholder = { Text("搜索此聊天", color = homeSecondaryText) },
-                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = homePrimaryText, unfocusedTextColor = homePrimaryText, focusedContainerColor = homeSurface, unfocusedContainerColor = homeSurface),
-                    shape = RoundedCornerShape(14.dp),
+                FindInChatBar(
+                    query = chatSearchQuery,
+                    matchCount = chatSearchMatches.size,
+                    currentIndex = chatSearchIndex,
+                    onQueryChange = {
+                        chatSearchQuery = it
+                        chatSearchIndex = 0
+                    },
+                    onPrevious = {
+                        chatSearchIndex = stepFindInChatIndex(
+                            chatSearchIndex,
+                            -1,
+                            chatSearchMatches.size,
+                        )
+                    },
+                    onNext = {
+                        chatSearchIndex = stepFindInChatIndex(
+                            chatSearchIndex,
+                            1,
+                            chatSearchMatches.size,
+                        )
+                    },
+                    onClose = {
+                        showChatSearch = false
+                        chatSearchQuery = ""
+                        chatSearchIndex = -1
+                    },
                 )
             }
             if (typingActorName != null) {
@@ -619,6 +673,9 @@ internal fun ConversationDetail(
                 conversationTitle = conversation.title,
                 messages = messages,
                 searchQuery = chatSearchQuery,
+                currentFindMessageId = chatSearchMatches
+                    .getOrNull(chatSearchIndex)
+                    ?.messageId,
                 playingVoiceMessageId = playingVoiceMessageId,
                 onPlayVoice = { message ->
                     val blobId = message.mediaBlobId
