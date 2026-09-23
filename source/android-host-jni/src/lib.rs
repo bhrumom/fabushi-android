@@ -326,7 +326,7 @@ impl AndroidNativeRuntime {
         self.next_request_id = self.next_request_id.saturating_add(1);
         let host_request_id = format!("mcp-oauth-{:016}", self.next_request_id);
         let host_params = json!({
-            "provider": provider,
+            "provider": provider.clone(),
             "state": callback.state,
             "code": callback.code,
             "error": callback.error,
