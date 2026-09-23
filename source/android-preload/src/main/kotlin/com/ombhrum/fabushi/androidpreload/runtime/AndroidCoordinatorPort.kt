@@ -6,8 +6,7 @@ import org.json.JSONObject
 data class AndroidMcpOAuthCompletion(
     val provider: String,
     val state: String,
-    val code: String?,
-    val error: String?,
+    val outcome: String,
 )
 
 /**
