@@ -3,11 +3,10 @@ package com.ombhrum.fabushi.androidmain.coordinator
 import android.app.Application
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidCoordinatorPort
 import com.ombhrum.fabushi.core.MahayanaHost
+import org.json.JSONArray
 import org.json.JSONObject
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -53,30 +52,63 @@ class AndroidCoordinatorRuntime private constructor(application: Application) : 
     override fun featureExecute(params: JSONObject) = host.request("feature.execute", params)
     override fun featureInterrupt(params: JSONObject) = host.request("feature.interrupt", params)
 
-    override fun botList(requestId: String): JSONObject {
-        require(requestId.isNotBlank()) { "requestId is required" }
-        val completed = CompletableFuture<JSONObject>()
-        val subscription = addFeatureEventListener { event ->
-            if (event.optString("type") == "bot.listed") {
-                val eventRequestId = event.optString("requestId")
-                if (eventRequestId.isBlank() || eventRequestId == requestId) {
-                    completed.complete(JSONObject(event.toString()))
-                }
-            }
-        }
-        return try {
-            host.request(
-                "feature.execute",
-                JSONObject().put(
-                    "command",
+    override fun agentList(): JSONArray =
+        host.requestValue("listAgents") as? JSONArray ?: JSONArray()
+
+    override fun agentCreate(name: String, description: String): JSONObject =
+        host.request(
+            "createAgent",
+            JSONObject()
+                .put("name", name)
+                .put("description", description)
+                .put("origin", "user"),
+        )
+
+    override fun agentUpdate(id: String, name: String, description: String): JSONObject =
+        host.request(
+            "updateAgent",
+            JSONObject()
+                .put("id", id)
+                .put(
+                    "profile",
                     JSONObject()
-                        .put("type", "bot.list")
-                        .put("requestId", requestId),
+                        .put("name", name)
+                        .put("description", description),
                 ),
-            )
-            completed.get(8, TimeUnit.SECONDS)
-        } finally {
-            subscription.close()
+        )
+
+    override fun agentSetHidden(id: String, isHidden: Boolean): JSONObject =
+        host.request(
+            "setAgentHiddenFromSidebar",
+            JSONObject().put("id", id).put("isHidden", isHidden),
+        )
+
+    override fun agentSetUnread(id: String, isUnread: Boolean): JSONObject =
+        host.request(
+            "setAgentUnread",
+            JSONObject().put("id", id).put("isUnread", isUnread),
+        )
+
+    override fun agentDuplicate(id: String): JSONObject =
+        host.request("duplicateAgent", JSONObject().put("id", id))
+
+    override fun agentDelete(id: String): JSONObject =
+        host.request(
+            "deleteAgents",
+            JSONObject().put("ids", JSONArray().put(id)),
+        )
+
+    override fun agentSetPinned(ids: List<String>): List<String> {
+        val values = JSONArray()
+        ids.forEach(values::put)
+        val result = host.requestValue(
+            "setPinnedAgents",
+            JSONObject().put("ids", values),
+        ) as? JSONArray ?: JSONArray()
+        return buildList {
+            for (index in 0 until result.length()) {
+                result.optString(index).takeIf(String::isNotBlank)?.let(::add)
+            }
         }
     }
 
