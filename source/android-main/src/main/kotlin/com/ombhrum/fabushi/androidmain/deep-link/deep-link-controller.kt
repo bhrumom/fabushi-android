@@ -2,6 +2,7 @@ package com.ombhrum.fabushi.androidmain.deeplink
 
 import com.ombhrum.fabushi.androidpreload.deeplink.AndroidDeepLink
 import com.ombhrum.fabushi.androidpreload.deeplink.AuthCompletionStatus
+import com.ombhrum.fabushi.androidpreload.deeplink.AndroidDeepLinkSource
 import java.net.URI
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
@@ -28,6 +29,7 @@ internal object AndroidDeepLinkRouter {
         return when (host) {
             "auth" -> parseAuth(uri.path.orEmpty(), query)
             "mcp-oauth" -> parseMcpOAuth(uri.path.orEmpty(), query)
+            "app" -> parseInfo(uri.path.orEmpty(), query)
             "agent" -> parseAgent(uri.path.orEmpty(), query)
             in appSections -> parseSection(host, uri.path.orEmpty(), query)
             else -> null
@@ -75,6 +77,20 @@ internal object AndroidDeepLinkRouter {
             state = state,
             code = code,
             error = error,
+        )
+    }
+
+    private fun parseInfo(
+        path: String,
+        query: Map<String, List<String>>,
+    ): AndroidDeepLink? {
+        if (path != "/v1/info") return null
+        if (query.keys != setOf("topic")) return null
+        val topics = query["topic"].orEmpty()
+        if (topics.size != 1 || topics.single() != "deep-links") return null
+        return AndroidDeepLink.Info(
+            source = AndroidDeepLinkSource.PROTOCOL,
+            topic = "deep-links",
         )
     }
 
@@ -209,6 +225,7 @@ internal class AndroidDeepLinkController(
             "auth:${link.attemptId}:${link.status.name.lowercase()}"
         is AndroidDeepLink.McpOAuthCallback ->
             "mcp-oauth:${link.state}:${link.code ?: "error:" + link.error}"
+        is AndroidDeepLink.Info -> "info:${link.source.name.lowercase()}:${link.topic}"
         is AndroidDeepLink.Agent -> "agent:${link.agentId}"
         is AndroidDeepLink.AppSection -> "section:${link.section}"
     }
