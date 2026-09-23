@@ -22,6 +22,7 @@ class ParityCheckerTest(unittest.TestCase):
         self.assertEqual(0, result.summary["presentation_runtime_bypasses"])
         self.assertEqual(0, result.summary["presentation_host_bypasses"])
         self.assertEqual(0, result.summary["frontend_android_main_dependencies"])
+        self.assertEqual(0, result.summary["presentation_feature_receive_bypasses"])
         self.assertEqual(0, result.summary["native_host_bridge_missing"])
         self.assertTrue(result.summary["native_host_ci_wired"])
 
