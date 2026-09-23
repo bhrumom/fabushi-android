@@ -2242,9 +2242,10 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/recovered/features/conversation/workspace/composer_view.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Shipping ConversationDetail delegates composer UI to the exact composer_view.kt target. Android-adapted component owns reply/edit context, attachment menu, input/send, voice start/finish/cancel and long-press send-mode affordance while system pickers/Coordinator mutations remain injected. Python cutover regression and Compose instrumentation cover send/attachment behavior; exact-HEAD CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "provenance_review": "clean-room Android Compose/Kotlin implementation from documented behavior; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/recovered/features/conversation/workspace/conversation-outline-provider.ts",
@@ -2515,9 +2516,10 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/recovered/features/conversation/workspace/reply-preview_view.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Shipping composer uses the exact reply-preview_view.kt target for reply/edit context, bounded preview labels, media-aware placeholder and cancel behavior. JVM tests cover normalization/truncation/placeholders and the component is production-wired through ConversationComposer; exact-HEAD CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "provenance_review": "clean-room Android Compose/Kotlin implementation from documented behavior; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/recovered/features/conversation/workspace/reply-thread-controller.ts",
@@ -2814,9 +2816,10 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/recovered/features/conversation/workspace/transcript_view.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Shipping ConversationDetail delegates message rendering to the exact transcript_view.kt target. The component owns transcript filtering, swipe-to-reply, long-press actions, reply context, contact/location/poll/voice/audio/media rendering, reactions and delivery state. Python cutover regression and Compose instrumentation cover wiring/rendering; exact-HEAD CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "provenance_review": "clean-room Android Compose/Kotlin implementation from documented behavior; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/recovered/features/conversation/workspace/view.css",
@@ -26754,7 +26757,7 @@
     }
   ],
   "status_summary": {
-    "mapped": 1854,
-    "implemented": 192
+    "mapped": 1851,
+    "implemented": 195
   }
 }
