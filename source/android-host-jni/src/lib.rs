@@ -2,7 +2,13 @@ use fabushi_android_shared::{
     CoordinatorFailure, CoordinatorFailureCode, CoordinatorRequest, ResyncRequest,
     COORDINATOR_PROTOCOL_VERSION,
 };
-use fabushi_mahayana_agent_coordinator::{HostPort, MahayanaCoordinator};
+use fabushi_mahayana_agent_coordinator::{
+    oauth::{
+        mcp_oauth_callback_listener::OAuthCallback,
+        mcp_oauth_forwarder::OAuthForwarder,
+    },
+    HostPort, MahayanaCoordinator,
+};
 use fabushi_mahayana_host::android_json_runtime::{AndroidHostMode, AndroidJsonHost};
 use serde_json::{json, Value};
 use std::path::PathBuf;
@@ -40,6 +46,7 @@ impl HostPort for CoordinatorHost {
 
 pub struct AndroidNativeRuntime {
     coordinator: MahayanaCoordinator<CoordinatorHost>,
+    mcp_oauth: OAuthForwarder,
     next_request_id: u64,
 }
 
@@ -57,6 +64,7 @@ impl AndroidNativeRuntime {
                 generation,
                 512,
             ),
+            mcp_oauth: OAuthForwarder::default(),
             next_request_id: 0,
         }
     }
@@ -89,6 +97,18 @@ impl AndroidNativeRuntime {
             }
             "coordinator.publishEvent" => {
                 self.coordinator_publish_event(envelope.get("id").cloned(), &params)
+            }
+            "coordinator.mcpOAuth.register" => {
+                self.coordinator_mcp_oauth_register(envelope.get("id").cloned(), &params)
+            }
+            "coordinator.mcpOAuth.complete" => {
+                self.coordinator_mcp_oauth_complete(envelope.get("id").cloned(), &params)
+            }
+            "coordinator.mcpOAuth.status" => {
+                success_response(
+                    envelope.get("id").cloned(),
+                    json!({"pendingCount": self.mcp_oauth.pending_count()}),
+                )
             }
             "feature.interrupt" => {
                 self.coordinator_interrupt(envelope.get("id").cloned(), &params)
@@ -245,6 +265,72 @@ impl AndroidNativeRuntime {
                 "eventId": recorded.event_id,
             }),
         )
+    }
+
+    fn coordinator_mcp_oauth_register(&mut self, id: Option<Value>, params: &Value) -> String {
+        let Some(state) = params
+            .get("state")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+        else {
+            return error_response(id, "state is required".into());
+        };
+        let Some(provider) = params
+            .get("provider")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+        else {
+            return error_response(id, "provider is required".into());
+        };
+
+        match self.mcp_oauth.register(state, provider) {
+            Ok(()) => success_response(
+                id,
+                json!({
+                    "registered": true,
+                    "pendingCount": self.mcp_oauth.pending_count(),
+                }),
+            ),
+            Err(message) => error_response(id, message.into()),
+        }
+    }
+
+    fn coordinator_mcp_oauth_complete(&mut self, id: Option<Value>, params: &Value) -> String {
+        let Some(state) = params
+            .get("state")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+        else {
+            return error_response(id, "state is required".into());
+        };
+        let code = params
+            .get("code")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+            .map(str::to_string);
+        let error = params
+            .get("error")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+            .map(str::to_string);
+
+        match self.mcp_oauth.forward(OAuthCallback {
+            state: state.to_string(),
+            code,
+            error,
+        }) {
+            Ok((provider, callback)) => success_response(
+                id,
+                json!({
+                    "provider": provider,
+                    "state": callback.state,
+                    "code": callback.code,
+                    "error": callback.error,
+                    "pendingCount": self.mcp_oauth.pending_count(),
+                }),
+            ),
+            Err(message) => error_response(id, message.into()),
+        }
     }
 
     fn coordinator_interrupt(&mut self, id: Option<Value>, params: &Value) -> String {
