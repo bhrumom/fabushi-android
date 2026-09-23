@@ -728,4 +728,66 @@ mod tests {
         let mut host = AndroidJsonHost::new("/tmp/fabushi-host-prod", AndroidHostMode::Production);
         assert!(host.dispatch("arbitrary.renderer.method", &json!({})).is_err());
     }
+    #[test]
+    fn canonical_agent_roster_drives_direct_and_bot_surfaces() {
+        let root = std::env::temp_dir().join(format!(
+            "fabushi-json-host-roster-{}-{}",
+            std::process::id(),
+            now_ms()
+        ));
+        let mut host = AndroidJsonHost::new(&root, AndroidHostMode::Test);
+
+        let created = host.dispatch("createAgent", &json!({
+            "name":"First Agent",
+            "description":"one",
+            "origin":"user"
+        })).unwrap();
+        let id = created["agent"]["id"].as_str().unwrap().to_string();
+
+        host.dispatch("updateAgent", &json!({
+            "id":id,
+            "profile":{"name":"Renamed Agent","description":"two"}
+        })).unwrap();
+        host.dispatch("setAgentHiddenFromSidebar", &json!({"id":id,"isHidden":true})).unwrap();
+        host.dispatch("setAgentUnread", &json!({"id":id,"isUnread":true})).unwrap();
+        host.dispatch("setPinnedAgents", &json!({"ids":[id]})).unwrap();
+
+        let list = host.dispatch("listAgents", &json!({})).unwrap();
+        assert_eq!(list.as_array().unwrap().len(), 1);
+        assert_eq!(list[0]["name"], "Renamed Agent");
+        assert_eq!(list[0]["isHiddenFromSidebar"], true);
+        assert_eq!(list[0]["hasUnread"], true);
+        assert_eq!(list[0]["isPinned"], true);
+
+        host.dispatch("feature.execute", &json!({"command":{
+            "type":"bot.list",
+            "requestId":"bot-list-1"
+        }})).unwrap();
+        let mut listed = None;
+        for _ in 0..4 {
+            let event = host.dispatch("feature.receive", &json!({})).unwrap();
+            if event["type"] == "bot.listed" {
+                listed = Some(event);
+                break;
+            }
+        }
+        let listed = listed.expect("bot.listed event");
+        assert_eq!(listed["bots"][0]["id"], id);
+
+        let duplicate = host.dispatch("duplicateAgent", &json!({"id":id})).unwrap();
+        let duplicate_id = duplicate["agent"]["id"].as_str().unwrap().to_string();
+        assert_ne!(duplicate_id, id);
+        assert_eq!(host.dispatch("countAgents", &json!({})).unwrap(), 2);
+
+        host.dispatch("deleteAgents", &json!({"ids":[id]})).unwrap();
+        assert_eq!(host.dispatch("countAgents", &json!({})).unwrap(), 1);
+
+        drop(host);
+        let reopened = AndroidJsonHost::new(&root, AndroidHostMode::Test);
+        let reopened_list = reopened.agents.list();
+        assert_eq!(reopened_list.len(), 1);
+        assert_eq!(reopened_list[0].id, duplicate_id);
+        let _ = std::fs::remove_dir_all(root);
+    }
+
 }
