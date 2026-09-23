@@ -11,52 +11,6 @@ pub const DEFAULT_EVENT_REPLAY_LIMIT: usize = 512;
 pub trait HostPort {
     fn execute(&mut self, request: &CoordinatorRequest) -> Result<String, CoordinatorFailure>;
     fn cancel(&mut self, request_id: &str, reason: Option<&str>) -> Result<(), CoordinatorFailure>;
-    #[test]
-    fn deferred_operation_streams_cancels_and_settles_by_operation_id() {
-        let mut coordinator = MahayanaCoordinator::with_generation(FakeHost::default(), 7, 8);
-        assert_eq!(coordinator.generation(), 7);
-
-        let accepted = coordinator.request_deferred(request("request-1"));
-        assert!(accepted.result_json.is_ok());
-        assert_eq!(coordinator.active_request_count(), 1);
-        coordinator.bind_operation("request-1", "operation-1").unwrap();
-
-        let first = coordinator.record_operation_event(
-            "session-a",
-            "chat.delta",
-            r#"{"operationId":"operation-1","delta":"a"}"#,
-            Some("operation-1"),
-            false,
-        );
-        assert_eq!(first.sequence, 1);
-        assert_eq!(coordinator.active_request_count(), 1);
-
-        let cancelled = coordinator.cancel_operation("operation-1", Some("user"));
-        assert_eq!(
-            cancelled.result_json.unwrap_err().code,
-            CoordinatorFailureCode::Cancelled
-        );
-        assert_eq!(coordinator.active_request_count(), 0);
-
-        coordinator.request_deferred(request("request-2"));
-        coordinator.bind_operation("request-2", "operation-2").unwrap();
-        coordinator.record_operation_event(
-            "session-a",
-            "operation.completed",
-            r#"{"operationId":"operation-2"}"#,
-            Some("operation-2"),
-            true,
-        );
-        assert_eq!(coordinator.active_request_count(), 0);
-        assert_eq!(coordinator.latest_sequence(), 2);
-
-        let replay = coordinator.resync(ResyncRequest {
-            generation: 7,
-            after_sequence: 0,
-        }).unwrap();
-        assert_eq!(replay.events.len(), 2);
-    }
-
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -422,6 +376,52 @@ mod tests {
         assert!(coordinator.resync(ResyncRequest { generation: 1, after_sequence: 0 }).is_err());
         let fresh = coordinator.resync(ResyncRequest { generation: 2, after_sequence: 0 }).unwrap();
         assert!(fresh.events.is_empty());
+    }
+
+    #[test]
+    fn deferred_operation_streams_cancels_and_settles_by_operation_id() {
+        let mut coordinator = MahayanaCoordinator::with_generation(FakeHost::default(), 7, 8);
+        assert_eq!(coordinator.generation(), 7);
+
+        let accepted = coordinator.request_deferred(request("request-1"));
+        assert!(accepted.result_json.is_ok());
+        assert_eq!(coordinator.active_request_count(), 1);
+        coordinator.bind_operation("request-1", "operation-1").unwrap();
+
+        let first = coordinator.record_operation_event(
+            "session-a",
+            "chat.delta",
+            r#"{"operationId":"operation-1","delta":"a"}"#,
+            Some("operation-1"),
+            false,
+        );
+        assert_eq!(first.sequence, 1);
+        assert_eq!(coordinator.active_request_count(), 1);
+
+        let cancelled = coordinator.cancel_operation("operation-1", Some("user"));
+        assert_eq!(
+            cancelled.result_json.unwrap_err().code,
+            CoordinatorFailureCode::Cancelled
+        );
+        assert_eq!(coordinator.active_request_count(), 0);
+
+        coordinator.request_deferred(request("request-2"));
+        coordinator.bind_operation("request-2", "operation-2").unwrap();
+        coordinator.record_operation_event(
+            "session-a",
+            "operation.completed",
+            r#"{"operationId":"operation-2"}"#,
+            Some("operation-2"),
+            true,
+        );
+        assert_eq!(coordinator.active_request_count(), 0);
+        assert_eq!(coordinator.latest_sequence(), 2);
+
+        let replay = coordinator.resync(ResyncRequest {
+            generation: 7,
+            after_sequence: 0,
+        }).unwrap();
+        assert_eq!(replay.events.len(), 2);
     }
 
     #[test]
