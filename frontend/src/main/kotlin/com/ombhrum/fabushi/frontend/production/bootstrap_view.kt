@@ -1,6 +1,5 @@
 package com.ombhrum.fabushi
 
-import android.app.Application
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import com.ombhrum.fabushi.androidpreload.deeplink.AndroidDeepLink
@@ -16,14 +15,12 @@ import kotlinx.coroutines.flow.SharedFlow
 @Composable
 internal fun FabushiApplicationRoot(
     activity: ComponentActivity,
-    application: Application,
     deepLinks: SharedFlow<AndroidDeepLink>,
     updateModel: AndroidUpdateViewModel,
     runtimePort: AndroidPresentationRuntimePort,
 ) {
     ProductionRenderer(
         activity = activity,
-        application = application,
         deepLinks = deepLinks,
         updateModel = updateModel,
         runtimePort = runtimePort,
