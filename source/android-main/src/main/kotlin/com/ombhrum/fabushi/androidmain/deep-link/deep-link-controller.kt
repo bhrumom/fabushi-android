@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets
 internal object AndroidDeepLinkRouter {
     private const val MAX_LENGTH = 2_048
     private val attemptIdPattern = Regex("^[A-Za-z0-9_-]{8,96}$")
+    private val mcpOAuthStatePattern = Regex("^[A-Za-z0-9._~-]{16,512}$")
     private val appSections = setOf("settings", "feedback", "about", "widgets", "onboarding")
 
     fun parse(raw: String): AndroidDeepLink? {
@@ -26,6 +27,7 @@ internal object AndroidDeepLinkRouter {
 
         return when (host) {
             "auth" -> parseAuth(uri.path.orEmpty(), query)
+            "mcp-oauth" -> parseMcpOAuth(uri.path.orEmpty(), query)
             "agent" -> parseAgent(uri.path.orEmpty(), query)
             in appSections -> parseSection(host, uri.path.orEmpty(), query)
             else -> null
@@ -50,6 +52,30 @@ internal object AndroidDeepLinkRouter {
             else -> return null
         }
         return AndroidDeepLink.AuthCompletion(attemptId, status)
+    }
+
+    private fun parseMcpOAuth(
+        path: String,
+        query: Map<String, List<String>>,
+    ): AndroidDeepLink? {
+        if (path != "/callback") return null
+        if (query.keys.any { it !in setOf("state", "code", "error") }) return null
+        val states = query["state"].orEmpty()
+        val codes = query["code"].orEmpty()
+        val errors = query["error"].orEmpty()
+        if (states.size != 1 || codes.size > 1 || errors.size > 1) return null
+        if ((codes.isEmpty()) == (errors.isEmpty())) return null
+
+        val state = states.single()
+        if (!mcpOAuthStatePattern.matches(state)) return null
+        val code = codes.singleOrNull()?.takeIf { it.isNotBlank() && it.length <= 4_096 }
+        val error = errors.singleOrNull()?.takeIf { it.isNotBlank() && it.length <= 1_024 }
+        if ((code == null) == (error == null)) return null
+        return AndroidDeepLink.McpOAuthCallback(
+            state = state,
+            code = code,
+            error = error,
+        )
     }
 
     private fun parseAgent(
@@ -181,6 +207,8 @@ internal class AndroidDeepLinkController(
     private fun canonicalKey(link: AndroidDeepLink): String = when (link) {
         is AndroidDeepLink.AuthCompletion ->
             "auth:${link.attemptId}:${link.status.name.lowercase()}"
+        is AndroidDeepLink.McpOAuthCallback ->
+            "mcp-oauth:${link.state}:${link.code ?: "error:" + link.error}"
         is AndroidDeepLink.Agent -> "agent:${link.agentId}"
         is AndroidDeepLink.AppSection -> "section:${link.section}"
     }
