@@ -319,9 +319,10 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/production/bootstrap_view.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Shipping MainActivity calls FabushiApplicationRoot defined at the exact bootstrap target; bootstrap only wires Android lifecycle inputs into ProductionRenderer. Exact-HEAD Android compile/instrumentation CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "provenance_review": "Fabushi-authored Android Compose implementation; behavior mapped clean-room from frozen responsibilities, no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/production/command-palette-link-provider.ts",
@@ -515,9 +516,10 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/production/ProductionRenderer_view.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Shipping renderer body moved to exact ProductionRenderer_view.kt target; old aggregate FabushiApplicationRoot.kt removed and checker forbids its return. Exact-HEAD Android compile/UI CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "provenance_review": "Fabushi-authored Android Compose implementation; behavior mapped clean-room from frozen responsibilities, no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/production/reaction-root.ts",
@@ -26744,7 +26746,7 @@
     }
   ],
   "status_summary": {
-    "mapped": 1864,
-    "implemented": 182
+    "mapped": 1862,
+    "implemented": 184
   }
 }
