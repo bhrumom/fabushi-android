@@ -1,10 +1,7 @@
 package com.ombhrum.fabushi
 
-import android.app.Application
-import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
-import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -38,7 +35,6 @@ private enum class RendererRoute { GROK_HOME, MESSAGING }
 @Composable
 internal fun FabushiApplicationRoot(
     activity: ComponentActivity,
-    application: Application,
     deepLinks: SharedFlow<AndroidDeepLink>,
     updateModel: AndroidUpdateViewModel,
     runtimePort: AndroidPresentationRuntimePort,
@@ -80,11 +76,8 @@ internal fun FabushiApplicationRoot(
                 }
                 LaunchedEffect(state.browserLaunchNonce, state.browserLoginUrl) {
                     val loginUrl = state.browserLoginUrl
-                    if (state.browserLaunchNonce > 0 && !loginUrl.isNullOrBlank() && !loginUrl.startsWith("about:blank")) {
-                        CustomTabsIntent.Builder()
-                            .setShowTitle(true)
-                            .build()
-                            .launchUrl(activity, Uri.parse(loginUrl))
+                    if (state.browserLaunchNonce > 0 && !loginUrl.isNullOrBlank()) {
+                        runtimePort.launchExternalAuth(loginUrl)
                     }
                 }
 
