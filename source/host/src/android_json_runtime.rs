@@ -542,7 +542,7 @@ impl AndroidJsonHost {
                                 "id":format!("assistant:{operation_id}"),
                                 "kind":"message",
                                 "role":"assistant",
-                                "content":final_text,
+                                "content":final_text.clone(),
                                 "operationId":operation_id,
                                 "timestampMs":now_ms(),
                             }))
