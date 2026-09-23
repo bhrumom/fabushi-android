@@ -21,13 +21,14 @@ import kotlinx.coroutines.flow.MutableSharedFlow
  */
 class MainActivity : ComponentActivity() {
     private val deepLinks = MutableSharedFlow<AndroidDeepLink>(replay = 1, extraBufferCapacity = 31)
+    private lateinit var processRuntime: FabushiProcessRuntime
     private val deepLinkController = AndroidDeepLinkController(
-        dispatch = { deepLinks.tryEmit(it) },
+        dispatch = ::dispatchDeepLink,
     )
     private val updateModel: AndroidUpdateViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val processRuntime = (application as FabushiApplication).ensureProcessRuntime(intent)
+        processRuntime = (application as FabushiApplication).ensureProcessRuntime(intent)
         enableEdgeToEdge()
         setContent {
             FabushiApplicationRoot(
@@ -73,6 +74,12 @@ class MainActivity : ComponentActivity() {
 
     internal fun appAgentSurfaceForTesting(): FabushiAppAgentSurface =
         (application as FabushiApplication).requireProcessRuntime().appAgentSurface
+
+    private fun dispatchDeepLink(link: AndroidDeepLink) {
+        if (!processRuntime.handlePlatformDeepLink(link)) {
+            deepLinks.tryEmit(link)
+        }
+    }
 
     private fun ensureNotificationPermission() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
