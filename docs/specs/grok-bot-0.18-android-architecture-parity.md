@@ -2,14 +2,16 @@
 
 Status: active  
 Owner: Fabushi Android  
-Last updated: 2026-09-22  
+Last updated: 2026-09-23  
 Related issue/task/PR: PR #3; user-requested Android architecture parity migration
 
 ## 1. Context / problem
 
 Fabushi Android is a native Android product currently rooted under `mobile/android`, with Jetpack Compose UI, Android ViewModels, Android-specific platform integrations, and a JNI-backed `MahayanaHost`. Important runtime and presentation responsibilities are currently mixed across large files such as `MainActivity.kt`, `GrokMobileShellAndroid.kt`, `FabushiScreen.kt`, `MobileBotViewModel.kt`, `MessagingViewModel.kt`, `MarketplaceViewModel.kt`, `FabushiRemoteDeviceGateway.kt`, `FabushiAppAgentSurface.kt`, and `core/MahayanaHost.kt`.
 
-The target is not a Grok-inspired UI and not a thin Android client around shared cross-platform code. The target is a **standalone Android implementation** that follows the Grok Bot 0.18 reconstructed architecture module-by-module and behavior-by-behavior, while selecting the best implementation language and Android primitive for each module.
+The target is not a Grok-inspired UI and not a thin Android client around shared cross-platform code. The target is a **standalone Android implementation** whose architecture, module boundaries, contracts, lifecycle behavior, and observable product effects correspond to Grok Bot 0.18 while using the best implementation language and Android primitive for each responsibility.
+
+The canonical migration rule is **per-source-file audit/disposition + per-product-responsibility Android implementation**. Every pinned Grok source file must be accounted for in the ledger, but Fabushi Android does not need one physical target file for every Grok file. One reference file may split across multiple Kotlin/Rust modules; multiple reference files may converge into one Android-native implementation when that does not collapse a Grok architectural boundary or product responsibility.
 
 Reference baselines:
 
@@ -91,17 +93,17 @@ exec-daemon/   exec-daemon/
 
 The migration must:
 
-1. enumerate every relevant Grok file under `source/**` and `frontend/**`;
-2. map it to an Android-local counterpart;
-3. preserve equivalent module responsibility and contract behavior;
-4. make the physical repository folder structure correspond to Grok's module tree;
+1. audit every relevant Grok file under `source/**` and `frontend/**`;
+2. record each source responsibility, Android-visible effect, platform delta, target path(s)/existing equivalent, or reviewed platform disposition;
+3. implement every product-relevant responsibility with equivalent contract behavior and Android-native effect;
+4. preserve Grok's major domain/boundary ownership in the physical repository without requiring one-to-one file granularity;
 5. preserve Coordinator / Host / Runner / bridge separation;
 6. make renderer code consume coordinator projections rather than own agent orchestration;
 7. reproduce supported Grok interactions and runtime effects on Android;
 8. remove superseded legacy Android architecture after cutover;
 9. prove behavior on an exact-HEAD packaged Android build, including process death/recreation.
 
-The final product must behave as the Android edition of the same architecture, not as a separate mobile shell connected to unrelated runtime plumbing.
+The final product must behave as the **Android edition of Grok Bot**, not as a separate mobile shell connected to unrelated runtime plumbing. Except where Android lifecycle/security rules genuinely prohibit a desktop mechanism, the user must receive the same core Agent capability and lifecycle effect through an Android-native implementation.
 
 ## 4. Non-goals / out of scope
 
@@ -110,7 +112,9 @@ The final product must behave as the Android edition of the same architecture, n
 - Do not preserve a cross-platform shared-source architecture for its own sake.
 - Do not depend on another Fabushi product repository for core Android runtime implementation.
 - Do not retain the current `mobile/android` layout as the final architecture merely because it exists today.
-- Do not flatten Grok's modules into a small number of Android mega-files.
+- Do not require one Android target file for every Grok source file merely to match file counts.
+- Do not create empty/no-op Kotlin/Rust counterparts solely to satisfy a source-tree mapping.
+- Do not flatten Grok architectural boundaries or product responsibilities into unrelated Android mega-files.
 - Do not preserve desktop-only system concepts literally when Android has no equivalent; preserve their responsibility/behavior through an Android-native counterpart.
 - Do not require pixel-identical desktop geometry on a phone viewport; interaction, information hierarchy, visual language, animation/state intent, and functional effect must correspond while remaining responsive.
 - Do not use a primary WebView shell as a shortcut for native Android UI parity.
@@ -131,20 +135,23 @@ Each row must contain:
 - Grok path;
 - Grok responsibility;
 - relevant evidence/contract anchor;
-- Android target path;
+- Android-visible effect;
+- platform delta;
+- Android target path(s), existing equivalent, or reviewed disposition;
 - target language/runtime;
 - parity class: `direct-equivalent`, `android-adapted`, or `not-applicable`;
+- replacement behavior when the source mechanism itself is not applicable;
 - implementation status;
 - test/evidence;
 - legacy Android path replaced/removed.
 
 There is no `shared-core` disposition. Android implementation belongs to this repository.
 
-No Grok module may silently disappear. `not-applicable` requires an Android-specific technical reason and reviewer acceptance.
+No Grok module may silently disappear. `not-applicable` applies to a source implementation mechanism only when there is a real Android-specific technical reason and reviewer acceptance. It may not be used to remove a user-facing/core Agent effect that can be delivered through an Android-native or remote adapter; when the effect still matters, replacement behavior and evidence are mandatory.
 
-### R2 — Physical directory structure parity
+### R2 — Major domain / boundary structure parity
 
-The final repository must mirror Grok's major source organization, with only explicit platform-name substitutions.
+The final repository must preserve Grok's major source organization and ownership boundaries, with explicit Android platform-name substitutions. This is a domain/boundary requirement, not a requirement for identical nested filenames or equal file counts.
 
 Required top-level correspondence:
 
@@ -166,7 +173,7 @@ Required top-level correspondence:
 | `manifests/` | `manifests/` |
 | `docs/` | `docs/` |
 
-The same principle applies recursively. Example:
+The same ownership principle applies recursively, but Android-native splitting/merging of files is allowed when the ledger records the mapping and no reference boundary/responsibility is collapsed. Example:
 
 ```
 Grok:
@@ -481,7 +488,7 @@ A package may use Kotlin or Rust and may be Android-adapted, but it may not be s
 
 ### R12 — Feature-effect parity
 
-For features supported on Android, parity is measured by observable effect and state behavior, not file naming alone.
+For product-relevant features, parity is measured by observable effect and state behavior, not file naming or desktop implementation mechanics.
 
 Required dimensions:
 
@@ -504,6 +511,23 @@ Required dimensions:
 - notifications;
 - background/foreground;
 - process recreation.
+
+A representative Android Agent turn must demonstrate the same core effect chain:
+
+```text
+send
+ -> accepted
+ -> preparing/thinking
+ -> Host inference
+ -> tool/MCP/Runner request when needed
+ -> live tool state
+ -> result
+ -> continued inference
+ -> incremental transcript streaming
+ -> completed/failed
+```
+
+If the Activity is recreated, the app is backgrounded, or Android kills and later recreates the process while a durable run is still owned by a surviving server/remote/runtime boundary, Fabushi Android must reattach/resync to that **same run** without silently losing it or starting a duplicate. When Android legitimately terminates local-only execution that cannot survive process death, the recovery/terminal behavior must be deterministic and explicitly mapped to the closest Grok product effect.
 
 ### R13 — One Android-local canonical truth
 
@@ -825,13 +849,13 @@ Every path must end in a deterministic recoverable or terminal state.
 
 1. pin Grok and Android SHAs;
 2. generate complete Grok file tree for `source/**` and `frontend/**`;
-3. generate the Android target path for every Grok file;
-4. create the physical root scaffolding matching Section 7;
+3. record target path(s), existing equivalent, or reviewed platform disposition for every Grok file; do not require one-to-one physical files;
+4. create the root domain/boundary scaffolding matching Section 7;
 5. record current Android files and planned destination/removal;
 6. record provenance/rights classification;
 7. define critical behavioral fixtures.
 
-Exit gate: 100% file-level mapping and zero unexplained folder divergence.\n\nCurrent evidence: file-level mapping is complete (2,046/2,046) and major target roots/scopes are scaffolded; implementation remains tracked independently per row as `mapped`, `implemented`, `verified`, or `blocked`.
+Exit gate: 100% source-file audit/disposition, zero unclassified responsibilities, and zero unexplained domain/boundary divergence. Equal source/target file counts are not required.\n\nCurrent evidence: source-file audit coverage is complete (2,046/2,046) and major target roots/scopes are scaffolded; implementation remains tracked independently per row as `mapped`, `implemented`, `verified`, or `blocked`.
 
 ### Phase 1 — Local contracts/packages
 
@@ -887,13 +911,15 @@ Run compile, unit, contract, architecture, instrumentation, process-death, packa
 
 ### 12.1 Folder parity checker
 
-CI must compare the pinned Grok module/file inventory to the parity ledger and Android target tree.
+CI must compare the pinned Grok module/file inventory to the parity ledger and Android target architecture.
 
 Fail if:
 
 - a Grok file/module is unclassified;
-- a required counterpart path is missing;
-- an Android target drifts from the agreed directory mapping without ledger rationale;
+- a required product responsibility lacks a real target implementation/equivalent;
+- a `not-applicable` row lacks Android platform rationale or required replacement behavior;
+- target ownership/domain drifts from the agreed architecture without ledger rationale;
+- a checker incorrectly requires equal source/target file counts;
 - an old monolithic path regains responsibilities already cut over.
 
 ### 12.2 Architecture checker
@@ -965,7 +991,7 @@ The packaged acceptance workflow must preserve the exact source SHA, APK checksu
 ## 13. Acceptance criteria / Definition of Done
 
 - **AC-1**: 100% of pinned Grok `source/**` and `frontend/**` files exist in the parity ledger.
-- **AC-2**: Every relevant Grok module has an Android-local counterpart or reviewed N/A.
+- **AC-2**: Every Grok source item has a reviewed disposition, and every product-relevant Grok responsibility has an Android-local production implementation or evidenced equivalent. Reviewed N/A applies only to genuinely inapplicable source mechanisms and cannot silently remove a required product effect.
 - **AC-3**: The repository root physically follows the Grok-corresponding `frontend/source/tests/scripts/manifests/docs` structure.
 - **AC-4**: `source/electron-main` responsibilities correspond to `source/android-main` submodules.
 - **AC-5**: `source/electron-preload` responsibilities correspond to `source/android-preload`.
@@ -987,6 +1013,7 @@ The packaged acceptance workflow must preserve the exact source SHA, APK checksu
 - **AC-21**: Exact-HEAD packaged Android acceptance passes on fresh install and upgrade.
 - **AC-22**: Rights/provenance review has no release-blocking unresolved item.
 - **AC-23**: Final compliance table records every requirement/AC as `passed`, `blocked`, or `not-applicable`; mandatory completion requires all mandatory items `passed`.
+- **AC-24 — Grok Bot Android effect**: Exact-HEAD packaged acceptance proves Fabushi Android delivers the same core Grok Bot Agent effect through native Android UI/lifecycle adapters: accepted → preparing/thinking → real tool/MCP/Runner activity when invoked → live tool state → continued inference → streaming transcript → terminal state, with Activity recreation/background/process-death recovery resynchronizing the same durable run where that run survives outside the UI process and with no silent task loss or duplicate execution.
 
 ## 14. Release / migration / rollback
 
@@ -1098,5 +1125,6 @@ Fabushi Android discovery baseline:
 | AC-21 | pending | packaged acceptance pending |
 | AC-22 | blocked | Pinned reconstruction explicitly disclaims an upstream source-code license; release cannot mark provenance clearance passed without independent authorization/review. See `docs/reviews/grok-bot-0.18-rights-provenance-review.md`. |
 | AC-23 | pending | final compliance review pending |
+| AC-24 | pending | exact-HEAD packaged Android evidence has not yet proven the complete Grok Bot Android effect and same-run recovery semantics |
 
 Allowed final statuses: `passed`, `blocked`, `not-applicable`.
