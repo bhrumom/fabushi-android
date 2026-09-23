@@ -55,6 +55,14 @@ impl<P: TurnStreamProvider> ProductionTurnAgentOwner<P> {
         &mut self,
         input: ProductionTurnInput,
     ) -> Result<ProductionTurnResult, ProviderFailure> {
+        self.run_with_event_sink(input, &mut |_| Ok(()))
+    }
+
+    pub fn run_with_event_sink(
+        &mut self,
+        input: ProductionTurnInput,
+        sink: &mut dyn FnMut(ProductionTurnEvent) -> Result<(), String>,
+    ) -> Result<ProductionTurnResult, ProviderFailure> {
         if !self.active.insert(input.operation_id.clone()) {
             return Err(ProviderFailure::new("operation is already active"));
         }
@@ -67,31 +75,36 @@ impl<P: TurnStreamProvider> ProductionTurnAgentOwner<P> {
             resume_checkpoint_available: input.resume_checkpoint_available,
         };
 
-        let result = self.stream.run(&stream_input);
+        let mut emitted_retries = Vec::new();
+        let mut emitted_chunks = Vec::new();
+        let result = self.stream.run_with_observers(
+            &stream_input,
+            &mut |retry| {
+                emitted_retries.push(retry.clone());
+            },
+            &mut |chunk| {
+                emitted_chunks.push(chunk.to_string());
+                sink(ProductionTurnEvent::Delta(chunk.to_string()))
+            },
+        );
         self.active.remove(&input.operation_id);
+
+        for retry in &emitted_retries {
+            sink(ProductionTurnEvent::Retrying {
+                attempt: retry.attempt,
+                delay_ms: retry.delay_ms,
+                reason: retry.reason.clone(),
+            })
+            .map_err(ProviderFailure::new)?;
+        }
 
         match result {
             Ok(result) => {
-                let mut events = result
-                    .retries
-                    .iter()
-                    .map(|retry| ProductionTurnEvent::Retrying {
-                        attempt: retry.attempt,
-                        delay_ms: retry.delay_ms,
-                        reason: retry.reason.clone(),
-                    })
-                    .collect::<Vec<_>>();
-                events.extend(
-                    result
-                        .chunks
-                        .iter()
-                        .cloned()
-                        .map(ProductionTurnEvent::Delta),
-                );
-                events.push(ProductionTurnEvent::Completed {
+                let completed = ProductionTurnEvent::Completed {
                     finish_reason: result.finish_reason.clone(),
                     attempts: result.attempts,
-                });
+                };
+                sink(completed.clone()).map_err(ProviderFailure::new)?;
 
                 let checkpoint = prepare_checkpoint(
                     &input.operation_id,
@@ -106,17 +119,37 @@ impl<P: TurnStreamProvider> ProductionTurnAgentOwner<P> {
                 )
                 .map_err(ProviderFailure::new)?;
 
+                let mut events = emitted_retries
+                    .iter()
+                    .map(|retry| ProductionTurnEvent::Retrying {
+                        attempt: retry.attempt,
+                        delay_ms: retry.delay_ms,
+                        reason: retry.reason.clone(),
+                    })
+                    .collect::<Vec<_>>();
+                events.extend(
+                    emitted_chunks
+                        .iter()
+                        .cloned()
+                        .map(ProductionTurnEvent::Delta),
+                );
+                events.push(completed);
+
                 Ok(ProductionTurnResult {
                     events,
                     settlement: Some(settlement),
                 })
             }
-            Err(error) => Ok(ProductionTurnResult {
-                events: vec![ProductionTurnEvent::Failed {
+            Err(error) => {
+                let failed = ProductionTurnEvent::Failed {
                     message: error.message.clone(),
-                }],
-                settlement: None,
-            }),
+                };
+                sink(failed.clone()).map_err(ProviderFailure::new)?;
+                Ok(ProductionTurnResult {
+                    events: vec![failed],
+                    settlement: None,
+                })
+            }
         }
     }
 
