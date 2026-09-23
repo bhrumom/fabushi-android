@@ -5534,9 +5534,10 @@
       "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/notifications/agents-control-feed.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
+      "implementation_status": "implemented",
+      "test_evidence": "Android exact-target agents-control-feed.kt is production-wired from process-scoped Coordinator feature events into OS notification and badge projections; parser fails closed on malformed agent rows. AndroidNotificationsTest plus exact-HEAD Gradle compile/unit CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters",
+      "provenance_review": "clean-room Kotlin platform adaptation from frozen behavior responsibilities; no reconstructed source copied"
     },
     {
       "grok_path": "source/electron-main/notifications/dock-badge-manager.ts",
@@ -5547,9 +5548,11 @@
       "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/notifications/dock-badge-manager.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
+      "implementation_status": "implemented",
+      "test_evidence": "Android exact-target dock-badge-manager.kt keeps roster state, rejects stale same-epoch sequence regressions, preserves newer rows across older roster snapshots, and dedupes unchanged projections. AndroidNotificationsTest covers stale-generation and projection behavior; exact-HEAD Gradle CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters",
+      "provenance_review": "clean-room Kotlin platform adaptation from frozen behavior responsibilities; no reconstructed source copied",
+      "android_adaptation_rationale": "Android has no standard Electron/macOS dock badge setter. The adapter preserves unread/stale-row semantics and projects count through NotificationManager notification-number/channel badge behavior supported by Android launchers."
     },
     {
       "grok_path": "source/electron-main/notifications/dock-badge.ts",
@@ -5560,9 +5563,11 @@
       "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/notifications/dock-badge.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
+      "implementation_status": "implemented",
+      "test_evidence": "Android exact-target dock-badge.kt computes unread totals while excluding hidden/read agents; Android adaptation projects count through native NotificationManager notification-number/channel badge semantics because Android has no standard Electron dock badge API. AndroidNotificationsTest covers count rules; exact-HEAD Gradle CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters",
+      "provenance_review": "clean-room Kotlin platform adaptation from frozen behavior responsibilities; no reconstructed source copied",
+      "android_adaptation_rationale": "Android has no standard Electron/macOS dock badge setter. The adapter preserves unread/stale-row semantics and projects count through NotificationManager notification-number/channel badge behavior supported by Android launchers."
     },
     {
       "grok_path": "source/electron-main/notifications/os-notification-manager.ts",
@@ -5573,9 +5578,10 @@
       "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/notifications/os-notification-manager.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
+      "implementation_status": "implemented",
+      "test_evidence": "Android exact-target os-notification-manager.kt is process-scoped and production-wired to Coordinator agent events; it implements baseline/delta replay, foreground/hidden/permission gating, message-id dedupe, throttle, high/normal channels, click-to-agent deep link, reset/logout cleanup, and native notification badge count. AndroidNotificationsTest plus emulator acceptance required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters",
+      "provenance_review": "clean-room Kotlin platform adaptation from frozen behavior responsibilities; no reconstructed source copied"
     },
     {
       "grok_path": "source/electron-main/onepassword/onepassword-cli-dev-controls.ts",
@@ -26729,7 +26735,7 @@
     }
   ],
   "status_summary": {
-    "mapped": 1877,
-    "implemented": 169
+    "mapped": 1873,
+    "implemented": 173
   }
 }
