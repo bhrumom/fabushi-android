@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import java.lang.ref.WeakReference
 import com.ombhrum.fabushi.androidmain.coordinator.AndroidCoordinatorPorts
 import com.ombhrum.fabushi.androidmain.notifications.AndroidNotificationRuntime
+import com.ombhrum.fabushi.androidmain.webauthn.AndroidCredentialManagerWebAuthn
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidCoordinatorBridge
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidPresentationRuntimePort
 
@@ -58,6 +59,10 @@ internal class FabushiProcessRuntime(
         context = application,
         isAppForeground = { appForeground },
     )
+    private val webAuthnRuntime = AndroidCredentialManagerWebAuthn(
+        application = application,
+        coordinator = coordinator,
+    )
     private val notificationEventSubscription =
         coordinator.addFeatureEventListener(notificationRuntime.feed::handleFeatureEvent)
     private val remoteDeviceGateway = FabushiRemoteDeviceGateway(
@@ -79,11 +84,13 @@ internal class FabushiProcessRuntime(
 
     override fun attachInteractiveActivity(activity: ComponentActivity) {
         interactiveActivityRef = WeakReference(activity)
+        webAuthnRuntime.attach(activity)
     }
 
     override fun detachInteractiveActivity(activity: ComponentActivity) {
         if (interactiveActivityRef?.get() === activity) {
             interactiveActivityRef = null
+            webAuthnRuntime.detach(activity)
         }
     }
 
@@ -92,6 +99,7 @@ internal class FabushiProcessRuntime(
 
     override fun close() {
         interactiveActivityRef = null
+        webAuthnRuntime.close()
         notificationEventSubscription.close()
         notificationRuntime.reset()
         remoteDeviceGateway.close()
