@@ -19,6 +19,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct CiAccountSessionIdentity {
+    access_token: String,
     session_id: String,
     device_id: String,
     expires_at_epoch_seconds: u64,
@@ -81,6 +82,7 @@ fn parse_ci_account_session_document(
     }
 
     Some(CiAccountSessionIdentity {
+        access_token: access_token.to_string(),
         session_id: session_id.to_string(),
         device_id: device_id.to_string(),
         expires_at_epoch_seconds: expiry,
@@ -186,19 +188,7 @@ impl AndroidJsonHost {
                 }
             })),
             "feature.auth.status" => Ok(self.auth_status()),
-            "feature.auth.deviceAgentSession" => Ok(json!({
-                "loggedIn": self.logged_in,
-                "session": if self.logged_in {
-                    Value::String(
-                        self.ci_session_identity
-                            .as_ref()
-                            .map(|identity| identity.session_id.clone())
-                            .unwrap_or_else(|| "android-device-session".into())
-                    )
-                } else {
-                    Value::Null
-                }
-            })),
+            "feature.auth.deviceAgentSession" => Ok(self.device_agent_session()),
             "feature.auth.providers" => Ok(json!([
                 {"id":"google","displayName":"Google"},
                 {"id":"github","displayName":"GitHub"}
@@ -428,6 +418,27 @@ impl AndroidJsonHost {
         } else {
             json!({"loggedIn":false,"user":Value::Null})
         }
+    }
+
+    fn device_agent_session(&self) -> Value {
+        if !self.logged_in {
+            return json!({"loggedIn": false});
+        }
+        let Some(identity) = self.ci_session_identity.as_ref() else {
+            return json!({
+                "loggedIn": true,
+                "available": false,
+                "reason": "device_agent_session_unavailable"
+            });
+        };
+        json!({
+            "loggedIn": true,
+            "available": true,
+            "accessToken": identity.access_token,
+            "deviceId": identity.device_id,
+            "sessionId": identity.session_id,
+            "accessTokenExpiresAt": identity.expires_at_epoch_seconds,
+        })
     }
 
     fn next_attempt_id(&mut self, prefix: &str) -> String {
@@ -1273,6 +1284,7 @@ mod tests {
             "accessTokenExpiresAt":now + 3_600,
         });
         let parsed = parse_ci_account_session_document(&valid, now).unwrap();
+        assert_eq!(parsed.access_token, "abcdefghijklmnopqrstuvwxyz0123456789");
         assert_eq!(parsed.session_id, "ci-runner:12345:7");
         assert_eq!(parsed.device_id, "gha-12345-7-interactive");
 
@@ -1288,5 +1300,44 @@ mod tests {
         expired["accessTokenExpiresAt"] = json!(now + 10);
         assert!(parse_ci_account_session_document(&expired, now).is_none());
     }
+
+    #[test]
+    fn device_agent_session_exposes_only_the_validated_short_lived_ci_session() {
+        let now = 1_000_000_u64;
+        let identity = parse_ci_account_session_document(
+            &json!({
+                "accessToken":"abcdefghijklmnopqrstuvwxyz0123456789",
+                "deviceId":"gha-12345-7-interactive",
+                "sessionId":"ci-runner:12345:7",
+                "tokenType":"Bearer",
+                "provider":"github-actions",
+                "ciRunner":true,
+                "accessTokenExpiresAt":now + 3_600,
+            }),
+            now,
+        )
+        .unwrap();
+        let root = std::env::temp_dir().join(format!(
+            "fabushi-device-session-{}-{}",
+            std::process::id(),
+            now_ms()
+        ));
+        let mut host = AndroidJsonHost::new(&root, AndroidHostMode::Test);
+        host.logged_in = true;
+        host.ci_session_identity = Some(identity);
+        let session = host.device_agent_session();
+        assert_eq!(session["loggedIn"], true);
+        assert_eq!(session["available"], true);
+        assert_eq!(session["deviceId"], "gha-12345-7-interactive");
+        assert_eq!(session["sessionId"], "ci-runner:12345:7");
+        assert_eq!(
+            session["accessToken"],
+            "abcdefghijklmnopqrstuvwxyz0123456789"
+        );
+        host.logged_in = false;
+        assert_eq!(host.device_agent_session(), json!({"loggedIn":false}));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
 
 }
