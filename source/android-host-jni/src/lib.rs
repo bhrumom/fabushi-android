@@ -314,23 +314,49 @@ impl AndroidNativeRuntime {
             .filter(|value| !value.trim().is_empty())
             .map(str::to_string);
 
-        match self.mcp_oauth.forward(OAuthCallback {
+        let (provider, callback) = match self.mcp_oauth.forward(OAuthCallback {
             state: state.to_string(),
             code,
             error,
         }) {
-            Ok((provider, callback)) => success_response(
-                id,
-                json!({
-                    "provider": provider,
-                    "state": callback.state,
-                    "code": callback.code,
-                    "error": callback.error,
-                    "pendingCount": self.mcp_oauth.pending_count(),
-                }),
-            ),
-            Err(message) => error_response(id, message.into()),
-        }
+            Ok(value) => value,
+            Err(message) => return error_response(id, message.into()),
+        };
+
+        self.next_request_id = self.next_request_id.saturating_add(1);
+        let host_request_id = format!("mcp-oauth-{:016}", self.next_request_id);
+        let host_params = json!({
+            "provider": provider,
+            "state": callback.state,
+            "code": callback.code,
+            "error": callback.error,
+        });
+        let host_reply = self.coordinator.request(CoordinatorRequest {
+            protocol_version: COORDINATOR_PROTOCOL_VERSION,
+            request_id: host_request_id,
+            session_id: "android-process".into(),
+            method: "feature.mcp.oauthComplete".into(),
+            params_json: host_params.to_string(),
+            deadline_ms: None,
+        });
+        let host_result = match host_reply.result_json {
+            Ok(raw) => serde_json::from_str::<Value>(&raw)
+                .unwrap_or_else(|_| json!({"outcome":"completed"})),
+            Err(failure) => return failure_response(id, failure),
+        };
+
+        success_response(
+            id,
+            json!({
+                "provider": provider,
+                "state": state,
+                "outcome": host_result
+                    .get("outcome")
+                    .and_then(Value::as_str)
+                    .unwrap_or("completed"),
+                "pendingCount": self.mcp_oauth.pending_count(),
+            }),
+        )
     }
 
     fn coordinator_interrupt(&mut self, id: Option<Value>, params: &Value) -> String {
