@@ -1,6 +1,14 @@
+use crate::extensions::webauthn_proxy::{
+    WebAuthnBridgeError, WebAuthnProxyExtension, WebAuthnProxyExtensionConfig,
+};
+use fabushi_android_shared::webauthn_gateway::{
+    WebAuthnCeremony, WebAuthnRequestFrame, WebAuthnResponseFrame, WebAuthnStage,
+    WebAuthnStageOutcome,
+};
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AndroidHostMode {
@@ -20,6 +28,8 @@ pub struct AndroidJsonHost {
     events: VecDeque<Value>,
     active_operations: BTreeSet<String>,
     installed_plugins: BTreeSet<String>,
+    webauthn: WebAuthnProxyExtension,
+    webauthn_provider_queues: BTreeMap<String, VecDeque<WebAuthnRequestFrame>>,
 }
 
 impl AndroidJsonHost {
@@ -35,6 +45,8 @@ impl AndroidJsonHost {
             events: VecDeque::new(),
             active_operations: BTreeSet::new(),
             installed_plugins: BTreeSet::new(),
+            webauthn: WebAuthnProxyExtension::new(WebAuthnProxyExtensionConfig::default()),
+            webauthn_provider_queues: BTreeMap::new(),
         }
     }
 
@@ -86,9 +98,116 @@ impl AndroidJsonHost {
             "feature.messaging.access.issue" => Ok(json!({"status":"available"})),
             "feature.messaging.blob.read" => Ok(json!({"data":Value::Null})),
             "feature.messaging.execute" => Ok(json!({"ok":true})),
+            "feature.webauthn.registerProvider" => self.webauthn_register_provider(),
+            "feature.webauthn.unregisterProvider" => self.webauthn_unregister_provider(params),
+            "feature.webauthn.pollRequest" => self.webauthn_poll_request(params),
+            "feature.webauthn.submitResponses" => self.webauthn_submit_responses(params),
+            "feature.webauthn.requestCeremony" => self.webauthn_request_ceremony(params),
             "platform.request" => Ok(json!({"ok":true})),
             other => Err(format!("unknown host method {other}")),
         }
+    }
+
+
+    fn webauthn_register_provider(&mut self) -> Result<Value, String> {
+        let now = now_ms();
+        let (provider_id, welcome) = self.webauthn.register_provider(now);
+        self.webauthn_provider_queues
+            .entry(provider_id.clone())
+            .or_default()
+            .push_back(welcome);
+        Ok(json!({"providerId": provider_id}))
+    }
+
+    fn webauthn_unregister_provider(&mut self, params: &Value) -> Result<Value, String> {
+        let provider_id = required_string(params, "providerId")?.to_string();
+        self.webauthn.bridge_mut().unregister_provider(&provider_id);
+        self.webauthn_provider_queues.remove(&provider_id);
+        Ok(json!({"providerId":provider_id,"status":"unregistered"}))
+    }
+
+    fn webauthn_poll_request(&mut self, params: &Value) -> Result<Value, String> {
+        let provider_id = required_string(params, "providerId")?.to_string();
+        for (target_provider, _, frame) in self.webauthn.expire(now_ms()) {
+            self.webauthn_provider_queues
+                .entry(target_provider)
+                .or_default()
+                .push_back(frame);
+        }
+        let frame = self
+            .webauthn_provider_queues
+            .entry(provider_id.clone())
+            .or_default()
+            .pop_front();
+        Ok(json!({
+            "providerId": provider_id,
+            "frame": frame.map(webauthn_request_frame_json).unwrap_or(Value::Null),
+        }))
+    }
+
+    fn webauthn_submit_responses(&mut self, params: &Value) -> Result<Value, String> {
+        let provider_id = params
+            .get("providerId")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty());
+        let raw_frames = params
+            .get("frames")
+            .and_then(Value::as_array)
+            .ok_or("frames array is required")?;
+        let frames = raw_frames
+            .iter()
+            .map(parse_webauthn_response_frame)
+            .collect::<Result<Vec<_>, _>>()?;
+        let settlements = self
+            .webauthn
+            .submit_responses(now_ms(), provider_id, &frames)
+            .into_iter()
+            .map(|(request_id, settlement)| match settlement {
+                crate::extensions::webauthn_proxy::WebAuthnBridgeSettlement::CredentialJson(value) => {
+                    json!({"requestId":request_id,"kind":"result","credentialJson":value})
+                }
+                crate::extensions::webauthn_proxy::WebAuthnBridgeSettlement::Error { name, message, code } => {
+                    json!({"requestId":request_id,"kind":"error","name":name,"message":message,"code":code})
+                }
+            })
+            .collect::<Vec<_>>();
+        Ok(json!({"accepted":true,"settlements":settlements}))
+    }
+
+    fn webauthn_request_ceremony(&mut self, params: &Value) -> Result<Value, String> {
+        let kind = required_string(params, "kind")?;
+        if kind != "create" && kind != "get" {
+            return Err("kind must be create or get".into());
+        }
+        let origin = required_string(params, "origin")?;
+        let payload_json = params
+            .get("payloadJson")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+            .ok_or("payloadJson is required")?;
+        serde_json::from_str::<Value>(payload_json)
+            .map_err(|error| format!("payloadJson must be valid JSON: {error}"))?;
+
+        let request = self
+            .webauthn
+            .request_ceremony(
+                now_ms(),
+                WebAuthnCeremony {
+                    kind: kind.to_string(),
+                    origin: origin.to_string(),
+                    payload_json: payload_json.to_string(),
+                },
+            )
+            .map_err(webauthn_bridge_error_message)?;
+        self.webauthn_provider_queues
+            .entry(request.provider_id.clone())
+            .or_default()
+            .push_back(request.frame);
+        Ok(json!({
+            "providerId":request.provider_id,
+            "requestId":request.request_id,
+            "deadlineAtMs":request.deadline_at_ms,
+        }))
     }
 
     pub fn cancel_operation(&mut self, operation_id: &str, reason: Option<&str>) -> Result<(), String> {
@@ -328,6 +447,87 @@ impl AndroidJsonHost {
     }
 }
 
+
+fn now_ms() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis()
+        .try_into()
+        .unwrap_or(u64::MAX)
+}
+
+fn webauthn_bridge_error_message(error: WebAuthnBridgeError) -> String {
+    match error {
+        WebAuthnBridgeError::NoProvider { message }
+        | WebAuthnBridgeError::ProviderStale { message } => message.to_string(),
+        WebAuthnBridgeError::DispatchFailed(message) => message,
+        WebAuthnBridgeError::UnknownRequest => "unknown WebAuthn request".into(),
+        WebAuthnBridgeError::TimedOut => "WebAuthn request timed out".into(),
+    }
+}
+
+fn webauthn_request_frame_json(frame: WebAuthnRequestFrame) -> Value {
+    match frame {
+        WebAuthnRequestFrame::Welcome { provider_id } => {
+            json!({"kind":"welcome","providerId":provider_id})
+        }
+        WebAuthnRequestFrame::Ceremony { request_id, ceremony } => json!({
+            "kind":"ceremony",
+            "requestId":request_id,
+            "ceremony":{
+                "kind":ceremony.kind,
+                "origin":ceremony.origin,
+                "payloadJson":ceremony.payload_json,
+            }
+        }),
+        WebAuthnRequestFrame::Cancel { request_id } => {
+            json!({"kind":"cancel","requestId":request_id})
+        }
+    }
+}
+
+fn parse_webauthn_response_frame(value: &Value) -> Result<WebAuthnResponseFrame, String> {
+    let kind = required_string(value, "kind")?;
+    match kind {
+        "hello" => Ok(WebAuthnResponseFrame::Hello {
+            computer_id: value.get("computerId").and_then(Value::as_str).map(str::to_string),
+            label: value.get("label").and_then(Value::as_str).map(str::to_string),
+        }),
+        "ping" => Ok(WebAuthnResponseFrame::Ping),
+        "stage" => {
+            let request_id = required_string(value, "requestId")?.to_string();
+            let stage = match required_string(value, "stage")? {
+                "grant" => WebAuthnStage::Grant,
+                "sign" => WebAuthnStage::Sign,
+                _ => return Err("stage must be grant or sign".into()),
+            };
+            let outcome = match required_string(value, "outcome")? {
+                "ok" => WebAuthnStageOutcome::Ok,
+                "declined" => WebAuthnStageOutcome::Declined,
+                "failed" => WebAuthnStageOutcome::Failed,
+                _ => return Err("outcome must be ok, declined, or failed".into()),
+            };
+            Ok(WebAuthnResponseFrame::Stage {
+                request_id,
+                stage,
+                outcome,
+            })
+        }
+        "result" => Ok(WebAuthnResponseFrame::Result {
+            request_id: required_string(value, "requestId")?.to_string(),
+            credential_json: required_string(value, "credentialJson")?.to_string(),
+        }),
+        "error" => Ok(WebAuthnResponseFrame::Error {
+            request_id: required_string(value, "requestId")?.to_string(),
+            name: required_string(value, "name")?.to_string(),
+            message: required_string(value, "message")?.to_string(),
+            code: value.get("code").and_then(Value::as_str).map(str::to_string),
+        }),
+        _ => Err(format!("unsupported WebAuthn response frame kind {kind}")),
+    }
+}
+
 fn required_string<'a>(value: &'a Value, key: &str) -> Result<&'a str, String> {
     value
         .get(key)
@@ -373,6 +573,80 @@ mod tests {
         let operation_id = long_task["operationId"].as_str().unwrap();
         let interrupted = host.dispatch("feature.interrupt", &json!({"operationId":operation_id})).unwrap();
         assert_eq!(interrupted["status"], "interrupted");
+    }
+
+    #[test]
+    fn webauthn_provider_transport_queues_ceremony_and_settles_result_once() {
+        let mut host = AndroidJsonHost::new("/tmp/fabushi-host-webauthn", AndroidHostMode::Test);
+        let registered = host
+            .dispatch("feature.webauthn.registerProvider", &json!({}))
+            .unwrap();
+        let provider_id = registered["providerId"].as_str().unwrap().to_string();
+
+        let welcome = host
+            .dispatch(
+                "feature.webauthn.pollRequest",
+                &json!({"providerId":provider_id}),
+            )
+            .unwrap();
+        assert_eq!(welcome["frame"]["kind"], "welcome");
+
+        host.dispatch(
+            "feature.webauthn.submitResponses",
+            &json!({"providerId":provider_id,"frames":[{"kind":"ping"}]}),
+        )
+        .unwrap();
+
+        let requested = host
+            .dispatch(
+                "feature.webauthn.requestCeremony",
+                &json!({
+                    "kind":"get",
+                    "origin":"https://cursor.com",
+                    "payloadJson":"{\"challenge\":\"abc\"}"
+                }),
+            )
+            .unwrap();
+        let request_id = requested["requestId"].as_str().unwrap().to_string();
+
+        let ceremony = host
+            .dispatch(
+                "feature.webauthn.pollRequest",
+                &json!({"providerId":provider_id}),
+            )
+            .unwrap();
+        assert_eq!(ceremony["frame"]["kind"], "ceremony");
+        assert_eq!(ceremony["frame"]["requestId"], request_id);
+
+        let settled = host
+            .dispatch(
+                "feature.webauthn.submitResponses",
+                &json!({
+                    "providerId":provider_id,
+                    "frames":[{
+                        "kind":"result",
+                        "requestId":request_id,
+                        "credentialJson":"{\"id\":\"cred-1\"}"
+                    }]
+                }),
+            )
+            .unwrap();
+        assert_eq!(settled["settlements"].as_array().unwrap().len(), 1);
+
+        let duplicate = host
+            .dispatch(
+                "feature.webauthn.submitResponses",
+                &json!({
+                    "providerId":provider_id,
+                    "frames":[{
+                        "kind":"result",
+                        "requestId":request_id,
+                        "credentialJson":"{}"
+                    }]
+                }),
+            )
+            .unwrap();
+        assert!(duplicate["settlements"].as_array().unwrap().is_empty());
     }
 
     #[test]
