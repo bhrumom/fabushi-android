@@ -11906,9 +11906,10 @@
       "android_target_path": "source/host/src/runner/production_turn_agent_owner.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust ProductionTurnAgentOwner owns one active operation, streams retry/delta/terminal events, persists durable checkpoint before settlement, and is directly constructed by source/host/src/android_json_runtime.rs on the production chat path. Focused unit tests cover single-owner streaming/settlement; exact-HEAD cargo/Android CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "clean-room Rust behavior/contract implementation; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/runner/production-turn-input-projection.ts",
@@ -12231,9 +12232,10 @@
       "android_target_path": "source/host/src/runner/stream_attempt.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust StreamAttemptHost implements provider attempts, first-token watchdog, retry observation, server-paced/backoff delay, output-aware retry safety and cancellation. It is production-wired through ProductionTurnAgentOwner -> AndroidJsonHost; unit tests cover transient retry, first-token stall and no-retry-after-output; exact-HEAD CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "clean-room Rust behavior/contract implementation; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/runner/subagent-runtime.ts",
@@ -12608,9 +12610,10 @@
       "android_target_path": "source/host/src/runner/transient_stream_error.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust transient/provider-capacity/context-overflow classification plus bounded retry/backoff policy is consumed by production StreamAttemptHost. Unit tests cover transient/capacity retry, checkpoint gating and bounded delay; exact-HEAD CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "clean-room Rust behavior/contract implementation; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/runner/turn-agent-composition.ts",
@@ -12673,9 +12676,10 @@
       "android_target_path": "source/host/src/runner/turn_settle.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust turn settlement requires durable checkpoint before completed/cancelled terminal settlement and is production-wired through ProductionTurnAgentOwner. Unit tests enforce durable-before-terminal invariant; exact-HEAD CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "clean-room Rust behavior/contract implementation; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/runner/turn-shape.ts",
@@ -26759,7 +26763,7 @@
     }
   ],
   "status_summary": {
-    "mapped": 1850,
-    "implemented": 196
+    "mapped": 1846,
+    "implemented": 200
   }
 }
