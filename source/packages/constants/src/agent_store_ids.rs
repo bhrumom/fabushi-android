@@ -26,11 +26,16 @@ pub fn parse_user_agent_store_source_id(source_id: &str) -> Option<UserAgentStor
     let re = Regex::new(r"^(?:t([1-9][0-9]*)-)?u([1-9][0-9]*)$").ok()?;
     let captures = re.captures(source_id)?;
     let user_id = captures.get(2)?.as_str().parse::<u64>().ok().filter(|value| *value > 0)?;
-    let team_id = captures
-        .get(1)
-        .map(|value| value.as_str().parse::<u64>().ok().filter(|value| *value > 0))
-        .transpose()?
-        .flatten();
+    let team_id = match captures.get(1) {
+        Some(value) => Some(
+            value
+                .as_str()
+                .parse::<u64>()
+                .ok()
+                .filter(|value| *value > 0)?,
+        ),
+        None => None,
+    };
     Some(UserAgentStoreSourceId { user_id, team_id })
 }
 
