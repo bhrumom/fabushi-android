@@ -2229,9 +2229,11 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/recovered/features/conversation/workspace/chat-header_view.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Compose ConversationChatHeader is called by shipping ConversationSurfaces; UI owns only menu/search/header state and injects all mutations. tests/test_conversation_workspace_wiring.py asserts shipping wiring and exact target presence; exact-HEAD Compose/instrumentation CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "android_adaptation_rationale": "Desktop conversation workspace behavior is rendered with Jetpack Compose while state mutations continue through typed presentation/Coordinator callbacks.",
+      "provenance_review": "clean-room Kotlin/Compose implementation from observable behavior and Fabushi domain contracts; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/recovered/features/conversation/workspace/composer.tsx",
@@ -2321,9 +2323,11 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/recovered/features/conversation/workspace/draft-state.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Coordinator-backed draft projection and write-decision functions are called by shipping ConversationSurfaces, keeping Host/Coordinator draft state canonical rather than a second renderer store. tests/test_conversation_workspace_wiring.py asserts production wiring/exact target; exact-HEAD JVM/Compose CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "android_adaptation_rationale": "Desktop conversation workspace behavior is rendered with Jetpack Compose while state mutations continue through typed presentation/Coordinator callbacks.",
+      "provenance_review": "clean-room Kotlin/Compose implementation from observable behavior and Fabushi domain contracts; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/recovered/features/conversation/workspace/editor-mcp-reference-provider.ts",
@@ -2386,9 +2390,11 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/recovered/features/conversation/workspace/find-in-chat-controller.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Find-in-chat search text, occurrence matching and wrapped navigation index are used by shipping ConversationSurfaces instead of inline filtering. tests/test_conversation_workspace_wiring.py asserts production wiring/exact target; exact-HEAD JVM/Compose CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "android_adaptation_rationale": "Desktop conversation workspace behavior is rendered with Jetpack Compose while state mutations continue through typed presentation/Coordinator callbacks.",
+      "provenance_review": "clean-room Kotlin/Compose implementation from observable behavior and Fabushi domain contracts; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/recovered/features/conversation/workspace/find-in-chat.tsx",
@@ -2399,9 +2405,11 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/recovered/features/conversation/workspace/find-in-chat_view.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Compose FindInChatBar is called by shipping ConversationSurfaces with controller-derived match/index state. tests/test_conversation_workspace_wiring.py asserts production wiring/exact target; exact-HEAD Compose/instrumentation CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "android_adaptation_rationale": "Desktop conversation workspace behavior is rendered with Jetpack Compose while state mutations continue through typed presentation/Coordinator callbacks.",
+      "provenance_review": "clean-room Kotlin/Compose implementation from observable behavior and Fabushi domain contracts; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/recovered/features/conversation/workspace/math.tsx",
@@ -2425,9 +2433,11 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/recovered/features/conversation/workspace/media-viewer_view.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "AndroidMediaViewer at the exact workspace target is invoked by shipping ConversationSurfaces for selected media and the legacy media viewer path is removed. tests/test_conversation_workspace_wiring.py asserts wiring, target existence and legacy removal; exact-HEAD Compose/instrumentation CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "android_adaptation_rationale": "Desktop conversation workspace behavior is rendered with Jetpack Compose while state mutations continue through typed presentation/Coordinator callbacks.",
+      "provenance_review": "clean-room Kotlin/Compose implementation from observable behavior and Fabushi domain contracts; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/recovered/features/conversation/workspace/mermaid.tsx",
@@ -26770,7 +26780,7 @@
     }
   ],
   "status_summary": {
-    "mapped": 1842,
-    "implemented": 204
+    "mapped": 1837,
+    "implemented": 209
   }
 }
