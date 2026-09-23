@@ -116,4 +116,47 @@ class AndroidDeepLinkRouterTest {
         )
     }
 
+    @Test
+    fun mcpOAuthCallbackIsTypedAndFailClosed() {
+        val success = AndroidDeepLinkRouter.parse(
+            "fabushi://mcp-oauth/callback?state=0123456789abcdef&code=code-1",
+        )
+        assertEquals(
+            AndroidDeepLink.McpOAuthCallback(
+                state = "0123456789abcdef",
+                code = "code-1",
+                error = null,
+            ),
+            success,
+        )
+
+        val failure = AndroidDeepLinkRouter.parse(
+            "fabushi://mcp-oauth/callback?state=0123456789abcdef&error=access_denied",
+        )
+        assertEquals(
+            AndroidDeepLink.McpOAuthCallback(
+                state = "0123456789abcdef",
+                code = null,
+                error = "access_denied",
+            ),
+            failure,
+        )
+
+        assertNull(
+            AndroidDeepLinkRouter.parse(
+                "fabushi://mcp-oauth/callback?state=0123456789abcdef&code=a&error=b",
+            ),
+        )
+        assertNull(
+            AndroidDeepLinkRouter.parse(
+                "fabushi://mcp-oauth/callback?state=short&code=a",
+            ),
+        )
+        assertNull(
+            AndroidDeepLinkRouter.parse(
+                "fabushi://mcp-oauth/callback?state=0123456789abcdef&state=other-state-12345&code=a",
+            ),
+        )
+    }
+
 }
