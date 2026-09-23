@@ -177,7 +177,6 @@ internal class AndroidOsNotificationManager(
             .setStyle(Notification.BigTextStyle().bigText(body))
             .setAutoCancel(true)
             .setOnlyAlertOnce(true)
-            .setSilent(!needsInput)
             .setContentIntent(agentPendingIntent(transition.agentId, id))
 
         notificationManager.notify(id, builder.build())
@@ -197,7 +196,6 @@ internal class AndroidOsNotificationManager(
             .setContentText("$count unread update${if (count == 1) "" else "s"}")
             .setNumber(count)
             .setOnlyAlertOnce(true)
-            .setSilent(true)
             .setOngoing(false)
             .build()
         notificationManager.notify(BADGE_NOTIFICATION_ID, notification)
@@ -235,7 +233,11 @@ internal class AndroidOsNotificationManager(
                     CHANNEL_UPDATES,
                     "Agent updates",
                     NotificationManager.IMPORTANCE_DEFAULT,
-                ).apply { setShowBadge(true) },
+                ).apply {
+                    setShowBadge(true)
+                    setSound(null, null)
+                    enableVibration(false)
+                },
                 NotificationChannel(
                     CHANNEL_BADGE,
                     "Unread count",
