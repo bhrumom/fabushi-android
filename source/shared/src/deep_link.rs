@@ -165,7 +165,7 @@ pub fn parse_sand_deep_link(raw: &str) -> Option<ParsedSandDeepLink> {
     }
 
     let entries = query_pairs(&url);
-    if entries.len() != 1 || entries[0] != ("topic".into(), "deep-links".into()) {
+    if entries.len() != 1 || entries[0].0 != "topic" || entries[0].1 != "deep-links" {
         return None;
     }
     let link = SandDeepLink::Info { source };
