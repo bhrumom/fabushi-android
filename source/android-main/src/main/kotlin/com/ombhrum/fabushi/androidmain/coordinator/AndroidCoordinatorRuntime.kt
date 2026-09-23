@@ -72,8 +72,7 @@ class AndroidCoordinatorRuntime private constructor(application: Application) : 
         return AndroidMcpOAuthCompletion(
             provider = result.getString("provider"),
             state = result.getString("state"),
-            code = result.optString("code").takeIf(String::isNotBlank),
-            error = result.optString("error").takeIf(String::isNotBlank),
+            outcome = result.optString("outcome", "completed"),
         )
     }
 
