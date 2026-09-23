@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ombhrum.fabushi.androidpreload.deeplink.AndroidDeepLink
 import com.ombhrum.fabushi.androidpreload.deeplink.AndroidPresentationDeepLink
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidPresentationRuntimePort
 import kotlinx.coroutines.flow.SharedFlow
@@ -52,14 +53,26 @@ internal fun ProductionRenderer(
                 var openedMiniApp by remember { mutableStateOf<MarketplacePlugin?>(null) }
                 var rendererRoute by remember { mutableStateOf(RendererRoute.GROK_HOME) }
                 var commandPaletteOpen by remember { mutableStateOf(false) }
+                var deepLinkInfo by remember { mutableStateOf<DeepLinkInfo?>(null) }
 
                 BackHandler(enabled = rendererRoute == RendererRoute.MESSAGING && state.loggedIn) {
                     rendererRoute = RendererRoute.GROK_HOME
                 }
 
                 LaunchedEffect(model) {
-                    deepLinks.collect { link -> model.handleDeepLink(link) }
+                    deepLinks.collect { link ->
+                        if (link is AndroidDeepLink.Info) {
+                            deepLinkInfo = link.toDeepLinkInfo()
+                        } else {
+                            model.handleDeepLink(link)
+                        }
+                    }
                 }
+                DeepLinkInfoDialog(
+                    link = deepLinkInfo,
+                    onClose = { deepLinkInfo = null },
+                )
+
                 LaunchedEffect(state.loggedIn) {
                     runtimePort.setLoggedIn(state.loggedIn)
                     if (state.loggedIn) {
