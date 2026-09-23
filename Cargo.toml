@@ -5,6 +5,7 @@ members = [
   "source/internal",
   "source/mahayana-agent-coordinator",
   "source/host",
+  "source/android-host-jni",
   "source/local-exec-daemon",
   "source/box-exec-daemon",
   "source/packages/agent-core",
