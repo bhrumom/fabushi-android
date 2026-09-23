@@ -16,6 +16,8 @@ internal interface AndroidPresentationRuntimePort {
 
     fun setForeground(foreground: Boolean)
 
+    fun launchExternalAuth(url: String): Boolean
+
     fun attachInteractiveActivity(activity: ComponentActivity)
 
     fun detachInteractiveActivity(activity: ComponentActivity)
