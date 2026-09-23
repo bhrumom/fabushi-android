@@ -5,7 +5,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidCoordinatorPort
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,6 +39,9 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
     private val messagesByBot = mutableMapOf<String, List<MobileChatMessage>>()
     private val draftsByBot = mutableMapOf<String, String>()
     val state: StateFlow<MobileBotUiState> = mutableState.asStateFlow()
+    private var featureEventSubscription: AutoCloseable? = coordinator.addFeatureEventListener { event ->
+        viewModelScope.launch { handleOperationEvent(event) }
+    }
 
     private fun commitState(next: MobileBotUiState) {
         next.activeBot?.let { bot ->
@@ -88,36 +90,25 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     private fun loadSurfaceBots(): List<MobileBotSummaryAndroid> {
-        val requestId = "android-mobile-bot-list-${UUID.randomUUID()}"
-        coordinator.featureExecute(
-            JSONObject().put(
-                "command",
-                JSONObject().put("type", "bot.list").put("requestId", requestId),
-            ),
-        )
-        repeat(48) {
-            val event = coordinator.featureReceive( JSONObject().put("timeoutMs", 120))
-            if (event.optString("type") == "bot.listed") {
-                val rows = event.optJSONArray("bots")
-                return buildList {
-                    if (rows != null) for (index in 0 until rows.length()) {
-                        val row = rows.optJSONObject(index) ?: continue
-                        val id = row.optString("id")
-                        if (id.isBlank() || id == "mahayana-assistant") continue
-                        add(
-                            MobileBotSummaryAndroid(
-                                id = id,
-                                name = row.optString("name").ifBlank { row.optString("displayName").ifBlank { id } },
-                                description = row.optString("description"),
-                                miniAppId = row.optString("miniAppId").takeIf(String::isNotBlank),
-                                menuButtonText = row.optString("menuButtonText").takeIf(String::isNotBlank),
-                            ),
-                        )
-                    }
-                }
+        val requestId = "android-mobile-bot-list-" + UUID.randomUUID()
+        val event = coordinator.botList(requestId)
+        val rows = event.optJSONArray("bots")
+        return buildList {
+            if (rows != null) for (index in 0 until rows.length()) {
+                val row = rows.optJSONObject(index) ?: continue
+                val id = row.optString("id")
+                if (id.isBlank() || id == "mahayana-assistant") continue
+                add(
+                    MobileBotSummaryAndroid(
+                        id = id,
+                        name = row.optString("name").ifBlank { row.optString("displayName").ifBlank { id } },
+                        description = row.optString("description"),
+                        miniAppId = row.optString("miniAppId").takeIf(String::isNotBlank),
+                        menuButtonText = row.optString("menuButtonText").takeIf(String::isNotBlank),
+                    ),
+                )
             }
         }
-        return emptyList()
     }
 
     /**
@@ -341,7 +332,6 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
                         actionStatus = "running",
                     ),
                 ))
-                pump(operationId)
             }.onFailure { error ->
                 removeThinking(requestId)
                 finishAssistant(requestId)
@@ -358,65 +348,52 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    private suspend fun pump(operationId: String) {
-        repeat(1800) {
-            if (!mutableState.value.busy || mutableState.value.operationId != operationId) return
-            val event = runCatching {
-                withContext(Dispatchers.IO) { coordinator.featureReceive( JSONObject().put("timeoutMs", 250)) }
-            }.getOrElse { error ->
+    private fun handleOperationEvent(event: JSONObject) {
+        val operationId = mutableState.value.operationId ?: return
+        if (!mutableState.value.busy) return
+        val type = event.optString("type")
+        val eventOperationId = event.optString("operationId").ifBlank { operationId }
+        if (type in setOf("chat.message", "chat.delta", "agent.step", "operation.started", "operation.completed", "operation.interrupted", "operation.failed", "model.routed") && eventOperationId != operationId) {
+            return
+        }
+        when (type) {
+            "chat.message" -> if (event.optString("role") != "user") {
+                removeThinking(operationId)
+                upsertAssistant(operationId, event.optString("text"), append = false, streaming = false)
+            }
+            "chat.delta" -> {
+                removeThinking(operationId)
+                upsertAssistant(operationId, event.optString("delta"), append = true, streaming = true)
+            }
+            "agent.step" -> {
+                val id = "action:" + operationId + ":" + event.optString("stepId").ifBlank { UUID.randomUUID().toString() }
+                upsert(
+                    MobileChatMessage(
+                        id = id,
+                        role = MobileChatRole.ASSISTANT,
+                        text = "",
+                        kind = MobileChatEntryKind.ACTION,
+                        operationId = operationId,
+                        actionTitle = event.optString("title").ifBlank { "Working" },
+                        actionDetail = event.optString("detail"),
+                        actionStatus = event.optString("status").ifBlank { "completed" },
+                    ),
+                )
+            }
+            "model.routed" -> {
+                val detail = listOf(event.optString("provider"), event.optString("model")).filter { it.isNotBlank() }.joinToString(" · ")
+                upsert(MobileChatMessage("action:" + operationId + ":model", MobileChatRole.ASSISTANT, "", MobileChatEntryKind.ACTION, operationId, "Model", detail, "completed"))
+            }
+            "operation.completed", "operation.interrupted" -> {
                 removeThinking(operationId)
                 finishAssistant(operationId)
-                commitState(mutableState.value.copy(busy = false, operationId = null, error = error.message ?: "Message stream interrupted"))
-                return
+                commitState(mutableState.value.copy(busy = false, operationId = null))
             }
-            val type = event.optString("type")
-            val eventOperationId = event.optString("operationId").ifBlank { operationId }
-            if (type in setOf("chat.message", "chat.delta", "agent.step", "operation.started", "operation.completed", "operation.interrupted", "operation.failed", "model.routed") && eventOperationId != operationId) {
-                delay(60)
-                return@repeat
+            "operation.failed" -> {
+                removeThinking(operationId)
+                finishAssistant(operationId)
+                commitState(mutableState.value.copy(busy = false, operationId = null, error = event.optString("message").ifBlank { "Bot run failed" }))
             }
-            when (type) {
-                "chat.message" -> if (event.optString("role") != "user") {
-                    removeThinking(operationId)
-                upsertAssistant(operationId, event.optString("text"), append = false, streaming = false)
-                }
-                "chat.delta" -> {
-                    removeThinking(operationId)
-                    upsertAssistant(operationId, event.optString("delta"), append = true, streaming = true)
-                }
-                "agent.step" -> {
-                    val id = "action:$operationId:${event.optString("stepId").ifBlank { UUID.randomUUID().toString() }}"
-                    upsert(
-                        MobileChatMessage(
-                            id = id,
-                            role = MobileChatRole.ASSISTANT,
-                            text = "",
-                            kind = MobileChatEntryKind.ACTION,
-                            operationId = operationId,
-                            actionTitle = event.optString("title").ifBlank { "Working" },
-                            actionDetail = event.optString("detail"),
-                            actionStatus = event.optString("status").ifBlank { "completed" },
-                        ),
-                    )
-                }
-                "model.routed" -> {
-                    val detail = listOf(event.optString("provider"), event.optString("model")).filter { it.isNotBlank() }.joinToString(" · ")
-                    upsert(MobileChatMessage("action:$operationId:model", MobileChatRole.ASSISTANT, "", MobileChatEntryKind.ACTION, operationId, "Model", detail, "completed"))
-                }
-                "operation.completed", "operation.interrupted" -> {
-                    removeThinking(operationId)
-                    finishAssistant(operationId)
-                    commitState(mutableState.value.copy(busy = false, operationId = null))
-                    return
-                }
-                "operation.failed" -> {
-                    removeThinking(operationId)
-                    finishAssistant(operationId)
-                    commitState(mutableState.value.copy(busy = false, operationId = null, error = event.optString("message").ifBlank { "Bot run failed" }))
-                    return
-                }
-            }
-            delay(60)
         }
     }
 
@@ -456,6 +433,8 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     override fun onCleared() {
+        featureEventSubscription?.close()
+        featureEventSubscription = null
         super.onCleared()
     }
 }
