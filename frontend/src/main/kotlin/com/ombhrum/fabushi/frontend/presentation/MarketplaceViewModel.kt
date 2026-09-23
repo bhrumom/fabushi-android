@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ombhrum.fabushi.androidpreload.deeplink.AndroidDeepLink
+import com.ombhrum.fabushi.androidpreload.deeplink.AndroidPresentationDeepLink
 import com.ombhrum.fabushi.androidpreload.deeplink.AuthCompletionStatus
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidCoordinatorPort
 import kotlinx.coroutines.Dispatchers
@@ -190,7 +191,7 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
         mutableState.value = mutableState.value.copy(query = value)
     }
 
-    fun handleDeepLink(link: AndroidDeepLink) {
+    fun handleDeepLink(link: AndroidPresentationDeepLink) {
         when (link) {
             is AndroidDeepLink.AuthCompletion -> {
                 mutableState.value = mutableState.value.copy(
