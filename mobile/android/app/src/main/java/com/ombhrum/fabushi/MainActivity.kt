@@ -44,13 +44,19 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        (application as FabushiApplication).requireProcessRuntime().setForeground(true)
+        (application as FabushiApplication).requireProcessRuntime().apply {
+            attachInteractiveActivity(this@MainActivity)
+            setForeground(true)
+        }
         updateModel.setForeground(true)
         ensureNotificationPermission()
     }
 
     override fun onStop() {
-        (application as FabushiApplication).requireProcessRuntime().setForeground(false)
+        (application as FabushiApplication).requireProcessRuntime().apply {
+            setForeground(false)
+            detachInteractiveActivity(this@MainActivity)
+        }
         updateModel.setForeground(false)
         super.onStop()
     }
