@@ -24,7 +24,7 @@ class AndroidCoordinatorRuntime private constructor(application: Application) : 
     }
     private val processRuntime = CoordinatorProcessRuntime(epochStore)
     val processGeneration: Long = processRuntime.start()
-    private val host = MahayanaHost(application)
+    private val host = MahayanaHost(application, processGeneration = processGeneration)
     private val featureEventListeners = CopyOnWriteArrayList<(JSONObject) -> Unit>()
     private val eventPumpRunning = AtomicBoolean(false)
     private val eventPumpExecutor = Executors.newSingleThreadExecutor { runnable ->
