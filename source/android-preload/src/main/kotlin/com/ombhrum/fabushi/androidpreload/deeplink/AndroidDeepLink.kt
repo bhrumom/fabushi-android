@@ -6,6 +6,12 @@ sealed interface AndroidDeepLink {
         val status: AuthCompletionStatus,
     ) : AndroidDeepLink
 
+    data class McpOAuthCallback(
+        val state: String,
+        val code: String?,
+        val error: String?,
+    ) : AndroidDeepLink
+
     data class Agent(val agentId: String) : AndroidDeepLink
 
     data class AppSection(val section: String) : AndroidDeepLink
