@@ -3,6 +3,7 @@
 //! No Compose/Activity/ViewModel dependency is permitted here.
 #![allow(special_module_name)]
 
+pub mod android_agent_roster;
 pub mod android_json_runtime;
 
 pub mod attachment_paths;
