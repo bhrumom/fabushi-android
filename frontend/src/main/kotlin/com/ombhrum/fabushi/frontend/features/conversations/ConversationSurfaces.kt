@@ -618,97 +618,37 @@ internal fun ConversationDetail(
             if (typingActorName != null) {
                 Text("$typingActorName 正在输入…", color = homeSecondaryText, style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp))
             }
-            LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (messages.isEmpty()) item { Text("开始与 ${conversation.title} 对话", color = homeSecondaryText, modifier = Modifier.fillMaxWidth().padding(top = 72.dp)) }
-                items(messages.filter { chatSearchQuery.isBlank() || it.text.contains(chatSearchQuery, ignoreCase = true) }, key = { it.id }) { message ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = if (message.outgoing) Arrangement.End else Arrangement.Start) {
-                        Column(
-                            Modifier.fillMaxWidth(0.78f)
-                                .background(if (message.outgoing) homeAccent.copy(alpha = 0.18f) else homeSurface, RoundedCornerShape(16.dp))
-                                .pointerInput(message.id) {
-                                    var horizontalDrag = 0f
-                                    detectHorizontalDragGestures(
-                                        onDragStart = { horizontalDrag = 0f },
-                                        onHorizontalDrag = { change, dragAmount -> horizontalDrag += dragAmount; change.consume() },
-                                        onDragEnd = {
-                                            if (horizontalDrag > 58.dp.toPx()) {
-                                                replyTarget = message
-                                                editingMessage = null
-                                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            }
-                                            horizontalDrag = 0f
-                                        },
-                                        onDragCancel = { horizontalDrag = 0f },
-                                    )
-                                }
-                                .combinedClickable(onClick = {}, onLongClick = { selectedMessage = message })
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                        ) {
-                            if (message.forwardOrigin != null) Text("↪ 转发自 ${message.forwardOrigin}", color = homeAccent, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
-                            val replied = message.replyToMessageId?.let { replyId -> messages.firstOrNull { it.id == replyId } }
-                            if (replied != null) {
-                                Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                                    Text("回复", color = homeAccent, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
-                                    Text(replied.text, color = homeSecondaryText, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            ConversationTranscript(
+                conversationTitle = conversation.title,
+                messages = messages,
+                searchQuery = chatSearchQuery,
+                playingVoiceMessageId = playingVoiceMessageId,
+                onPlayVoice = { message ->
+                    val blobId = message.mediaBlobId
+                    if (playingVoiceMessageId == message.id) {
+                        voicePlayer.stop()
+                        playingVoiceMessageId = null
+                    } else if (blobId != null && message.mediaSizeBytes > 0) {
+                        onLoadBlob(blobId, message.mediaSizeBytes) { result ->
+                            result.onSuccess { bytes ->
+                                voicePlayer.toggle(message.id, bytes) {
+                                    playingVoiceMessageId = null
+                                }.onSuccess { playing ->
+                                    playingVoiceMessageId = if (playing) message.id else null
                                 }
                             }
-                            when (message.contentType) {
-                                "contact" -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                    Box(Modifier.size(40.dp).background(homeAccent, CircleShape), contentAlignment = Alignment.Center) { Text((message.contactName ?: "联").take(1), color = Color.Black, fontWeight = FontWeight.Bold) }
-                                    Column(Modifier.padding(start = 10.dp)) { Text(message.contactName ?: "联系人", color = homePrimaryText, fontWeight = FontWeight.SemiBold); Text("联系人", color = homeSecondaryText, style = MaterialTheme.typography.bodySmall) }
-                                }
-                                "location" -> Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Text("📍 位置", color = homePrimaryText, fontWeight = FontWeight.SemiBold)
-                                    if (message.latitude != null && message.longitude != null) Text("%.6f, %.6f".format(message.latitude, message.longitude), color = homeSecondaryText, style = MaterialTheme.typography.bodySmall)
-                                }
-                                "poll" -> Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                    Text(message.pollQuestion ?: "投票", color = homePrimaryText, fontWeight = FontWeight.SemiBold)
-                                    message.pollOptions.forEach { option ->
-                                        Row(Modifier.fillMaxWidth().clickable {
-                                            val chosenIds = message.pollOptions.filter { it.chosen }.map { it.id }.toMutableSet()
-                                            val next = if (message.pollMultipleAnswers) { if (option.chosen) chosenIds.remove(option.id) else chosenIds.add(option.id); chosenIds.toList() } else if (option.chosen) emptyList() else listOf(option.id)
-                                            onVotePoll(message.id, next)
-                                        }.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                                            Text(if (option.chosen) "●" else "○", color = homeAccent); Text(option.text, color = homePrimaryText, modifier = Modifier.weight(1f).padding(start = 7.dp)); Text("${option.voterCount}", color = homeSecondaryText, style = MaterialTheme.typography.bodySmall)
-                                        }
-                                    }
-                                }
-                                "voice" -> Row(Modifier.fillMaxWidth().clickable {
-                                    val blobId = message.mediaBlobId
-                                    if (playingVoiceMessageId == message.id) { voicePlayer.stop(); playingVoiceMessageId = null }
-                                    else if (blobId != null && message.mediaSizeBytes > 0) {
-                                        onLoadBlob(blobId, message.mediaSizeBytes) { result ->
-                                            result.onSuccess { bytes -> voicePlayer.toggle(message.id, bytes) { playingVoiceMessageId = null }.onSuccess { playing -> playingVoiceMessageId = if (playing) message.id else null } }
-                                        }
-                                    }
-                                }, verticalAlignment = Alignment.CenterVertically) {
-                                    Text(if (playingVoiceMessageId == message.id) "■" else "▶", color = homeAccent, fontSize = 24.sp)
-                                    Column(Modifier.padding(start = 10.dp)) { Text("语音消息", color = homePrimaryText, fontWeight = FontWeight.Medium); Text(if (playingVoiceMessageId == message.id) "正在播放" else (message.mediaFileName ?: "录音"), color = homeSecondaryText, style = MaterialTheme.typography.bodySmall) }
-                                }
-                                "audio" -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Text("♫", color = homeAccent, fontSize = 24.sp); Text(message.mediaFileName ?: "音频", color = homePrimaryText, modifier = Modifier.padding(start = 10.dp)) }
-                                "photo", "video", "document" -> Row(Modifier.fillMaxWidth().clickable { mediaViewerMessage = message }, verticalAlignment = Alignment.CenterVertically) {
-                                    Text(if (message.contentType == "photo") "🖼" else if (message.contentType == "video") "🎬" else "📎", fontSize = 24.sp)
-                                    Column(Modifier.padding(start = 10.dp)) { Text(message.mediaFileName ?: message.text, color = homePrimaryText, fontWeight = FontWeight.Medium); Text(if (message.contentType == "photo") "图片 · 点击查看" else if (message.contentType == "video") "视频 · 点击播放" else "文件 · 点击打开", color = homeSecondaryText, style = MaterialTheme.typography.bodySmall) }
-                                }
-                                else -> Text(message.text, color = homePrimaryText)
-                            }
-                            if (message.reactions.isNotEmpty()) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(5.dp), modifier = Modifier.padding(top = 5.dp)) {
-                                    message.reactions.take(5).forEach { reaction ->
-                                        Text("${reaction.reaction} ${reaction.count}", color = homePrimaryText, fontSize = 11.sp, modifier = Modifier.background(if (reaction.chosenByMe) homeAccent.copy(alpha = 0.25f) else homeBorder, RoundedCornerShape(10.dp)).padding(horizontal = 7.dp, vertical = 3.dp))
-                                    }
-                                }
-                            }
-                            val check = when {
-                                message.deliveryState.contains("read", true) -> "✓✓"
-                                message.deliveryState.contains("deliver", true) -> "✓✓"
-                                else -> "✓"
-                            }
-                            Text((if (message.edited) "已编辑  " else "") + message.time + if (message.outgoing) "  $check" else "", color = if (message.outgoing && message.deliveryState.contains("read", true)) homeAccent else homeSecondaryText, style = MaterialTheme.typography.bodySmall, modifier = Modifier.align(Alignment.End))
                         }
                     }
-                }
-            }
+                },
+                onOpenMedia = { mediaViewerMessage = it },
+                onVotePoll = onVotePoll,
+                onSelectMessage = { selectedMessage = it },
+                onReply = {
+                    replyTarget = it
+                    editingMessage = null
+                },
+                modifier = Modifier.weight(1f),
+            )
             if (editingMessage != null || replyTarget != null) {
                 Row(Modifier.fillMaxWidth().background(homeSurface).padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(if (editingMessage != null) "✎" else "↩", color = homeAccent, fontSize = 20.sp)
