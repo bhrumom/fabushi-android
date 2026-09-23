@@ -4,8 +4,10 @@ import android.app.Application
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidCoordinatorPort
 import com.ombhrum.fabushi.core.MahayanaHost
 import org.json.JSONObject
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -50,6 +52,33 @@ class AndroidCoordinatorRuntime private constructor(application: Application) : 
 
     override fun featureExecute(params: JSONObject) = host.request("feature.execute", params)
     override fun featureInterrupt(params: JSONObject) = host.request("feature.interrupt", params)
+
+    override fun botList(requestId: String): JSONObject {
+        require(requestId.isNotBlank()) { "requestId is required" }
+        val completed = CompletableFuture<JSONObject>()
+        val subscription = addFeatureEventListener { event ->
+            if (event.optString("type") == "bot.listed") {
+                val eventRequestId = event.optString("requestId")
+                if (eventRequestId.isBlank() || eventRequestId == requestId) {
+                    completed.complete(JSONObject(event.toString()))
+                }
+            }
+        }
+        return try {
+            host.request(
+                "feature.execute",
+                JSONObject().put(
+                    "command",
+                    JSONObject()
+                        .put("type", "bot.list")
+                        .put("requestId", requestId),
+                ),
+            )
+            completed.get(8, TimeUnit.SECONDS)
+        } finally {
+            subscription.close()
+        }
+    }
 
     override fun marketplaceBrowse(params: JSONObject) = host.request("feature.marketplace.browse", params)
     override fun marketplaceRelease(params: JSONObject) = host.request("feature.marketplace.release", params)
