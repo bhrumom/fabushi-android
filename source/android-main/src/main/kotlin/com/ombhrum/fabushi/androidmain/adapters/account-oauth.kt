@@ -1,6 +1,7 @@
 package com.ombhrum.fabushi.androidmain.adapters
 
 import android.net.Uri
+import java.net.URI
 import androidx.activity.ComponentActivity
 import androidx.browser.customtabs.CustomTabsIntent
 
@@ -14,14 +15,14 @@ internal class AndroidAccountOAuthAdapter {
         CustomTabsIntent.Builder()
             .setShowTitle(true)
             .build()
-            .launchUrl(interactiveActivity, target)
+            .launchUrl(interactiveActivity, Uri.parse(target.toASCIIString()))
         return true
     }
 
     companion object {
-        internal fun validateExternalAuthUrl(rawUrl: String): Uri? {
+        internal fun validateExternalAuthUrl(rawUrl: String): URI? {
             if (rawUrl.length !in 1..MAX_URL_LENGTH) return null
-            val uri = runCatching { Uri.parse(rawUrl) }.getOrNull() ?: return null
+            val uri = runCatching { URI(rawUrl) }.getOrNull() ?: return null
             if (!uri.scheme.equals("https", ignoreCase = true)) return null
             if (uri.host.isNullOrBlank()) return null
             if (uri.userInfo != null) return null
