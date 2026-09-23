@@ -96,7 +96,7 @@ fn truncate_body(text: &str) -> String {
         .chars()
         .take(MAX_NOTIFICATION_BODY_LENGTH.saturating_sub(1))
         .collect();
-    while value.ends_with(char::is_whitespace) {
+    while value.chars().last().is_some_and(char::is_whitespace) {
         value.pop();
     }
     value.push('…');
