@@ -23,7 +23,7 @@ class FabushiApplication : Application() {
     @Volatile
     private var processRuntime: FabushiProcessRuntime? = null
 
-    internal fun ensureProcessRuntime(intent: Intent?): FabushiProcessRuntime =
+    internal fun ensurePresentationRuntime(intent: Intent?): AndroidPresentationRuntimePort =
         processRuntime ?: synchronized(this) {
             processRuntime ?: run {
                 val ciBootstrapActive = FabushiCiBootstrap.prepare(this)
@@ -35,7 +35,7 @@ class FabushiApplication : Application() {
             }
         }
 
-    internal fun requireProcessRuntime(): FabushiProcessRuntime =
+    internal fun requirePresentationRuntime(): AndroidPresentationRuntimePort =
         checkNotNull(processRuntime) { "Fabushi process runtime has not been initialized" }
 
     override fun onTerminate() {
@@ -80,7 +80,7 @@ internal class FabushiProcessRuntime(
         configuredDeviceName = FabushiCiBootstrap.configuredDeviceName(intent, ciBootstrapActive),
     )
 
-    internal fun handlePlatformDeepLink(link: AndroidDeepLink): Boolean =
+    override fun handlePlatformDeepLink(link: AndroidDeepLink): Boolean =
         when (link) {
             is AndroidDeepLink.McpOAuthCallback -> {
                 runCatching { mcpOAuth.handleCallback(link) }
