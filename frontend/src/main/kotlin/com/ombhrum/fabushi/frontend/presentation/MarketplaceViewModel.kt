@@ -106,7 +106,10 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
                     accountName = user?.optString("nickname").orEmpty().ifBlank { user?.optString("username").orEmpty().ifBlank { user?.optString("email").orEmpty().ifBlank { "Fabushi" } } },
                     accountEmail = user?.optString("email").orEmpty(),
                 )
-                if (mutableState.value.loggedIn) refresh()
+                if (mutableState.value.loggedIn) {
+                    restoreChatTranscript()
+                    refresh()
+                }
             }.onFailure { error ->
                 mutableState.value = mutableState.value.copy(authResolved = true, message = "账号状态加载失败：${error.message ?: error::class.java.simpleName}")
             }
@@ -237,6 +240,7 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
                             loginError = null,
                             message = "登录成功，账号状态已同步",
                         )
+                        restoreChatTranscript()
                         refresh()
                     }
                     "cancelled" -> mutableState.value = mutableState.value.copy(message = "登录授权已取消")
@@ -272,6 +276,46 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
                     )
                 }
                 .onFailure { error -> mutableState.value = mutableState.value.copy(message = "退出登录失败：${error.message ?: error::class.java.simpleName}") }
+        }
+    }
+
+    private fun restoreChatTranscript() {
+        viewModelScope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) { coordinator.transcriptSnapshot() }
+            }.onSuccess { entries ->
+                val restored = buildList {
+                    for (index in 0 until entries.length()) {
+                        val entry = entries.optJSONObject(index) ?: continue
+                        if (entry.optString("kind") != "message") continue
+                        val id = entry.optString("id").trim()
+                        val text = entry.optString("content")
+                        val role = when (entry.optString("role")) {
+                            "user" -> MobileChatRole.USER
+                            "assistant" -> MobileChatRole.ASSISTANT
+                            else -> continue
+                        }
+                        if (id.isBlank()) continue
+                        add(
+                            MobileChatMessage(
+                                id = id,
+                                role = role,
+                                text = text,
+                                operationId = entry.optString("operationId").takeIf(String::isNotBlank),
+                            ),
+                        )
+                    }
+                }.distinctBy(MobileChatMessage::id)
+                mutableState.value = mutableState.value.copy(
+                    chatMessages = restored,
+                    chatBusy = false,
+                    activeOperationId = null,
+                )
+            }.onFailure { error ->
+                mutableState.value = mutableState.value.copy(
+                    message = "会话恢复失败：${error.message ?: error::class.java.simpleName}",
+                )
+            }
         }
     }
 
