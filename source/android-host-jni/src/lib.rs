@@ -746,4 +746,59 @@ mod tests {
             .unwrap()
             .contains("unknown host method"));
     }
+    #[test]
+    fn mcp_oauth_callback_is_single_use_and_host_event_does_not_echo_code() {
+        let mut runtime =
+            AndroidNativeRuntime::new("/tmp/fabushi-jni-mcp-oauth", AndroidHostMode::Test, 13);
+        let state = "0123456789abcdef0123456789abcdef";
+
+        let registered = call(
+            &mut runtime,
+            json!({
+                "method":"coordinator.mcpOAuth.register",
+                "params":{"state":state,"provider":"github"}
+            }),
+        );
+        assert_eq!(registered["ok"], true);
+        assert_eq!(registered["result"]["registered"], true);
+
+        let completed = call(
+            &mut runtime,
+            json!({
+                "method":"coordinator.mcpOAuth.complete",
+                "params":{"state":state,"code":"secret-oauth-code"}
+            }),
+        );
+        assert_eq!(completed["ok"], true);
+        assert_eq!(completed["result"]["provider"], "github");
+        assert_eq!(completed["result"]["outcome"], "completed");
+        assert!(completed["result"].get("code").is_none());
+
+        let duplicate = call(
+            &mut runtime,
+            json!({
+                "method":"coordinator.mcpOAuth.complete",
+                "params":{"state":state,"code":"second-code"}
+            }),
+        );
+        assert_eq!(duplicate["ok"], false);
+
+        let mut saw_completion = false;
+        for _ in 0..8 {
+            let event = call(
+                &mut runtime,
+                json!({"method":"feature.receive","params":{}}),
+            );
+            let result = &event["result"];
+            if result["type"] == "mcp.auth.completed" {
+                saw_completion = true;
+                assert_eq!(result["provider"], "github");
+                assert!(result.get("code").is_none());
+                assert!(!result.to_string().contains("secret-oauth-code"));
+                break;
+            }
+        }
+        assert!(saw_completion);
+    }
+
 }
