@@ -41,6 +41,13 @@ impl TranscriptStore {
             .any(|entry| entry.get("id").and_then(Value::as_str) == Some(id))
     }
 
+    pub fn entry(&self, id: &str) -> Option<Value> {
+        self.entries
+            .iter()
+            .find(|entry| entry.get("id").and_then(Value::as_str) == Some(id))
+            .cloned()
+    }
+
     pub fn set_transcript(&mut self, entries: &[Value]) -> io::Result<()> {
         validate_entries(entries)?;
         let previous = std::mem::replace(&mut self.entries, entries.to_vec());
