@@ -74,7 +74,7 @@ jobs:
         working-directory: mobile/android
         run: |
           set -eu
-          ./gradlew --no-daemon clean             assembleDebug             assembleCiAcceptance             assembleCiAcceptanceAndroidTest             testDebugUnitTest             lintDebug
+          ./gradlew --no-daemon clean             assembleDebug             assembleCiAcceptance             assembleCiAcceptanceAndroidTest             testCiAcceptanceUnitTest             lintDebug
       - name: Record exact-HEAD APK identities
         working-directory: mobile/android
         run: |
