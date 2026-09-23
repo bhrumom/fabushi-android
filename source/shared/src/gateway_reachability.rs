@@ -1,5 +1,3 @@
-use std::error::Error;
-
 pub const CLOUD_AGENT_STORAGE_DISABLED: &str = "CLOUD_AGENT_STORAGE_DISABLED";
 pub const GATEWAY_NO_STORAGE_MESSAGE_MARKER: &str =
     "sand box access blocked by privacy mode (no_storage)";
@@ -10,6 +8,8 @@ pub const SAND_BOX_BLOCK_REASON_KEY: &str = "sandBoxBlockReason";
 pub const GATEWAY_BOX_BLOCKED_PREFIX: &str = "sand box blocked by kill switch: ";
 pub const SAND_CLIENT_PAUSE_REASON: &str = "SAND_CLIENT_PAUSE";
 
+const UNIT_SEPARATOR: char = '\u{001f}';
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SandBoxBlockedInfo {
     pub reason: String,
@@ -19,8 +19,8 @@ pub struct SandBoxBlockedInfo {
 
 pub fn encode_sand_box_blocked_message(info: &SandBoxBlockedInfo) -> String {
     format!(
-        "{GATEWAY_BOX_BLOCKED_PREFIX}{}\u{001f}{}\u{001f}{}",
-        info.reason, info.title, info.detail
+        "{GATEWAY_BOX_BLOCKED_PREFIX}{}{}{}{}{}",
+        info.reason, UNIT_SEPARATOR, info.title, UNIT_SEPARATOR, info.detail
     )
 }
 
@@ -30,20 +30,20 @@ pub fn has_sand_box_blocked_marker(message: &str) -> bool {
 
 pub fn sand_client_pause_blocked_message() -> String {
     encode_sand_box_blocked_message(&SandBoxBlockedInfo {
-        reason: SAND_CLIENT_PAUSE_REASON.to_string(),
+        reason: SAND_CLIENT_PAUSE_REASON.into(),
         title: String::new(),
         detail: String::new(),
     })
 }
 
-pub fn find_sand_box_blocked_message(error: &(dyn Error + 'static)) -> Option<String> {
-    let mut current: Option<&(dyn Error + 'static)> = Some(error);
-    while let Some(node) = current {
-        let message = node.to_string();
-        if let Some(start) = message.find(GATEWAY_BOX_BLOCKED_PREFIX) {
-            return Some(message[start..].to_string());
+pub fn find_sand_box_blocked_message<'a, I>(messages: I) -> Option<String>
+where
+    I: IntoIterator<Item = &'a str>,
+{
+    for message in messages {
+        if let Some(index) = message.find(GATEWAY_BOX_BLOCKED_PREFIX) {
+            return Some(message[index..].to_string());
         }
-        current = node.source();
     }
     None
 }
@@ -51,45 +51,24 @@ pub fn find_sand_box_blocked_message(error: &(dyn Error + 'static)) -> Option<St
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{error::Error, fmt};
 
-    #[derive(Debug)]
-    struct Wrapped {
-        message: &'static str,
-        source: Option<Box<dyn Error + Send + Sync>>,
-    }
-    impl fmt::Display for Wrapped {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            f.write_str(self.message)
-        }
-    }
-    impl Error for Wrapped {
-        fn source(&self) -> Option<&(dyn Error + 'static)> {
-            self.source
-                .as_deref()
-                .map(|value| value as &(dyn Error + 'static))
-        }
+    #[test]
+    fn blocked_message_is_structured_and_detectable() {
+        let encoded = encode_sand_box_blocked_message(&SandBoxBlockedInfo {
+            reason: "policy".into(),
+            title: "Unavailable".into(),
+            detail: "retry later".into(),
+        });
+        assert!(has_sand_box_blocked_marker(&encoded));
+        assert!(encoded.contains("\u{001f}"));
+        assert_eq!(
+            find_sand_box_blocked_message(["wrapper", &format!("prefix: {encoded}")]),
+            Some(encoded)
+        );
     }
 
     #[test]
-    fn marker_round_trip_and_nested_error_search_are_stable() {
-        let encoded = encode_sand_box_blocked_message(&SandBoxBlockedInfo {
-            reason: "maintenance".into(),
-            title: "Paused".into(),
-            detail: "Try later".into(),
-        });
-        assert!(has_sand_box_blocked_marker(&encoded));
-        let error = Wrapped {
-            message: "outer",
-            source: Some(Box::new(Wrapped {
-                message: Box::leak(format!("prefix {encoded} suffix").into_boxed_str()),
-                source: None,
-            })),
-        };
-        assert_eq!(
-            find_sand_box_blocked_message(&error).as_deref(),
-            Some(format!("{encoded} suffix").as_str())
-        );
+    fn pause_marker_uses_canonical_reason() {
         assert!(sand_client_pause_blocked_message().contains(SAND_CLIENT_PAUSE_REASON));
     }
 }
