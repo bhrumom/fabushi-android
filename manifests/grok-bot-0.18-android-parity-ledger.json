@@ -10315,9 +10315,10 @@
       "android_target_path": "source/host/src/extensions/telemetry/webauthn_proxy_telemetry.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust bounded WebAuthn telemetry maps known causes/error names without leaking arbitrary provider error taxonomy; focused unit test included; exact-HEAD cargo CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "clean-room behavior/contract implementation from frozen Grok responsibilities; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/extensions/transcript/ack-obligations.ts",
@@ -11121,9 +11122,10 @@
       "android_target_path": "source/host/src/extensions/webauthn_proxy/extension.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust Host WebAuthn extension composes provider registration, ceremony request/response/expiry and marker enablement in source/host/src/extensions/webauthn_proxy/extension.rs; workspace tests cover bridge and marker behavior; exact-HEAD cargo CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "clean-room behavior/contract implementation from frozen Grok responsibilities; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/extensions/webauthn-proxy/webauthn-proxy-bridge.ts",
@@ -11134,9 +11136,10 @@
       "android_target_path": "source/host/src/extensions/webauthn_proxy/webauthn_proxy_bridge.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust WebAuthn provider bridge selects latest live provider, distinguishes no-provider/stale-provider, records grant/sign stages, settles result/error once, and emits timeout cancel; focused unit tests cover liveness, settlement, stage cause and timeout; exact-HEAD cargo CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "clean-room behavior/contract implementation from frozen Grok responsibilities; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/extensions/webauthn-proxy/webauthn-proxy-marker.ts",
@@ -11147,9 +11150,10 @@
       "android_target_path": "source/host/src/extensions/webauthn_proxy/webauthn_proxy_marker.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust marker policy applies/removes box marker idempotently, gates on box directory and optionally invokes Chrome policy command; focused filesystem test included; exact-HEAD cargo CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "clean-room behavior/contract implementation from frozen Grok responsibilities; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/gateway-command-error.ts",
@@ -26735,7 +26739,7 @@
     }
   ],
   "status_summary": {
-    "mapped": 1873,
-    "implemented": 173
+    "mapped": 1869,
+    "implemented": 177
   }
 }
