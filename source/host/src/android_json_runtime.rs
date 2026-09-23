@@ -465,7 +465,7 @@ impl AndroidJsonHost {
             .and_then(Value::as_str)
             .filter(|value| !value.trim().is_empty())
             .ok_or("chat.send text is required")?;
-        self.transcript
+        let user_was_new = self.transcript
             .append_entry_if_absent(json!({
                 "id":request_id,
                 "kind":"message",
@@ -475,6 +475,47 @@ impl AndroidJsonHost {
                 "timestampMs":now_ms(),
             }))
             .map_err(|error| format!("failed to persist user transcript entry: {error}"))?;
+
+        let assistant_entry_id = format!("assistant:{operation_id}");
+        if !user_was_new {
+            if let Some(existing) = self.transcript.entry(&assistant_entry_id) {
+                let text = existing
+                    .get("content")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string();
+                let mut queue = VecDeque::new();
+                if !text.is_empty() {
+                    queue.push_back(json!({
+                        "type":"chat.message",
+                        "operationId":operation_id,
+                        "requestId":request_id,
+                        "role":"assistant",
+                        "text":text,
+                        "recovered":true,
+                    }));
+                }
+                queue.push_back(json!({
+                    "type":"operation.completed",
+                    "operationId":operation_id,
+                    "requestId":request_id,
+                    "finishReason":"recovered",
+                    "attempts":0,
+                    "deduped":true,
+                }));
+                self.turn_event_queues
+                    .insert(operation_id.to_string(), queue);
+                if !self
+                    .turn_delivery_order
+                    .iter()
+                    .any(|queued| queued == operation_id)
+                {
+                    self.turn_delivery_order.push_back(operation_id.to_string());
+                }
+                return Ok(());
+            }
+        }
+
         let agent_id = command
             .get("agentId")
             .and_then(Value::as_str)
@@ -539,7 +580,7 @@ impl AndroidJsonHost {
                     if !final_text.is_empty() {
                         self.transcript
                             .append_entry_if_absent(json!({
-                                "id":format!("assistant:{operation_id}"),
+                                "id":assistant_entry_id,
                                 "kind":"message",
                                 "role":"assistant",
                                 "content":final_text.clone(),
