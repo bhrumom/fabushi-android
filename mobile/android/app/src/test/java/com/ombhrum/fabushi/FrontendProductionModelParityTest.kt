@@ -190,6 +190,28 @@ class FrontendProductionModelParityTest {
     }
 
     @Test
+    fun conversationReplyPreviewNormalizesAndBoundsMessageContent() {
+        val message = ChatMessage(
+            id = "m1",
+            conversationId = "c1",
+            text = "  hello    world  ",
+            outgoing = false,
+            time = "now",
+        )
+        assertEquals("hello world", replyPreviewLabel(message))
+        assertEquals("回复…", replyComposerPlaceholder(message))
+        assertEquals(
+            "回复附件…",
+            replyComposerPlaceholder(
+                message.copy(contentType = "photo", mediaFileName = "photo.jpg"),
+            ),
+        )
+        val long = message.copy(text = "x".repeat(200))
+        assertTrue(replyPreviewLabel(long).endsWith("…"))
+        assertTrue(replyPreviewLabel(long).length <= 96)
+    }
+
+    @Test
     fun permissionScopeRequiresStrictlyNewRevisionAfterAccountReentry() {
         val gate = LocalToolPermissionScopeGate()
         gate.enter("account-a")
