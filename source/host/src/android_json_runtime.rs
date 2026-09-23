@@ -15,7 +15,12 @@ use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fs;
 use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+};
+use std::thread;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct CiAccountSessionIdentity {
@@ -115,7 +120,7 @@ pub enum AndroidHostMode {
 pub struct AndroidJsonHost {
     mode: AndroidHostMode,
     agents: AndroidAgentRoster,
-    transcript: TranscriptStore,
+    transcript: Arc<Mutex<TranscriptStore>>,
     ci_session_path: Option<PathBuf>,
     ci_session_identity: Option<CiAccountSessionIdentity>,
     logged_in: bool,
@@ -125,9 +130,8 @@ pub struct AndroidJsonHost {
     browser_attempts: BTreeMap<String, String>,
     events: VecDeque<Value>,
     active_operations: BTreeSet<String>,
-    turn_owner: ProductionTurnAgentOwner<AndroidHostInferenceProvider>,
-    turn_event_queues: BTreeMap<String, VecDeque<Value>>,
-    turn_delivery_order: VecDeque<String>,
+    turn_events: Arc<Mutex<VecDeque<Value>>>,
+    turn_cancellations: BTreeMap<String, Arc<AtomicBool>>,
     installed_plugins: BTreeSet<String>,
     webauthn: WebAuthnProxyExtension,
     webauthn_provider_queues: BTreeMap<String, VecDeque<WebAuthnRequestFrame>>,
@@ -138,8 +142,10 @@ impl AndroidJsonHost {
         let app_data_dir = app_data_dir.into();
         let agents = AndroidAgentRoster::open(app_data_dir.join("agents.json"))
             .unwrap_or_else(|error| panic!("failed to open canonical Android agent roster: {error}"));
-        let transcript = TranscriptStore::open(app_data_dir.join("transcript.json"))
-            .unwrap_or_else(|error| panic!("failed to open canonical Android transcript: {error}"));
+        let transcript = Arc::new(Mutex::new(
+            TranscriptStore::open(app_data_dir.join("transcript.json"))
+                .unwrap_or_else(|error| panic!("failed to open canonical Android transcript: {error}")),
+        ));
         let ci_session = if mode == AndroidHostMode::Production {
             ci_account_session_from_environment(now_ms() / 1_000)
         } else {
@@ -162,14 +168,8 @@ impl AndroidJsonHost {
             browser_attempts: BTreeMap::new(),
             events: VecDeque::new(),
             active_operations: BTreeSet::new(),
-            turn_owner: ProductionTurnAgentOwner::new(AndroidHostInferenceProvider::new(
-                match mode {
-                    AndroidHostMode::Production => AndroidInferenceMode::Production,
-                    AndroidHostMode::Test => AndroidInferenceMode::Test,
-                },
-            )),
-            turn_event_queues: BTreeMap::new(),
-            turn_delivery_order: VecDeque::new(),
+            turn_events: Arc::new(Mutex::new(VecDeque::new())),
+            turn_cancellations: BTreeMap::new(),
             installed_plugins: BTreeSet::new(),
             webauthn: WebAuthnProxyExtension::new(WebAuthnProxyExtensionConfig::default()),
             webauthn_provider_queues: BTreeMap::new(),
@@ -275,7 +275,12 @@ impl AndroidJsonHost {
             "feature.messaging.access.issue" => Ok(json!({"status":"available"})),
             "feature.messaging.blob.read" => Ok(json!({"data":Value::Null})),
             "feature.messaging.execute" => Ok(json!({"ok":true})),
-            "feature.transcript.snapshot" => Ok(Value::Array(self.transcript.get_transcript())),
+            "feature.transcript.snapshot" => Ok(Value::Array(
+                self.transcript
+                    .lock()
+                    .map_err(|_| "transcript lock poisoned".to_string())?
+                    .get_transcript(),
+            )),
             "feature.webauthn.registerProvider" => self.webauthn_register_provider(),
             "feature.webauthn.unregisterProvider" => self.webauthn_unregister_provider(params),
             "feature.webauthn.pollRequest" => self.webauthn_poll_request(params),
@@ -392,11 +397,16 @@ impl AndroidJsonHost {
         if operation_id.trim().is_empty() {
             return Err("operation id is required".into());
         }
-        let _ = self.turn_owner.cancel(operation_id);
+        if let Some(cancelled) = self.turn_cancellations.remove(operation_id) {
+            cancelled.store(true, Ordering::Release);
+        }
         self.active_operations.remove(operation_id);
-        self.turn_event_queues.remove(operation_id);
-        self.turn_delivery_order
-            .retain(|queued| queued != operation_id);
+        self.turn_events
+            .lock()
+            .map_err(|_| "turn event queue lock poisoned".to_string())?
+            .retain(|event| {
+                event.get("operationId").and_then(Value::as_str) != Some(operation_id)
+            });
         self.events.push_back(json!({
             "type":"operation.interrupted",
             "operationId":operation_id,
@@ -623,55 +633,57 @@ impl AndroidJsonHost {
             .get("text")
             .and_then(Value::as_str)
             .filter(|value| !value.trim().is_empty())
-            .ok_or("chat.send text is required")?;
-        let user_was_new = self.transcript
-            .append_entry_if_absent(json!({
-                "id":request_id,
-                "kind":"message",
-                "role":"user",
-                "content":prompt,
-                "operationId":operation_id,
-                "timestampMs":now_ms(),
-            }))
-            .map_err(|error| format!("failed to persist user transcript entry: {error}"))?;
+            .ok_or("chat.send text is required")?
+            .to_string();
 
         let assistant_entry_id = format!("assistant:{operation_id}");
-        if !user_was_new {
-            if let Some(existing) = self.transcript.entry(&assistant_entry_id) {
-                let text = existing
-                    .get("content")
-                    .and_then(Value::as_str)
-                    .unwrap_or_default()
-                    .to_string();
-                let mut queue = VecDeque::new();
-                if !text.is_empty() {
-                    queue.push_back(json!({
-                        "type":"chat.message",
+        {
+            let mut transcript = self
+                .transcript
+                .lock()
+                .map_err(|_| "transcript lock poisoned".to_string())?;
+            let user_was_new = transcript
+                .append_entry_if_absent(json!({
+                    "id":request_id,
+                    "kind":"message",
+                    "role":"user",
+                    "content":prompt.clone(),
+                    "operationId":operation_id,
+                    "timestampMs":now_ms(),
+                }))
+                .map_err(|error| format!("failed to persist user transcript entry: {error}"))?;
+
+            if !user_was_new {
+                if let Some(existing) = transcript.entry(&assistant_entry_id) {
+                    let text = existing
+                        .get("content")
+                        .and_then(Value::as_str)
+                        .unwrap_or_default()
+                        .to_string();
+                    let mut events = self
+                        .turn_events
+                        .lock()
+                        .map_err(|_| "turn event queue lock poisoned".to_string())?;
+                    if !text.is_empty() {
+                        events.push_back(json!({
+                            "type":"chat.message",
+                            "operationId":operation_id,
+                            "requestId":request_id,
+                            "role":"assistant",
+                            "text":text,
+                            "recovered":true,
+                        }));
+                    }
+                    events.push_back(json!({
+                        "type":"operation.completed",
                         "operationId":operation_id,
                         "requestId":request_id,
-                        "role":"assistant",
-                        "text":text,
-                        "recovered":true,
+                        "finishReason":"recovered",
+                        "attempts":0,
+                        "deduped":true,
                     }));
+                    return Ok(());
                 }
-                queue.push_back(json!({
-                    "type":"operation.completed",
-                    "operationId":operation_id,
-                    "requestId":request_id,
-                    "finishReason":"recovered",
-                    "attempts":0,
-                    "deduped":true,
-                }));
-                self.turn_event_queues
-                    .insert(operation_id.to_string(), queue);
-                if !self
-                    .turn_delivery_order
-                    .iter()
-                    .any(|queued| queued == operation_id)
-                {
-                    self.turn_delivery_order.push_back(operation_id.to_string());
-                }
-                return Ok(());
             }
         }
 
@@ -679,118 +691,207 @@ impl AndroidJsonHost {
             .get("agentId")
             .and_then(Value::as_str)
             .filter(|value| !value.trim().is_empty())
-            .unwrap_or("mahayana-assistant");
+            .unwrap_or("mahayana-assistant")
+            .to_string();
         let model = command
             .get("model")
             .and_then(Value::as_str)
             .filter(|value| !value.trim().is_empty())
-            .unwrap_or("default");
+            .unwrap_or("default")
+            .to_string();
 
-        let result = self
-            .turn_owner
-            .run(ProductionTurnInput {
-                operation_id: operation_id.to_string(),
-                request_id: request_id.to_string(),
-                agent_id: agent_id.to_string(),
-                model: model.to_string(),
-                prompt: prompt.to_string(),
-                resume_checkpoint_available: false,
-            })
-            .map_err(|error| error.message)?;
+        let cancelled = Arc::new(AtomicBool::new(false));
+        self.turn_cancellations
+            .insert(operation_id.to_string(), cancelled.clone());
 
-        let mut queue = VecDeque::new();
-        queue.push_back(json!({
-            "type":"model.routed",
-            "operationId":operation_id,
-            "requestId":request_id,
-            "model":model,
-            "provider":"android-host",
-            "mode":"agent",
-        }));
+        let mode = self.mode;
+        let bearer_token = self
+            .ci_session_identity
+            .as_ref()
+            .map(|identity| identity.access_token.clone());
+        let turn_events = self.turn_events.clone();
+        let transcript = self.transcript.clone();
+        let operation_id_owned = operation_id.to_string();
+        let request_id_owned = request_id.to_string();
+        let assistant_entry_id_owned = assistant_entry_id.clone();
 
-        let mut final_text = String::new();
-        for event in result.events {
-            match event {
-                ProductionTurnEvent::Retrying {
-                    attempt,
-                    delay_ms,
-                    reason,
-                } => queue.push_back(json!({
-                    "type":"turn.retrying",
-                    "operationId":operation_id,
-                    "requestId":request_id,
-                    "attempt":attempt,
-                    "delayMs":delay_ms,
-                    "reason":reason,
-                })),
-                ProductionTurnEvent::Delta(delta) => {
-                    final_text.push_str(&delta);
-                    queue.push_back(json!({
-                        "type":"chat.delta",
-                        "operationId":operation_id,
-                        "requestId":request_id,
-                        "delta":delta,
-                    }));
-                }
-                ProductionTurnEvent::Completed {
-                    finish_reason,
-                    attempts,
-                } => {
-                    if !final_text.is_empty() {
-                        self.transcript
-                            .append_entry_if_absent(json!({
-                                "id":assistant_entry_id,
-                                "kind":"message",
-                                "role":"assistant",
-                                "content":final_text.clone(),
-                                "operationId":operation_id,
-                                "timestampMs":now_ms(),
-                            }))
-                            .map_err(|error| format!("failed to persist assistant transcript entry: {error}"))?;
-                        queue.push_back(json!({
-                            "type":"chat.message",
-                            "operationId":operation_id,
-                            "requestId":request_id,
-                            "role":"assistant",
-                            "text":final_text,
-                        }));
+        let spawn = thread::Builder::new()
+            .name(format!("fabushi-turn-{}", operation_id.chars().take(32).collect::<String>()))
+            .spawn(move || {
+                let provider = match mode {
+                    AndroidHostMode::Test => {
+                        AndroidHostInferenceProvider::new(AndroidInferenceMode::Test)
                     }
-                    queue.push_back(json!({
-                        "type":"operation.completed",
-                        "operationId":operation_id,
-                        "requestId":request_id,
-                        "finishReason":finish_reason,
-                        "attempts":attempts,
-                    }));
+                    AndroidHostMode::Production => {
+                        let Some(token) = bearer_token else {
+                            push_turn_event(
+                                &turn_events,
+                                json!({
+                                    "type":"operation.failed",
+                                    "operationId":operation_id_owned,
+                                    "requestId":request_id_owned,
+                                    "message":"provider_credentials_unavailable",
+                                }),
+                            );
+                            return;
+                        };
+                        match AndroidHostInferenceProvider::production(token, cancelled.clone()) {
+                            Ok(provider) => provider,
+                            Err(error) => {
+                                push_turn_event(
+                                    &turn_events,
+                                    json!({
+                                        "type":"operation.failed",
+                                        "operationId":operation_id_owned,
+                                        "requestId":request_id_owned,
+                                        "message":error.message,
+                                    }),
+                                );
+                                return;
+                            }
+                        }
+                    }
+                };
+
+                let mut owner = ProductionTurnAgentOwner::new(provider);
+                let mut final_text = String::new();
+                let mut terminal_emitted = false;
+                let mut sink = |event: ProductionTurnEvent| -> Result<(), String> {
+                    if cancelled.load(Ordering::Acquire) {
+                        return Err("cancelled".into());
+                    }
+                    match event {
+                        ProductionTurnEvent::Retrying {
+                            attempt,
+                            delay_ms,
+                            reason,
+                        } => push_turn_event(
+                            &turn_events,
+                            json!({
+                                "type":"turn.retrying",
+                                "operationId":operation_id_owned,
+                                "requestId":request_id_owned,
+                                "attempt":attempt,
+                                "delayMs":delay_ms,
+                                "reason":reason,
+                            }),
+                        ),
+                        ProductionTurnEvent::Delta(delta) => {
+                            final_text.push_str(&delta);
+                            push_turn_event(
+                                &turn_events,
+                                json!({
+                                    "type":"chat.delta",
+                                    "operationId":operation_id_owned,
+                                    "requestId":request_id_owned,
+                                    "delta":delta,
+                                }),
+                            );
+                        }
+                        ProductionTurnEvent::Completed {
+                            finish_reason,
+                            attempts,
+                        } => {
+                            if !final_text.is_empty() {
+                                let persist = transcript
+                                    .lock()
+                                    .map_err(|_| "transcript lock poisoned".to_string())?
+                                    .append_entry_if_absent(json!({
+                                        "id":assistant_entry_id_owned,
+                                        "kind":"message",
+                                        "role":"assistant",
+                                        "content":final_text.clone(),
+                                        "operationId":operation_id_owned,
+                                        "timestampMs":now_ms(),
+                                    }))
+                                    .map_err(|error| {
+                                        format!("failed to persist assistant transcript entry: {error}")
+                                    })?;
+                                let _ = persist;
+                                push_turn_event(
+                                    &turn_events,
+                                    json!({
+                                        "type":"chat.message",
+                                        "operationId":operation_id_owned,
+                                        "requestId":request_id_owned,
+                                        "role":"assistant",
+                                        "text":final_text.clone(),
+                                    }),
+                                );
+                            }
+                            terminal_emitted = true;
+                            push_turn_event(
+                                &turn_events,
+                                json!({
+                                    "type":"operation.completed",
+                                    "operationId":operation_id_owned,
+                                    "requestId":request_id_owned,
+                                    "finishReason":finish_reason,
+                                    "attempts":attempts,
+                                }),
+                            );
+                        }
+                        ProductionTurnEvent::Failed { message } => {
+                            terminal_emitted = true;
+                            push_turn_event(
+                                &turn_events,
+                                json!({
+                                    "type":"operation.failed",
+                                    "operationId":operation_id_owned,
+                                    "requestId":request_id_owned,
+                                    "message":message,
+                                }),
+                            );
+                        }
+                        ProductionTurnEvent::Cancelled => {
+                            terminal_emitted = true;
+                            push_turn_event(
+                                &turn_events,
+                                json!({
+                                    "type":"operation.interrupted",
+                                    "operationId":operation_id_owned,
+                                    "requestId":request_id_owned,
+                                    "reason":"cancelled",
+                                }),
+                            );
+                        }
+                    }
+                    Ok(())
+                };
+
+                let result = owner.run_with_event_sink(
+                    ProductionTurnInput {
+                        operation_id: operation_id_owned.clone(),
+                        request_id: request_id_owned.clone(),
+                        agent_id,
+                        model,
+                        prompt,
+                        resume_checkpoint_available: false,
+                    },
+                    &mut sink,
+                );
+
+                if let Err(error) = result {
+                    if !cancelled.load(Ordering::Acquire) && !terminal_emitted {
+                        push_turn_event(
+                            &turn_events,
+                            json!({
+                                "type":"operation.failed",
+                                "operationId":operation_id_owned,
+                                "requestId":request_id_owned,
+                                "message":error.message,
+                            }),
+                        );
+                    }
                 }
-                ProductionTurnEvent::Failed { message } => queue.push_back(json!({
-                    "type":"operation.failed",
-                    "operationId":operation_id,
-                    "requestId":request_id,
-                    "message":message,
-                })),
-                ProductionTurnEvent::Cancelled => queue.push_back(json!({
-                    "type":"operation.interrupted",
-                    "operationId":operation_id,
-                    "requestId":request_id,
-                    "reason":"cancelled",
-                })),
-            }
+            });
+
+        if let Err(error) = spawn {
+            self.turn_cancellations.remove(operation_id);
+            self.active_operations.remove(operation_id);
+            return Err(format!("failed to start turn worker: {error}"));
         }
 
-        if queue.is_empty() {
-            return Err("turn owner produced no lifecycle events".into());
-        }
-        self.turn_event_queues
-            .insert(operation_id.to_string(), queue);
-        if !self
-            .turn_delivery_order
-            .iter()
-            .any(|queued| queued == operation_id)
-        {
-            self.turn_delivery_order
-                .push_back(operation_id.to_string());
-        }
         Ok(())
     }
 
@@ -799,26 +900,12 @@ impl AndroidJsonHost {
             return Ok(event);
         }
 
-        let pending = self.turn_delivery_order.len();
-        for _ in 0..pending {
-            let Some(operation_id) = self.turn_delivery_order.pop_front() else {
-                break;
-            };
-            let mut remove_queue = false;
-            let event = if let Some(queue) = self.turn_event_queues.get_mut(&operation_id) {
-                let event = queue.pop_front();
-                remove_queue = queue.is_empty();
-                event
-            } else {
-                None
-            };
-
-            if remove_queue {
-                self.turn_event_queues.remove(&operation_id);
-            } else if self.turn_event_queues.contains_key(&operation_id) {
-                self.turn_delivery_order.push_back(operation_id.clone());
-            }
-
+        for wait in 0..=10 {
+            let event = self
+                .turn_events
+                .lock()
+                .map_err(|_| "turn event queue lock poisoned".to_string())?
+                .pop_front();
             if let Some(event) = event {
                 if matches!(
                     event.get("type").and_then(Value::as_str),
@@ -826,12 +913,19 @@ impl AndroidJsonHost {
                         | Some("operation.failed")
                         | Some("operation.interrupted")
                 ) {
-                    self.active_operations.remove(&operation_id);
-                    self.turn_event_queues.remove(&operation_id);
-                    self.turn_delivery_order
-                        .retain(|queued| queued != &operation_id);
+                    if let Some(operation_id) =
+                        event.get("operationId").and_then(Value::as_str)
+                    {
+                        self.active_operations.remove(operation_id);
+                        self.turn_cancellations.remove(operation_id);
+                    }
                 }
                 return Ok(event);
+            }
+            if wait < 10 && !self.active_operations.is_empty() {
+                thread::sleep(Duration::from_millis(5));
+            } else {
+                break;
             }
         }
 
@@ -917,6 +1011,21 @@ impl AndroidJsonHost {
     }
 }
 
+
+fn push_turn_event(events: &Arc<Mutex<VecDeque<Value>>>, event: Value) {
+    if let Ok(mut queue) = events.lock() {
+        queue.push_back(event);
+    }
+}
+
+impl Drop for AndroidJsonHost {
+    fn drop(&mut self) {
+        for cancelled in self.turn_cancellations.values() {
+            cancelled.store(true, Ordering::Release);
+        }
+        self.turn_cancellations.clear();
+    }
+}
 
 fn now_ms() -> u64 {
     SystemTime::now()
