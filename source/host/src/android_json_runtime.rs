@@ -7,6 +7,7 @@ use crate::runner::{
     AndroidHostInferenceProvider, AndroidInferenceMode, ProductionTurnAgentOwner,
     ProductionTurnEvent, ProductionTurnInput,
 };
+use fabushi_constants::composer::text_size_allowed;
 use fabushi_android_shared::webauthn_gateway::{
     WebAuthnCeremony, WebAuthnRequestFrame, WebAuthnResponseFrame, WebAuthnStage,
     WebAuthnStageOutcome,
@@ -635,6 +636,9 @@ impl AndroidJsonHost {
             .filter(|value| !value.trim().is_empty())
             .ok_or("chat.send text is required")?
             .to_string();
+        if !text_size_allowed(&prompt) {
+            return Err("chat.send text exceeds maximum composer size".into());
+        }
 
         let assistant_entry_id = format!("assistant:{operation_id}");
         {
