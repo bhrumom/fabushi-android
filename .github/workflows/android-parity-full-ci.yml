@@ -52,6 +52,24 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,x86_64-linux-android
+      - name: Install Android NDK for native Host
+        run: sdkmanager 'ndk;28.2.13676358'
+      - name: Install cargo-ndk
+        run: command -v cargo-ndk >/dev/null 2>&1 || cargo install cargo-ndk --locked
+      - name: Build exact-HEAD native Mahayana Coordinator Host
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/28.2.13676358
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/28.2.13676358
+        run: |
+          set -eu
+          rm -rf mobile/android/app/src/main/jniLibs
+          cargo ndk -t arm64-v8a -t x86_64 -o mobile/android/app/src/main/jniLibs build --release -p fabushi-android-host-jni
+          test -s mobile/android/app/src/main/jniLibs/arm64-v8a/libmahayana_app_host.so
+          test -s mobile/android/app/src/main/jniLibs/x86_64/libmahayana_app_host.so
       - name: Compile, unit-test, lint, and compile instrumentation tests
         working-directory: mobile/android
         run: ./gradlew --no-daemon clean assembleDebug testDebugUnitTest lintDebug compileDebugAndroidTestKotlin
@@ -63,6 +81,8 @@ jobs:
           sha256sum "fabushi-android-${SOURCE_SHA}.apk" > "fabushi-android-${SOURCE_SHA}.apk.sha256"
           printf 'head=%s\n' "$SOURCE_SHA" > artifact-identity.txt
           cat "fabushi-android-${SOURCE_SHA}.apk.sha256" >> artifact-identity.txt
+          find app/src/main/jniLibs -type f -name 'libmahayana_app_host.so' -print0 | sort -z | xargs -0 sha256sum > native-jni.sha256
+          cat native-jni.sha256 >> artifact-identity.txt
       - uses: actions/upload-artifact@v4
         with:
           name: android-debug-apk-${{ env.SOURCE_SHA }}
@@ -70,6 +90,7 @@ jobs:
             mobile/android/fabushi-android-${{ env.SOURCE_SHA }}.apk
             mobile/android/fabushi-android-${{ env.SOURCE_SHA }}.apk.sha256
             mobile/android/artifact-identity.txt
+            mobile/android/native-jni.sha256
           if-no-files-found: error
 
   android-emulator-instrumentation:
