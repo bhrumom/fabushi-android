@@ -19,7 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.ombhrum.fabushi.androidpreload.deeplink.AndroidDeepLink
+import com.ombhrum.fabushi.androidpreload.deeplink.AndroidPresentationDeepLink
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidPresentationRuntimePort
 import kotlinx.coroutines.flow.SharedFlow
 import org.json.JSONObject
@@ -35,7 +35,7 @@ private enum class RendererRoute { GROK_HOME, MESSAGING }
 @Composable
 internal fun ProductionRenderer(
     activity: ComponentActivity,
-    deepLinks: SharedFlow<AndroidDeepLink>,
+    deepLinks: SharedFlow<AndroidPresentationDeepLink>,
     updateModel: AndroidUpdateViewModel,
     runtimePort: AndroidPresentationRuntimePort,
 ) {
