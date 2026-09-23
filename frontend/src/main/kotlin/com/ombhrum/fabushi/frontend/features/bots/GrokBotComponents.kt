@@ -121,6 +121,7 @@ internal fun GrokBotChatAndroid(
     state: MobileBotUiState,
     appAgentSurface: FabushiAppAgentSurface,
     onClose: () -> Unit,
+    onOpenCommandPalette: () -> Unit,
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
     onStop: () -> Unit,
@@ -171,7 +172,15 @@ internal fun GrokBotChatAndroid(
                 Text(bot.name, color = GrokMobileInk, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp))
             }
             Spacer(Modifier.weight(1f))
-            Text("▣", color = GrokMobileInk, fontSize = 20.sp, modifier = Modifier.padding(horizontal = 8.dp))
+            Text(
+                "⌘",
+                color = GrokMobileInk,
+                fontSize = 20.sp,
+                modifier = Modifier
+                    .padding(horizontal = 8.dp)
+                    .clickable(onClick = onOpenCommandPalette)
+                    .testTag("command-palette-open-chat"),
+            )
         }
         LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
             if (state.messages.isEmpty()) item {
