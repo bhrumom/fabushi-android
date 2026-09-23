@@ -10973,9 +10973,10 @@
       "android_target_path": "source/host/src/extensions/transcript/transcript_store.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored durable Rust TranscriptStore at the exact target implements get/set/append/update/remove/clear plus Android-required atomic disk persistence and request-id dedupe; focused reopen tests and AndroidJsonHost process-reopen recovery tests passed in Android Parity Full CI run 35813864348 architecture-and-contracts at exact HEAD 5436c5af46e7c8540f3e5fa72a0fa82e06d359cc. New HEAD still requires re-verification before verified.",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "clean-room Rust implementation of the pinned transcript-store behavior, extended for Android process-death durability; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/extensions/transcript/turn-runtime.ts",
@@ -26746,7 +26747,7 @@
     }
   ],
   "status_summary": {
-    "mapped": 1862,
-    "implemented": 184
+    "mapped": 1861,
+    "implemented": 185
   }
 }
