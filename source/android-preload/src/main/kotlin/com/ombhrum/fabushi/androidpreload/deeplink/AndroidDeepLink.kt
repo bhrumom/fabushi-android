@@ -4,7 +4,7 @@ sealed interface AndroidDeepLink {
     data class AuthCompletion(
         val attemptId: String,
         val status: AuthCompletionStatus,
-    ) : AndroidDeepLink
+    ) : AndroidPresentationDeepLink
 
     data class McpOAuthCallback(
         val state: String,
@@ -12,10 +12,12 @@ sealed interface AndroidDeepLink {
         val error: String?,
     ) : AndroidDeepLink
 
-    data class Agent(val agentId: String) : AndroidDeepLink
+    data class Agent(val agentId: String) : AndroidPresentationDeepLink
 
-    data class AppSection(val section: String) : AndroidDeepLink
+    data class AppSection(val section: String) : AndroidPresentationDeepLink
 }
+
+sealed interface AndroidPresentationDeepLink : AndroidDeepLink
 
 enum class AuthCompletionStatus {
     COMPLETED,
