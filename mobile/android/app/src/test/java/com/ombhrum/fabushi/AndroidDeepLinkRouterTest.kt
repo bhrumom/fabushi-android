@@ -65,7 +65,7 @@ class AndroidDeepLinkRouterTest {
         var now = 1_000L
         val delivered = mutableListOf<AndroidDeepLink>()
         val controller = AndroidDeepLinkController(
-            dispatch = delivered::add,
+            dispatch = { delivered.add(it) },
             nowMs = { now },
         )
 
