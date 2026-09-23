@@ -32,7 +32,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             FabushiApplicationRoot(
                 activity = this,
-                application = application,
                 deepLinks = deepLinks,
                 updateModel = updateModel,
                 runtimePort = processRuntime,
