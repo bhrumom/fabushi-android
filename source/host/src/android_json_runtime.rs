@@ -2,6 +2,10 @@ use crate::android_agent_roster::AndroidAgentRoster;
 use crate::extensions::webauthn_proxy::{
     WebAuthnBridgeError, WebAuthnProxyExtension, WebAuthnProxyExtensionConfig,
 };
+use crate::runner::{
+    AndroidHostInferenceProvider, AndroidInferenceMode, ProductionTurnAgentOwner,
+    ProductionTurnEvent, ProductionTurnInput,
+};
 use fabushi_android_shared::webauthn_gateway::{
     WebAuthnCeremony, WebAuthnRequestFrame, WebAuthnResponseFrame, WebAuthnStage,
     WebAuthnStageOutcome,
@@ -27,6 +31,9 @@ pub struct AndroidJsonHost {
     browser_attempts: BTreeMap<String, String>,
     events: VecDeque<Value>,
     active_operations: BTreeSet<String>,
+    turn_owner: ProductionTurnAgentOwner<AndroidHostInferenceProvider>,
+    turn_event_queues: BTreeMap<String, VecDeque<Value>>,
+    turn_delivery_order: VecDeque<String>,
     installed_plugins: BTreeSet<String>,
     webauthn: WebAuthnProxyExtension,
     webauthn_provider_queues: BTreeMap<String, VecDeque<WebAuthnRequestFrame>>,
@@ -47,6 +54,14 @@ impl AndroidJsonHost {
             browser_attempts: BTreeMap::new(),
             events: VecDeque::new(),
             active_operations: BTreeSet::new(),
+            turn_owner: ProductionTurnAgentOwner::new(AndroidHostInferenceProvider::new(
+                match mode {
+                    AndroidHostMode::Production => AndroidInferenceMode::Production,
+                    AndroidHostMode::Test => AndroidInferenceMode::Test,
+                },
+            )),
+            turn_event_queues: BTreeMap::new(),
+            turn_delivery_order: VecDeque::new(),
             installed_plugins: BTreeSet::new(),
             webauthn: WebAuthnProxyExtension::new(WebAuthnProxyExtensionConfig::default()),
             webauthn_provider_queues: BTreeMap::new(),
@@ -133,7 +148,7 @@ impl AndroidJsonHost {
                 Ok(json!(ids))
             }
             "feature.execute" => self.feature_execute(params),
-            "feature.receive" => Ok(self.events.pop_front().unwrap_or_else(|| json!({}))),
+            "feature.receive" => self.feature_receive(),
             "feature.interrupt" => self.feature_interrupt(params),
             "feature.approval.resolve" => Ok(json!({"status":"resolved"})),
             "feature.marketplace.browse" => self.marketplace_browse(params),
@@ -266,7 +281,14 @@ impl AndroidJsonHost {
         if operation_id.trim().is_empty() {
             return Err("operation id is required".into());
         }
+        let _ = self.turn_owner.cancel(operation_id);
         self.active_operations.remove(operation_id);
+        self.turn_event_queues.remove(operation_id);
+        self.turn_delivery_order
+            .retain(|queued| queued != operation_id);
+        self.events.retain(|event| {
+            event.get("operationId").and_then(Value::as_str) != Some(operation_id)
+        });
         self.events.push_back(json!({
             "type":"operation.interrupted",
             "operationId":operation_id,
@@ -400,20 +422,7 @@ impl AndroidJsonHost {
                 self.finish_operation(&operation_id);
             }
             "chat.send" => {
-                let text = command.get("text").and_then(Value::as_str).unwrap_or("");
-                self.events.push_back(json!({
-                    "type":"chat.message",
-                    "operationId":operation_id,
-                    "role":"assistant",
-                    "text": if self.mode == AndroidHostMode::Test {
-                        "自动化测试状态正常。"
-                    } else if text.is_empty() {
-                        "Fabushi Android Host is ready."
-                    } else {
-                        "Fabushi Android Host accepted the message."
-                    }
-                }));
-                self.finish_operation(&operation_id);
+                self.queue_chat_turn(&operation_id, request_id, &command)?;
             }
             "marketplace.install" => {
                 if let Some(id) = command.get("miniAppId").and_then(Value::as_str) {
@@ -440,6 +449,170 @@ impl AndroidJsonHost {
         }
 
         Ok(json!({"requestId":request_id,"operationId":operation_id,"accepted":true}))
+    }
+
+    fn queue_chat_turn(
+        &mut self,
+        operation_id: &str,
+        request_id: &str,
+        command: &Value,
+    ) -> Result<(), String> {
+        let prompt = command
+            .get("text")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+            .ok_or("chat.send text is required")?;
+        let agent_id = command
+            .get("agentId")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or("mahayana-assistant");
+        let model = command
+            .get("model")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or("default");
+
+        let result = self
+            .turn_owner
+            .run(ProductionTurnInput {
+                operation_id: operation_id.to_string(),
+                request_id: request_id.to_string(),
+                agent_id: agent_id.to_string(),
+                model: model.to_string(),
+                prompt: prompt.to_string(),
+                resume_checkpoint_available: false,
+            })
+            .map_err(|error| error.message)?;
+
+        let mut queue = VecDeque::new();
+        queue.push_back(json!({
+            "type":"model.routed",
+            "operationId":operation_id,
+            "requestId":request_id,
+            "model":model,
+            "provider":"android-host",
+            "mode":"agent",
+        }));
+
+        let mut final_text = String::new();
+        for event in result.events {
+            match event {
+                ProductionTurnEvent::Retrying {
+                    attempt,
+                    delay_ms,
+                    reason,
+                } => queue.push_back(json!({
+                    "type":"turn.retrying",
+                    "operationId":operation_id,
+                    "requestId":request_id,
+                    "attempt":attempt,
+                    "delayMs":delay_ms,
+                    "reason":reason,
+                })),
+                ProductionTurnEvent::Delta(delta) => {
+                    final_text.push_str(&delta);
+                    queue.push_back(json!({
+                        "type":"chat.delta",
+                        "operationId":operation_id,
+                        "requestId":request_id,
+                        "delta":delta,
+                    }));
+                }
+                ProductionTurnEvent::Completed {
+                    finish_reason,
+                    attempts,
+                } => {
+                    if !final_text.is_empty() {
+                        queue.push_back(json!({
+                            "type":"chat.message",
+                            "operationId":operation_id,
+                            "requestId":request_id,
+                            "role":"assistant",
+                            "text":final_text,
+                        }));
+                    }
+                    queue.push_back(json!({
+                        "type":"operation.completed",
+                        "operationId":operation_id,
+                        "requestId":request_id,
+                        "finishReason":finish_reason,
+                        "attempts":attempts,
+                    }));
+                }
+                ProductionTurnEvent::Failed { message } => queue.push_back(json!({
+                    "type":"operation.failed",
+                    "operationId":operation_id,
+                    "requestId":request_id,
+                    "message":message,
+                })),
+                ProductionTurnEvent::Cancelled => queue.push_back(json!({
+                    "type":"operation.interrupted",
+                    "operationId":operation_id,
+                    "requestId":request_id,
+                    "reason":"cancelled",
+                })),
+            }
+        }
+
+        if queue.is_empty() {
+            return Err("turn owner produced no lifecycle events".into());
+        }
+        self.turn_event_queues
+            .insert(operation_id.to_string(), queue);
+        if !self
+            .turn_delivery_order
+            .iter()
+            .any(|queued| queued == operation_id)
+        {
+            self.turn_delivery_order
+                .push_back(operation_id.to_string());
+        }
+        Ok(())
+    }
+
+    fn feature_receive(&mut self) -> Result<Value, String> {
+        if let Some(event) = self.events.pop_front() {
+            return Ok(event);
+        }
+
+        let pending = self.turn_delivery_order.len();
+        for _ in 0..pending {
+            let Some(operation_id) = self.turn_delivery_order.pop_front() else {
+                break;
+            };
+            let mut remove_queue = false;
+            let event = if let Some(queue) = self.turn_event_queues.get_mut(&operation_id) {
+                let event = queue.pop_front();
+                remove_queue = queue.is_empty();
+                event
+            } else {
+                None
+            };
+
+            if remove_queue {
+                self.turn_event_queues.remove(&operation_id);
+            } else if self.turn_event_queues.contains_key(&operation_id) {
+                self.turn_delivery_order.push_back(operation_id.clone());
+            }
+
+            if let Some(event) = event {
+                if matches!(
+                    event.get("type").and_then(Value::as_str),
+                    Some("operation.completed")
+                        | Some("operation.failed")
+                        | Some("operation.interrupted")
+                ) {
+                    self.active_operations.remove(&operation_id);
+                    self.turn_event_queues.remove(&operation_id);
+                    self.turn_delivery_order
+                        .retain(|queued| queued != &operation_id);
+                }
+                return Ok(event);
+            }
+        }
+
+        Ok(json!({}))
     }
 
     fn finish_operation(&mut self, operation_id: &str) {
