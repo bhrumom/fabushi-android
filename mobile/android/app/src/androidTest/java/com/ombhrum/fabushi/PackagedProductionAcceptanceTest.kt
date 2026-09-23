@@ -11,6 +11,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -27,6 +28,11 @@ class PackagedProductionAcceptanceTest {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         val application = context.applicationContext as FabushiApplication
+        val gatewayTrace = File(
+            context.getExternalFilesDir(null) ?: context.filesDir,
+            "device-gateway-trace.jsonl",
+        )
+        gatewayTrace.delete()
         val intent = Intent(context, MainActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
 
@@ -42,9 +48,13 @@ class PackagedProductionAcceptanceTest {
                 auth.optBoolean("loggedIn", false),
             )
             val deviceSession = coordinator.authDeviceAgentSession()
-            assertTrue(deviceSession.optString("accessToken").length >= 24)
-            assertTrue(deviceSession.optString("deviceId").startsWith("gha-"))
+            val expectedDeviceId = deviceSession.optString("deviceId")
+            assertTrue(expectedDeviceId.startsWith("gha-"))
             assertTrue(deviceSession.optString("sessionId").startsWith("ci-runner:"))
+            assertTrue(
+                "Authenticated packaged acceptance requires backend-confirmed remote-device registration",
+                waitForGatewayRegistration(gatewayTrace, expectedDeviceId),
+            )
 
             val events = CopyOnWriteArrayList<JSONObject>()
             val deltaSeen = CountDownLatch(1)
@@ -148,4 +158,24 @@ class PackagedProductionAcceptanceTest {
             }
         }
     }
+
+    private fun waitForGatewayRegistration(trace: File, expectedDeviceId: String): Boolean {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(45)
+        while (System.nanoTime() < deadline) {
+            val registered = runCatching {
+                trace.takeIf(File::isFile)
+                    ?.readLines(Charsets.UTF_8)
+                    .orEmpty()
+                    .any { line ->
+                        val record = runCatching { JSONObject(line) }.getOrNull()
+                        record?.optString("phase") == "registered" &&
+                            record.optString("deviceId") == expectedDeviceId
+                    }
+            }.getOrDefault(false)
+            if (registered) return true
+            Thread.sleep(250)
+        }
+        return false
+    }
+
 }
