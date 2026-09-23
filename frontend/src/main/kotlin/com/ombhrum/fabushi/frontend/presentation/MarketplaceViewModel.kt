@@ -205,6 +205,7 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
                     completeBrowserLogin(link.attemptId)
                 }
             }
+            is AndroidDeepLink.Info -> Unit
             is AndroidDeepLink.Agent -> {
                 mutableState.value = mutableState.value.copy(
                     message = "已接收智能体链接：${link.agentId}",
