@@ -22,6 +22,16 @@ class AndroidCoordinatorRuntime private constructor(application: Application) : 
     val processGeneration: Long = processRuntime.start()
     private val host = MahayanaHost(application)
 
+    override fun coordinatorStatus() = host.request("coordinator.status")
+
+    override fun coordinatorResync(generation: Long, afterSequence: Long) =
+        host.request(
+            "coordinator.resync",
+            JSONObject()
+                .put("generation", generation)
+                .put("afterSequence", afterSequence),
+        )
+
     override fun authStatus() = host.request("feature.auth.status")
     override fun authDeviceAgentSession() = host.request("feature.auth.deviceAgentSession")
     override fun authBrowserStart() = host.request("feature.auth.browserStart")
