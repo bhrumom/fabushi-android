@@ -310,4 +310,15 @@ class FrontendProductionModelParityTest {
         while (queue.isNotEmpty()) queue.removeFirst().invoke()
         assertEquals(1, secondDisposed)
     }
+    @Test
+    fun deepLinkInfoModelUsesFabushiRouteAndSourceLabel() {
+        val info = DeepLinkInfo(source = DeepLinkSource.PROTOCOL)
+        assertEquals("fabushi://app/v1/info?topic=deep-links", deepLinkRoute(info))
+        assertEquals(
+            "Custom protocol (fabushi://)",
+            deepLinkSourceLabel(DeepLinkSource.PROTOCOL),
+        )
+        assertEquals("HTTPS link", deepLinkSourceLabel(DeepLinkSource.HTTPS))
+    }
+
 }
