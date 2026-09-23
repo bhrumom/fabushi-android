@@ -2,6 +2,7 @@ package com.ombhrum.fabushi.androidmain.coordinator
 
 import android.app.Application
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidCoordinatorPort
+import com.ombhrum.fabushi.androidpreload.runtime.AndroidMcpOAuthCompletion
 import com.ombhrum.fabushi.core.MahayanaHost
 import org.json.JSONArray
 import org.json.JSONObject
@@ -42,6 +43,39 @@ class AndroidCoordinatorRuntime private constructor(application: Application) : 
                 .put("generation", generation)
                 .put("afterSequence", afterSequence),
         )
+
+    override fun mcpOAuthRegister(state: String, provider: String): Boolean =
+        host.request(
+            "coordinator.mcpOAuth.register",
+            JSONObject()
+                .put("state", state)
+                .put("provider", provider),
+        ).optBoolean("registered", false)
+
+    override fun mcpOAuthComplete(
+        state: String,
+        code: String?,
+        error: String?,
+    ): AndroidMcpOAuthCompletion {
+        require((code == null) xor (error == null)) {
+            "MCP OAuth completion requires exactly one of code or error"
+        }
+        val result = host.request(
+            "coordinator.mcpOAuth.complete",
+            JSONObject()
+                .put("state", state)
+                .apply {
+                    code?.let { put("code", it) }
+                    error?.let { put("error", it) }
+                },
+        )
+        return AndroidMcpOAuthCompletion(
+            provider = result.getString("provider"),
+            state = result.getString("state"),
+            code = result.optString("code").takeIf(String::isNotBlank),
+            error = result.optString("error").takeIf(String::isNotBlank),
+        )
+    }
 
     override fun authStatus() = host.request("feature.auth.status")
     override fun authDeviceAgentSession() = host.request("feature.auth.deviceAgentSession")
