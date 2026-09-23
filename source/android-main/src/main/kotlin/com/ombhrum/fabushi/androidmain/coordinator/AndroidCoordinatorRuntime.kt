@@ -8,6 +8,7 @@ import org.json.JSONObject
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Process-scoped Android owner of the native Mahayana Host.
@@ -27,6 +28,7 @@ class AndroidCoordinatorRuntime private constructor(application: Application) : 
     private val host = MahayanaHost(application, processGeneration = processGeneration)
     private val featureEventListeners = CopyOnWriteArrayList<(JSONObject) -> Unit>()
     private val eventPumpRunning = AtomicBoolean(false)
+    private val lastEventSequence = AtomicLong(0L)
     private val eventPumpExecutor = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "fabushi-coordinator-feature-events").apply { isDaemon = true }
     }
@@ -51,6 +53,8 @@ class AndroidCoordinatorRuntime private constructor(application: Application) : 
 
     override fun featureExecute(params: JSONObject) = host.request("feature.execute", params)
     override fun featureInterrupt(params: JSONObject) = host.request("feature.interrupt", params)
+    override fun transcriptSnapshot(): JSONArray =
+        host.requestValue("feature.transcript.snapshot") as? JSONArray ?: JSONArray()
 
     override fun agentList(): JSONArray =
         host.requestValue("listAgents") as? JSONArray ?: JSONArray()
@@ -133,13 +137,17 @@ class AndroidCoordinatorRuntime private constructor(application: Application) : 
     override fun webAuthnSubmitResponses(params: JSONObject) = host.request("feature.webauthn.submitResponses", params)
 
     override fun publishFeatureEvent(event: JSONObject) {
-        runCatching {
+        val metadata = runCatching {
             host.request(
                 "coordinator.publishEvent",
                 JSONObject().put("event", JSONObject(event.toString())),
             )
+        }.getOrNull()
+        val projected = JSONObject(event.toString())
+        if (metadata != null) {
+            projected.put("_coordinator", JSONObject(metadata.toString()))
         }
-        dispatchFeatureEvent(event)
+        dispatchFeatureEvent(projected)
     }
 
     override fun addFeatureEventListener(listener: (JSONObject) -> Unit): AutoCloseable {
@@ -153,6 +161,8 @@ class AndroidCoordinatorRuntime private constructor(application: Application) : 
         if (!eventPumpRunning.compareAndSet(false, true)) return
         eventPumpExecutor.execute {
             try {
+                runCatching { replayCoordinatorEvents() }
+                .onFailure { Thread.sleep(20) }
                 while (featureEventListeners.isNotEmpty()) {
                     val event = try {
                         host.request(
@@ -160,6 +170,7 @@ class AndroidCoordinatorRuntime private constructor(application: Application) : 
                             JSONObject().put("timeoutMs", 250),
                         )
                     } catch (_: Throwable) {
+                        runCatching { replayCoordinatorEvents() }
                         Thread.sleep(100)
                         continue
                     }
@@ -176,7 +187,43 @@ class AndroidCoordinatorRuntime private constructor(application: Application) : 
         }
     }
 
+    private fun replayCoordinatorEvents() {
+        val status = coordinatorStatus()
+        val generation = status.optLong("generation", -1L)
+        check(generation == processGeneration) {
+            "Coordinator generation mismatch: expected $processGeneration, got $generation"
+        }
+        val snapshot = coordinatorResync(generation, lastEventSequence.get())
+        val events = snapshot.optJSONArray("events") ?: JSONArray()
+        for (index in 0 until events.length()) {
+            val envelope = events.optJSONObject(index) ?: continue
+            val sequence = envelope.optLong("sequence", -1L)
+            val payload = envelope.optJSONObject("payload") ?: continue
+            val projected = JSONObject(payload.toString()).put(
+                "_coordinator",
+                JSONObject()
+                    .put("generation", generation)
+                    .put("sequence", sequence)
+                    .put("eventId", envelope.optString("eventId")),
+            )
+            dispatchFeatureEvent(projected)
+        }
+    }
+
+    private fun acceptCoordinatorEvent(event: JSONObject): Boolean {
+        val metadata = event.optJSONObject("_coordinator") ?: return true
+        val generation = metadata.optLong("generation", -1L)
+        val sequence = metadata.optLong("sequence", -1L)
+        if (generation != processGeneration || sequence <= 0L) return false
+        while (true) {
+            val current = lastEventSequence.get()
+            if (sequence <= current) return false
+            if (lastEventSequence.compareAndSet(current, sequence)) return true
+        }
+    }
+
     private fun dispatchFeatureEvent(event: JSONObject) {
+        if (!acceptCoordinatorEvent(event)) return
         val serialized = event.toString()
         featureEventListeners.forEach { listener ->
             runCatching { listener(JSONObject(serialized)) }
