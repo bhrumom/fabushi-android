@@ -19,6 +19,10 @@ data class MobileBotSummaryAndroid(
     val description: String = "",
     val miniAppId: String? = null,
     val menuButtonText: String? = null,
+    val isPinned: Boolean = false,
+    val hasUnread: Boolean = false,
+    val isHidden: Boolean = false,
+    val isGroup: Boolean = false,
 )
 
 data class MobileBotUiState(
@@ -90,11 +94,9 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     private fun loadSurfaceBots(): List<MobileBotSummaryAndroid> {
-        val requestId = "android-mobile-bot-list-" + UUID.randomUUID()
-        val event = coordinator.botList(requestId)
-        val rows = event.optJSONArray("bots")
+        val rows = coordinator.agentList()
         return buildList {
-            if (rows != null) for (index in 0 until rows.length()) {
+            for (index in 0 until rows.length()) {
                 val row = rows.optJSONObject(index) ?: continue
                 val id = row.optString("id")
                 if (id.isBlank() || id == "mahayana-assistant") continue
@@ -105,6 +107,10 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
                         description = row.optString("description"),
                         miniAppId = row.optString("miniAppId").takeIf(String::isNotBlank),
                         menuButtonText = row.optString("menuButtonText").takeIf(String::isNotBlank),
+                        isPinned = row.optBoolean("isPinned"),
+                        hasUnread = row.optBoolean("hasUnread"),
+                        isHidden = row.optBoolean("isHiddenFromSidebar") || row.optBoolean("hiddenFromSidebar"),
+                        isGroup = row.optBoolean("isGroup"),
                     ),
                 )
             }
@@ -157,17 +163,7 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             runCatching {
                 withContext(Dispatchers.IO) {
-                    val requestId = "android-mobile-bot-create-${UUID.randomUUID()}"
-                    coordinator.featureExecute(
-                        JSONObject().put(
-                            "command",
-                            JSONObject()
-                                .put("type", "bot.create")
-                                .put("requestId", requestId)
-                                .put("name", cleanName)
-                                .put("description", description.trim().take(240)),
-                        ),
-                    )
+                    coordinator.agentCreate(cleanName, description.trim().take(240))
                 }
             }.onSuccess {
                 mutableState.value = mutableState.value.copy(creating = false)
@@ -175,6 +171,77 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
                 onCreated?.invoke()
             }.onFailure { error ->
                 mutableState.value = mutableState.value.copy(creating = false, error = error.message ?: "Bot creation failed")
+            }
+        }
+    }
+
+    fun renameBot(botId: String, name: String) {
+        val bot = mutableState.value.bots.firstOrNull { it.id == botId } ?: return
+        val committed = committedAgentName(bot.name, name) ?: return
+        viewModelScope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    coordinator.agentUpdate(botId, committed, bot.description)
+                }
+            }.onSuccess {
+                refreshBots()
+            }.onFailure { error ->
+                mutableState.value = mutableState.value.copy(error = error.message ?: "Agent rename failed")
+            }
+        }
+    }
+
+    fun hideBot(botId: String) {
+        mutateAgent(botId, "Hide agent failed") { coordinator.agentSetHidden(botId, true) }
+    }
+
+    fun setBotUnread(botId: String, isUnread: Boolean) {
+        mutateAgent(botId, "Unread state update failed") { coordinator.agentSetUnread(botId, isUnread) }
+    }
+
+    fun duplicateBot(botId: String) {
+        mutateAgent(botId, "Agent duplication failed") { coordinator.agentDuplicate(botId) }
+    }
+
+    fun deleteBot(botId: String) {
+        mutateAgent(botId, "Agent deletion failed") {
+            coordinator.agentDelete(botId)
+        }
+        if (mutableState.value.activeBot?.id == botId) {
+            commitState(mutableState.value.copy(activeBot = null, busy = false, operationId = null))
+        }
+    }
+
+    fun setBotPinned(botId: String, isPinned: Boolean) {
+        val current = mutableState.value.bots.filter { it.isPinned }.map { it.id }.toMutableList()
+        if (isPinned) {
+            if (botId !in current) current += botId
+        } else {
+            current.removeAll { it == botId }
+        }
+        viewModelScope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) { coordinator.agentSetPinned(current) }
+            }.onSuccess {
+                refreshBots()
+            }.onFailure { error ->
+                mutableState.value = mutableState.value.copy(error = error.message ?: "Pin state update failed")
+            }
+        }
+    }
+
+    private fun mutateAgent(
+        botId: String,
+        fallbackMessage: String,
+        mutation: () -> JSONObject,
+    ) {
+        viewModelScope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) { mutation() }
+            }.onSuccess {
+                refreshBots()
+            }.onFailure { error ->
+                mutableState.value = mutableState.value.copy(error = error.message ?: fallbackMessage)
             }
         }
     }
