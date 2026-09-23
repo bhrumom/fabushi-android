@@ -37,6 +37,10 @@ interface AndroidCoordinatorPort {
     fun messagingExecute(params: JSONObject): JSONObject
 
     fun platformRequest(params: JSONObject): JSONObject
+    fun webAuthnRegisterProvider(): JSONObject
+    fun webAuthnUnregisterProvider(params: JSONObject): JSONObject
+    fun webAuthnPollRequest(params: JSONObject): JSONObject
+    fun webAuthnSubmitResponses(params: JSONObject): JSONObject
     fun publishFeatureEvent(event: JSONObject)
     fun addFeatureEventListener(listener: (JSONObject) -> Unit): AutoCloseable
 }
