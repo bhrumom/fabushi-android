@@ -21,4 +21,6 @@ pub mod deep_link;
 pub mod gateway_reachability;
 pub mod webauthn_gateway;
 pub mod os_notification;
-\npub mod mcp;\npub mod mcp_oauth_callback_page;\npub mod webauthn_proxy_availability;\n
+pub mod mcp;
+pub mod mcp_oauth_callback_page;
+pub mod webauthn_proxy_availability;
