@@ -212,6 +212,65 @@ class FrontendProductionModelParityTest {
     }
 
     @Test
+    fun coordinatorDraftAdapterUsesCanonicalSharedDraftAndAvoidsDuplicateWrites() {
+        val shared = MessagingDraft(
+            conversationId = "c1",
+            text = "hello",
+            replyToMessageId = "m1",
+            updatedAtMs = 7,
+        )
+        val snapshot = coordinatorComposerDraftSnapshot("c1", shared)
+        assertEquals("hello", snapshot.text)
+        assertEquals("m1", snapshot.replyToMessageId)
+        assertFalse(
+            shouldPersistCoordinatorDraft(
+                snapshot,
+                text = "hello",
+                replyToMessageId = "m1",
+            ),
+        )
+        assertTrue(
+            shouldPersistCoordinatorDraft(
+                snapshot,
+                text = "hello!",
+                replyToMessageId = "m1",
+            ),
+        )
+        assertTrue(composerDraftIsEmpty("", null))
+        assertFalse(composerDraftIsEmpty("", "m1"))
+    }
+
+    @Test
+    fun findInChatSearchesVisiblePayloadAndWrapsNavigation() {
+        val messages = listOf(
+            ChatMessage(
+                id = "m1",
+                conversationId = "c1",
+                text = "alpha beta alpha",
+                outgoing = false,
+                time = "now",
+            ),
+            ChatMessage(
+                id = "m2",
+                conversationId = "c1",
+                text = "",
+                contentType = "poll",
+                pollQuestion = "Choose Gamma",
+                pollOptions = listOf(ChatPollOption("g", "Gamma", 0, false)),
+                outgoing = false,
+                time = "now",
+            ),
+        )
+        val alpha = findInChatMatches(messages, "alpha")
+        assertEquals(2, alpha.size)
+        assertEquals(listOf("m1", "m1"), alpha.map { it.messageId })
+        assertEquals("m2", findInChatMatches(messages, "gamma").single().messageId)
+        assertEquals(1, stepFindInChatIndex(0, -1, 2))
+        assertEquals(0, stepFindInChatIndex(1, 1, 2))
+        assertEquals(-1, stepFindInChatIndex(0, 1, 0))
+    }
+
+    @Test
     fun permissionScopeRequiresStrictlyNewRevisionAfterAccountReentry() {
         val gate = LocalToolPermissionScopeGate()
         gate.enter("account-a")
