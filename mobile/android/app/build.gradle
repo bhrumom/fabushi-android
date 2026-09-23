@@ -68,7 +68,20 @@ android {
             buildConfigField 'boolean', 'CI_ACCOUNT_SESSION_IMPORT_ENABLED', 'true'
             if (releaseKeystore) signingConfig signingConfigs.release
         }
+        ciAcceptance {
+            initWith debug
+            applicationIdSuffix '.ci'
+            versionNameSuffix '-ci'
+            matchingFallbacks = ['debug']
+            debuggable true
+            minifyEnabled false
+            shrinkResources false
+            buildConfigField 'boolean', 'GITHUB_UPDATES_ENABLED', 'false'
+            buildConfigField 'boolean', 'CI_ACCOUNT_SESSION_IMPORT_ENABLED', 'true'
+        }
     }
+
+    testBuildType 'ciAcceptance'
 
     testOptions {
         unitTests.returnDefaultValues = true
