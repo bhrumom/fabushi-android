@@ -1,4 +1,5 @@
 use crate::android_agent_roster::AndroidAgentRoster;
+use crate::extensions::transcript::TranscriptStore;
 use crate::extensions::webauthn_proxy::{
     WebAuthnBridgeError, WebAuthnProxyExtension, WebAuthnProxyExtensionConfig,
 };
@@ -24,6 +25,7 @@ pub enum AndroidHostMode {
 pub struct AndroidJsonHost {
     mode: AndroidHostMode,
     agents: AndroidAgentRoster,
+    transcript: TranscriptStore,
     logged_in: bool,
     next_attempt: u64,
     next_operation: u64,
@@ -44,9 +46,12 @@ impl AndroidJsonHost {
         let app_data_dir = app_data_dir.into();
         let agents = AndroidAgentRoster::open(app_data_dir.join("agents.json"))
             .unwrap_or_else(|error| panic!("failed to open canonical Android agent roster: {error}"));
+        let transcript = TranscriptStore::open(app_data_dir.join("transcript.json"))
+            .unwrap_or_else(|error| panic!("failed to open canonical Android transcript: {error}"));
         Self {
             mode,
             agents,
+            transcript,
             logged_in: false,
             next_attempt: 0,
             next_operation: 0,
@@ -165,6 +170,7 @@ impl AndroidJsonHost {
             "feature.messaging.access.issue" => Ok(json!({"status":"available"})),
             "feature.messaging.blob.read" => Ok(json!({"data":Value::Null})),
             "feature.messaging.execute" => Ok(json!({"ok":true})),
+            "feature.transcript.snapshot" => Ok(Value::Array(self.transcript.get_transcript())),
             "feature.webauthn.registerProvider" => self.webauthn_register_provider(),
             "feature.webauthn.unregisterProvider" => self.webauthn_unregister_provider(params),
             "feature.webauthn.pollRequest" => self.webauthn_poll_request(params),
@@ -459,6 +465,16 @@ impl AndroidJsonHost {
             .and_then(Value::as_str)
             .filter(|value| !value.trim().is_empty())
             .ok_or("chat.send text is required")?;
+        self.transcript
+            .append_entry_if_absent(json!({
+                "id":request_id,
+                "kind":"message",
+                "role":"user",
+                "content":prompt,
+                "operationId":operation_id,
+                "timestampMs":now_ms(),
+            }))
+            .map_err(|error| format!("failed to persist user transcript entry: {error}"))?;
         let agent_id = command
             .get("agentId")
             .and_then(Value::as_str)
@@ -521,6 +537,16 @@ impl AndroidJsonHost {
                     attempts,
                 } => {
                     if !final_text.is_empty() {
+                        self.transcript
+                            .append_entry_if_absent(json!({
+                                "id":format!("assistant:{operation_id}"),
+                                "kind":"message",
+                                "role":"assistant",
+                                "content":final_text,
+                                "operationId":operation_id,
+                                "timestampMs":now_ms(),
+                            }))
+                            .map_err(|error| format!("failed to persist assistant transcript entry: {error}"))?;
                         queue.push_back(json!({
                             "type":"chat.message",
                             "operationId":operation_id,
