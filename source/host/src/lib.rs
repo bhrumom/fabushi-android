@@ -31,6 +31,7 @@ pub mod mcp_auth;
 pub mod notify_drain_gate;
 pub mod process_crash_guard;
 pub mod production_binding_providers;
+pub mod runner;
 pub mod runner_context_production_provider;
 pub mod runner_production_bridge;
 pub mod sand_activity;
