@@ -209,6 +209,7 @@ impl AndroidJsonHost {
             "feature.auth.browserPoll" => self.browser_poll(params),
             "feature.auth.oauthStart" => self.oauth_start(params),
             "feature.auth.oauthPoll" => self.oauth_poll(params),
+            "feature.mcp.oauthComplete" => self.mcp_oauth_complete(params),
             "feature.auth.logout" => {
                 self.logged_in = false;
                 self.ci_session_identity = None;
@@ -476,6 +477,39 @@ impl AndroidJsonHost {
             return Ok(json!({"attemptId":attempt_id,"status":"completed","auth":self.auth_status()}));
         }
         Ok(json!({"attemptId":attempt_id,"status":status}))
+    }
+
+    fn mcp_oauth_complete(&mut self, params: &Value) -> Result<Value, String> {
+        let provider = required_string(params, "provider")?.to_string();
+        let state = required_string(params, "state")?.to_string();
+        let code = params
+            .get("code")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty());
+        let error = params
+            .get("error")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty());
+        if code.is_some() == error.is_some() {
+            return Err("MCP OAuth completion requires exactly one of code or error".into());
+        }
+
+        let outcome = if error.is_some() { "failed" } else { "completed" };
+        self.events.push_back(json!({
+            "type": if outcome == "completed" {
+                "mcp.auth.completed"
+            } else {
+                "mcp.auth.failed"
+            },
+            "provider": provider,
+            "state": state,
+            "outcome": outcome,
+        }));
+        Ok(json!({
+            "provider": provider,
+            "state": state,
+            "outcome": outcome,
+        }))
     }
 
     fn oauth_start(&mut self, params: &Value) -> Result<Value, String> {
