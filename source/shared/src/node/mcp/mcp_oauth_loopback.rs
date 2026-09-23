@@ -235,6 +235,75 @@ impl Default for McpOAuthLoopbackState {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct McpOAuthPendingStateRegistry {
+    pending: BTreeMap<String, (String, u64)>,
+    ttl_ms: u64,
+}
+
+impl McpOAuthPendingStateRegistry {
+    pub fn new(ttl_ms: u64) -> Self {
+        Self {
+            pending: BTreeMap::new(),
+            ttl_ms: ttl_ms.max(1),
+        }
+    }
+
+    pub fn register(
+        &mut self,
+        now_ms: u64,
+        state: impl Into<String>,
+        provider: impl Into<String>,
+    ) -> Result<(), &'static str> {
+        self.expire(now_ms);
+        let state = state.into();
+        if state.len() < 16 {
+            return Err("OAuth state token is too short");
+        }
+        if !state
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '.' | '_' | '~' | '-'))
+        {
+            return Err("OAuth state token contains unsupported characters");
+        }
+        let provider = provider.into();
+        if provider.trim().is_empty() {
+            return Err("OAuth provider is required");
+        }
+        if self
+            .pending
+            .insert(
+                state,
+                (provider, now_ms.saturating_add(self.ttl_ms)),
+            )
+            .is_some()
+        {
+            return Err("OAuth state already registered");
+        }
+        Ok(())
+    }
+
+    pub fn consume(&mut self, now_ms: u64, state: &str) -> Option<String> {
+        self.expire(now_ms);
+        self.pending.remove(state).map(|(provider, _)| provider)
+    }
+
+    pub fn expire(&mut self, now_ms: u64) {
+        self.pending
+            .retain(|_, (_, expires_at_ms)| *expires_at_ms > now_ms);
+    }
+
+    pub fn pending_count(&self) -> usize {
+        self.pending.len()
+    }
+}
+
+impl Default for McpOAuthPendingStateRegistry {
+    fn default() -> Self {
+        Self::new(MCP_OAUTH_PENDING_TTL_MS)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -371,6 +440,23 @@ mod tests {
             )
             .unwrap();
         assert_eq!(retried.code, "second");
+    }
+
+    #[test]
+    fn pending_state_registry_is_single_use_and_expires() {
+        let mut registry = McpOAuthPendingStateRegistry::new(100);
+        registry
+            .register(10, "0123456789abcdef", "drive")
+            .unwrap();
+        assert_eq!(registry.pending_count(), 1);
+        assert_eq!(registry.consume(20, "0123456789abcdef").as_deref(), Some("drive"));
+        assert_eq!(registry.consume(21, "0123456789abcdef"), None);
+
+        registry
+            .register(30, "fedcba9876543210", "calendar")
+            .unwrap();
+        assert_eq!(registry.consume(130, "fedcba9876543210"), None);
+        assert_eq!(registry.pending_count(), 0);
     }
 
     #[test]
