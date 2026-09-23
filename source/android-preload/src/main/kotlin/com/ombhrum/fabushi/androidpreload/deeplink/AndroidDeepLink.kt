@@ -12,6 +12,11 @@ sealed interface AndroidDeepLink {
         val error: String?,
     ) : AndroidDeepLink
 
+    data class Info(
+        val source: AndroidDeepLinkSource,
+        val topic: String = "deep-links",
+    ) : AndroidPresentationDeepLink
+
     data class Agent(val agentId: String) : AndroidPresentationDeepLink
 
     data class AppSection(val section: String) : AndroidPresentationDeepLink
@@ -23,4 +28,9 @@ enum class AuthCompletionStatus {
     COMPLETED,
     CANCELLED,
     FAILED,
+}
+
+enum class AndroidDeepLinkSource {
+    PROTOCOL,
+    HTTPS,
 }
