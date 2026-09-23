@@ -2,6 +2,7 @@ package com.ombhrum.fabushi.androidpreload.runtime
 
 import androidx.activity.ComponentActivity
 import com.ombhrum.fabushi.FabushiAppAgentSurface
+import com.ombhrum.fabushi.androidpreload.deeplink.AndroidDeepLink
 
 /**
  * Process-scoped services that presentation is allowed to observe or signal.
@@ -17,6 +18,8 @@ internal interface AndroidPresentationRuntimePort {
     fun setForeground(foreground: Boolean)
 
     fun launchExternalAuth(url: String): Boolean
+
+    fun handlePlatformDeepLink(link: AndroidDeepLink): Boolean
 
     fun attachInteractiveActivity(activity: ComponentActivity)
 
