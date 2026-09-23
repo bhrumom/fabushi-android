@@ -2,7 +2,7 @@ package com.ombhrum.fabushi
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
-import com.ombhrum.fabushi.androidpreload.deeplink.AndroidDeepLink
+import com.ombhrum.fabushi.androidpreload.deeplink.AndroidPresentationDeepLink
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidPresentationRuntimePort
 import kotlinx.coroutines.flow.SharedFlow
 
@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.SharedFlow
 @Composable
 internal fun FabushiApplicationRoot(
     activity: ComponentActivity,
-    deepLinks: SharedFlow<AndroidDeepLink>,
+    deepLinks: SharedFlow<AndroidPresentationDeepLink>,
     updateModel: AndroidUpdateViewModel,
     runtimePort: AndroidPresentationRuntimePort,
 ) {
