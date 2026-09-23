@@ -1,17 +1,41 @@
-use std::collections::BTreeMap;
+use fabushi_android_shared::node::mcp::mcp_oauth_loopback::McpOAuthPendingStateRegistry;
+use std::time::{SystemTime, UNIX_EPOCH};
 
-#[derive(Default)]
 pub struct OAuthLoopbackRegistry {
-    pending: BTreeMap<String, String>,
+    pending: McpOAuthPendingStateRegistry,
 }
 
 impl OAuthLoopbackRegistry {
-    pub fn register(&mut self, state: impl Into<String>, provider: impl Into<String>) -> Result<(), &'static str> {
-        let state=state.into();
-        if state.len() < 16 { return Err("OAuth state token is too short"); }
-        if self.pending.insert(state, provider.into()).is_some() { return Err("OAuth state already registered"); }
-        Ok(())
+    pub fn register(
+        &mut self,
+        state: impl Into<String>,
+        provider: impl Into<String>,
+    ) -> Result<(), &'static str> {
+        self.pending.register(now_ms(), state, provider)
     }
-    pub fn consume(&mut self, state: &str) -> Option<String> { self.pending.remove(state) }
-    pub fn pending_count(&self) -> usize { self.pending.len() }
+
+    pub fn consume(&mut self, state: &str) -> Option<String> {
+        self.pending.consume(now_ms(), state)
+    }
+
+    pub fn pending_count(&self) -> usize {
+        self.pending.pending_count()
+    }
+}
+
+impl Default for OAuthLoopbackRegistry {
+    fn default() -> Self {
+        Self {
+            pending: McpOAuthPendingStateRegistry::default(),
+        }
+    }
+}
+
+fn now_ms() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis()
+        .try_into()
+        .unwrap_or(u64::MAX)
 }
