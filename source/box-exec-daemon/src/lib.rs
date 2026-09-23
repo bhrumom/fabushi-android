@@ -26,3 +26,36 @@ impl<T: RemoteExecutionTransport> RemoteRunner<T> {
     }
     pub fn into_transport(self) -> T { self.transport }
 }
+
+pub fn remote_viewer_ports() -> (u16, u16) {
+    (
+        fabushi_constants::sand_box::SAND_BOX_PRIMARY_NOVNC_PORT,
+        fabushi_constants::sand_box::SAND_BOX_FORK_NOVNC_PORT,
+    )
+}
+
+pub fn remote_viewer_url(
+    proxy_base_url: &str,
+    network_token: &str,
+    session_token: Option<&str>,
+    special_treatment: bool,
+) -> String {
+    fabushi_constants::sand_box::build_sand_box_no_vnc_url(
+        proxy_base_url,
+        network_token,
+        session_token,
+        special_treatment,
+    )
+}
+
+#[cfg(test)]
+mod constants_wiring_tests {
+    use super::*;
+
+    #[test]
+    fn remote_runner_uses_canonical_box_viewer_contract() {
+        assert_eq!(remote_viewer_ports(), (6080, 6081));
+        let url = remote_viewer_url("https://proxy.example", "network", None, true);
+        assert!(fabushi_constants::sand_box::is_sand_special_treatment_no_vnc_url(&url));
+    }
+}
