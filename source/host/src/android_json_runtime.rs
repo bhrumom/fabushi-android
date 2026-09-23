@@ -13,8 +13,96 @@ use fabushi_android_shared::webauthn_gateway::{
 };
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::fs;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct CiAccountSessionIdentity {
+    session_id: String,
+    device_id: String,
+    expires_at_epoch_seconds: u64,
+}
+
+const CI_SESSION_MAX_BYTES: u64 = 64 * 1024;
+const CI_SESSION_MAX_LIFETIME_SECONDS: u64 = 5 * 60 * 60;
+
+fn parse_ci_account_session_document(
+    document: &Value,
+    now_epoch_seconds: u64,
+) -> Option<CiAccountSessionIdentity> {
+    let object = document.as_object()?;
+    let access_token = object.get("accessToken")?.as_str()?;
+    let device_id = object.get("deviceId")?.as_str()?;
+    let session_id = object.get("sessionId")?.as_str()?;
+    let token_type = object
+        .get("tokenType")
+        .and_then(Value::as_str)
+        .unwrap_or("Bearer");
+    let provider = object.get("provider")?.as_str()?;
+    let ci_runner = object.get("ciRunner")?.as_bool()?;
+    let expiry = object.get("accessTokenExpiresAt")?.as_u64()?;
+
+    if access_token.len() < 24
+        || access_token.len() > 16 * 1024
+        || access_token.chars().any(char::is_whitespace)
+        || token_type != "Bearer"
+        || provider != "github-actions"
+        || !ci_runner
+        || object.contains_key("refreshToken")
+        || expiry <= now_epoch_seconds.saturating_add(30)
+        || expiry > now_epoch_seconds.saturating_add(CI_SESSION_MAX_LIFETIME_SECONDS)
+    {
+        return None;
+    }
+
+    let device_inner = device_id
+        .strip_prefix("gha-")?
+        .strip_suffix("-interactive")?;
+    let (device_run, device_attempt) = device_inner.split_once('-')?;
+    if device_run.is_empty()
+        || device_attempt.is_empty()
+        || !device_run.chars().all(|value| value.is_ascii_digit())
+        || !device_attempt.chars().all(|value| value.is_ascii_digit())
+    {
+        return None;
+    }
+
+    let session_inner = session_id.strip_prefix("ci-runner:")?;
+    let (session_run, session_attempt) = session_inner.split_once(':')?;
+    if session_run != device_run
+        || session_attempt != device_attempt
+        || session_run.is_empty()
+        || session_attempt.is_empty()
+        || !session_run.chars().all(|value| value.is_ascii_digit())
+        || !session_attempt.chars().all(|value| value.is_ascii_digit())
+    {
+        return None;
+    }
+
+    Some(CiAccountSessionIdentity {
+        session_id: session_id.to_string(),
+        device_id: device_id.to_string(),
+        expires_at_epoch_seconds: expiry,
+    })
+}
+
+fn ci_account_session_from_environment(
+    now_epoch_seconds: u64,
+) -> Option<(PathBuf, CiAccountSessionIdentity)> {
+    if std::env::var("GITHUB_ACTIONS").ok().as_deref() != Some("true") {
+        return None;
+    }
+    let path = PathBuf::from(std::env::var("FABUSHI_CI_ACCOUNT_SESSION_FILE").ok()?);
+    let metadata = fs::metadata(&path).ok()?;
+    if !metadata.is_file() || metadata.len() == 0 || metadata.len() > CI_SESSION_MAX_BYTES {
+        return None;
+    }
+    let raw = fs::read_to_string(&path).ok()?;
+    let document: Value = serde_json::from_str(&raw).ok()?;
+    let identity = parse_ci_account_session_document(&document, now_epoch_seconds)?;
+    Some((path, identity))
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AndroidHostMode {
@@ -26,6 +114,8 @@ pub struct AndroidJsonHost {
     mode: AndroidHostMode,
     agents: AndroidAgentRoster,
     transcript: TranscriptStore,
+    ci_session_path: Option<PathBuf>,
+    ci_session_identity: Option<CiAccountSessionIdentity>,
     logged_in: bool,
     next_attempt: u64,
     next_operation: u64,
@@ -48,11 +138,22 @@ impl AndroidJsonHost {
             .unwrap_or_else(|error| panic!("failed to open canonical Android agent roster: {error}"));
         let transcript = TranscriptStore::open(app_data_dir.join("transcript.json"))
             .unwrap_or_else(|error| panic!("failed to open canonical Android transcript: {error}"));
+        let ci_session = if mode == AndroidHostMode::Production {
+            ci_account_session_from_environment(now_ms() / 1_000)
+        } else {
+            None
+        };
+        let logged_in = ci_session.is_some();
+        let (ci_session_path, ci_session_identity) = ci_session
+            .map(|(path, identity)| (Some(path), Some(identity)))
+            .unwrap_or((None, None));
         Self {
             mode,
             agents,
             transcript,
-            logged_in: false,
+            ci_session_path,
+            ci_session_identity,
+            logged_in,
             next_attempt: 0,
             next_operation: 0,
             oauth_attempts: BTreeSet::new(),
@@ -87,7 +188,16 @@ impl AndroidJsonHost {
             "feature.auth.status" => Ok(self.auth_status()),
             "feature.auth.deviceAgentSession" => Ok(json!({
                 "loggedIn": self.logged_in,
-                "session": if self.logged_in { Value::String("android-device-session".into()) } else { Value::Null }
+                "session": if self.logged_in {
+                    Value::String(
+                        self.ci_session_identity
+                            .as_ref()
+                            .map(|identity| identity.session_id.clone())
+                            .unwrap_or_else(|| "android-device-session".into())
+                    )
+                } else {
+                    Value::Null
+                }
             })),
             "feature.auth.providers" => Ok(json!([
                 {"id":"google","displayName":"Google"},
@@ -101,6 +211,10 @@ impl AndroidJsonHost {
             "feature.auth.oauthPoll" => self.oauth_poll(params),
             "feature.auth.logout" => {
                 self.logged_in = false;
+                self.ci_session_identity = None;
+                if let Some(path) = self.ci_session_path.take() {
+                    let _ = fs::remove_file(path);
+                }
                 Ok(self.auth_status())
             }
             "listAgents" => Ok(Value::Array(
@@ -1110,6 +1224,35 @@ mod tests {
         }
 
         let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn ci_session_validation_is_bounded_and_refresh_token_free() {
+        let now = 1_000_000_u64;
+        let valid = json!({
+            "accessToken":"abcdefghijklmnopqrstuvwxyz0123456789",
+            "deviceId":"gha-12345-7-interactive",
+            "sessionId":"ci-runner:12345:7",
+            "tokenType":"Bearer",
+            "provider":"github-actions",
+            "ciRunner":true,
+            "accessTokenExpiresAt":now + 3_600,
+        });
+        let parsed = parse_ci_account_session_document(&valid, now).unwrap();
+        assert_eq!(parsed.session_id, "ci-runner:12345:7");
+        assert_eq!(parsed.device_id, "gha-12345-7-interactive");
+
+        let mut mismatched = valid.clone();
+        mismatched["sessionId"] = Value::String("ci-runner:12345:8".into());
+        assert!(parse_ci_account_session_document(&mismatched, now).is_none());
+
+        let mut refresh = valid.clone();
+        refresh["refreshToken"] = Value::String("forbidden".into());
+        assert!(parse_ci_account_session_document(&refresh, now).is_none());
+
+        let mut expired = valid.clone();
+        expired["accessTokenExpiresAt"] = json!(now + 10);
+        assert!(parse_ci_account_session_document(&expired, now).is_none());
     }
 
 }
