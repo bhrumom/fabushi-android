@@ -89,7 +89,18 @@ class PackagedProductionAcceptanceTest {
                 )
                 assertTrue(
                     "Production chat must settle with a terminal event",
-                    completedSeen.await(20, TimeUnit.SECONDS),
+                    completedSeen.await(45, TimeUnit.SECONDS),
+                )
+                val streamedText = events
+                    .filter { it.optString("type") == "chat.delta" }
+                    .joinToString(separator = "") { it.optString("delta") }
+                assertTrue(
+                    "Production inference must return real streamed model output",
+                    streamedText.isNotBlank(),
+                )
+                assertFalse(
+                    "The production Host must not pass acceptance with the placeholder provider",
+                    streamedText == "Fabushi Android Host accepted the message.",
                 )
 
                 val streamEvents = events.filter {
