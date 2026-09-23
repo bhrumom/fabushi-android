@@ -12,4 +12,6 @@ internal interface AndroidPresentationRuntimePort {
     val appAgentSurface: FabushiAppAgentSurface
 
     fun setLoggedIn(loggedIn: Boolean)
+
+    fun setForeground(foreground: Boolean)
 }
