@@ -111,6 +111,10 @@ impl AndroidAgentRoster {
         self.state.agents.len()
     }
 
+    pub fn get(&self, id: &str) -> Option<AndroidAgentRecord> {
+        self.state.agents.iter().find(|agent| agent.id == id).cloned()
+    }
+
     pub fn create(&mut self, name: &str, description: &str) -> io::Result<AndroidAgentRecord> {
         let name = normalize_name(name)?;
         let description = normalize_description(description);
