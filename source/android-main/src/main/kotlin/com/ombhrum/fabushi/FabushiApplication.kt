@@ -3,6 +3,7 @@ package com.ombhrum.fabushi
 import android.app.Application
 import android.content.Intent
 import androidx.activity.ComponentActivity
+import com.ombhrum.fabushi.androidmain.adapters.AndroidAccountOAuthAdapter
 import java.lang.ref.WeakReference
 import com.ombhrum.fabushi.androidmain.coordinator.AndroidCoordinatorPorts
 import com.ombhrum.fabushi.androidmain.notifications.AndroidNotificationRuntime
@@ -54,6 +55,7 @@ internal class FabushiProcessRuntime(
     private val coordinator = AndroidCoordinatorPorts.presentation(application).also {
         AndroidCoordinatorBridge.installTrustedRuntime(it)
     }
+    private val accountOAuth = AndroidAccountOAuthAdapter()
     override val appAgentSurface = FabushiAppAgentSurface()
     private val notificationRuntime = AndroidNotificationRuntime(
         context = application,
@@ -81,6 +83,9 @@ internal class FabushiProcessRuntime(
     override fun setForeground(foreground: Boolean) {
         appForeground = foreground
     }
+
+    override fun launchExternalAuth(url: String): Boolean =
+        accountOAuth.openExternalAuth(interactiveActivityOrNull(), url)
 
     override fun attachInteractiveActivity(activity: ComponentActivity) {
         interactiveActivityRef = WeakReference(activity)
