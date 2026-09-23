@@ -85,6 +85,66 @@ class FrontendProductionModelParityTest {
     }
 
     @Test
+    fun commandPaletteSearchFiltersAndScoresAgentsAndActions() {
+        var activated = ""
+        val entries = listOf(
+            CommandPaletteEntry(
+                id = "agent:a",
+                kind = CommandPaletteEntryKind.AGENT,
+                label = "Research Agent",
+                searchText = "Research Agent analysis",
+                activate = { activated = "agent" },
+            ),
+            CommandPaletteEntry(
+                id = "command:settings",
+                kind = CommandPaletteEntryKind.COMMAND,
+                label = "Chat Settings",
+                searchText = "Chat Settings notifications",
+                activate = { activated = "settings" },
+            ),
+        )
+        val agentResults = commandPaletteEntries(
+            entries,
+            CommandPaletteTab.AGENTS,
+            "rsrch",
+        )
+        assertEquals(listOf("agent:a"), agentResults.map { it.id })
+        assertTrue(activateCommandPaletteEntry(agentResults, 0))
+        assertEquals("agent", activated)
+        assertEquals(0, movePaletteHighlight(-1, 1, 1))
+    }
+
+    @Test
+    fun commandPaletteRootCommandsAreCurrentChatScoped() {
+        val opened = mutableListOf<CommandPaletteInfoSection>()
+        assertTrue(
+            commandPaletteRootCommands(
+                activeAgentIsGroup = null,
+                activeAgentIsSharedRoom = false,
+                hasChannels = true,
+                openInfoSection = opened::add,
+            ).isEmpty(),
+        )
+
+        val commands = commandPaletteRootCommands(
+            activeAgentIsGroup = true,
+            activeAgentIsSharedRoom = false,
+            hasChannels = true,
+            openInfoSection = opened::add,
+        )
+        assertEquals(
+            listOf("info:members", "info:channels", "info:settings"),
+            commands.map { it.id },
+        )
+        commands.first().activate()
+        commands.last().activate()
+        assertEquals(
+            listOf(CommandPaletteInfoSection.MEMBERS, CommandPaletteInfoSection.SETTINGS),
+            opened,
+        )
+    }
+
+    @Test
     fun permissionScopeRequiresStrictlyNewRevisionAfterAccountReentry() {
         val gate = LocalToolPermissionScopeGate()
         gate.enter("account-a")
