@@ -3,6 +3,7 @@ package com.ombhrum.fabushi
 import android.app.Application
 import android.content.Intent
 import com.ombhrum.fabushi.androidmain.coordinator.AndroidCoordinatorPorts
+import com.ombhrum.fabushi.androidmain.notifications.AndroidNotificationRuntime
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidCoordinatorBridge
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidPresentationRuntimePort
 
@@ -43,10 +44,18 @@ internal class FabushiProcessRuntime(
     intent: Intent?,
     ciBootstrapActive: Boolean,
 ) : AndroidPresentationRuntimePort, AutoCloseable {
+    @Volatile
+    private var appForeground = false
     private val coordinator = AndroidCoordinatorPorts.presentation(application).also {
         AndroidCoordinatorBridge.installTrustedRuntime(it)
     }
     override val appAgentSurface = FabushiAppAgentSurface()
+    private val notificationRuntime = AndroidNotificationRuntime(
+        context = application,
+        isAppForeground = { appForeground },
+    )
+    private val notificationEventSubscription =
+        coordinator.addFeatureEventListener(notificationRuntime.feed::handleFeatureEvent)
     private val remoteDeviceGateway = FabushiRemoteDeviceGateway(
         context = application,
         coordinator = coordinator,
@@ -57,9 +66,16 @@ internal class FabushiProcessRuntime(
 
     override fun setLoggedIn(loggedIn: Boolean) {
         remoteDeviceGateway.setLoggedIn(loggedIn)
+        if (!loggedIn) notificationRuntime.reset()
+    }
+
+    override fun setForeground(foreground: Boolean) {
+        appForeground = foreground
     }
 
     override fun close() {
+        notificationEventSubscription.close()
+        notificationRuntime.reset()
         remoteDeviceGateway.close()
     }
 }
