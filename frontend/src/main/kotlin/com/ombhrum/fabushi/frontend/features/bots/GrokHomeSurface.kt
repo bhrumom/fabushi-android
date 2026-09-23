@@ -65,6 +65,7 @@ fun GrokHomeSurface(
     botState: MobileBotUiState,
     appAgentSurface: FabushiAppAgentSurface,
     onOpenMessaging: () -> Unit,
+    onOpenCommandPalette: () -> Unit,
     onRefreshBots: () -> Unit,
     onCreateBot: (String, String, (() -> Unit)?) -> Unit,
     onOpenBot: (MobileBotSummaryAndroid) -> Unit,
@@ -82,7 +83,16 @@ fun GrokHomeSurface(
     LaunchedEffect(Unit) { onRefreshBots() }
     val active = botState.activeBot
     if (active != null) {
-        GrokBotChatAndroid(active, botState, appAgentSurface, onCloseBot, onDraftChange, onSend, onStop)
+        GrokBotChatAndroid(
+            active,
+            botState,
+            appAgentSurface,
+            onCloseBot,
+            onOpenCommandPalette,
+            onDraftChange,
+            onSend,
+            onStop,
+        )
         return
     }
 
@@ -285,6 +295,15 @@ fun GrokHomeSurface(
                     ) { Text(accountName.take(1).uppercase().ifBlank { "F" }, color = GrokMobileInk, fontWeight = FontWeight.Bold) }
                     Spacer(Modifier.weight(1f))
                     Text("⌕", fontSize = 29.sp, color = GrokMobileInk, modifier = Modifier.padding(horizontal = 10.dp).clickable { query = if (query.isEmpty()) " " else "" })
+                    Text(
+                        "⌘",
+                        fontSize = 20.sp,
+                        color = GrokMobileInk,
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .clickable(onClick = onOpenCommandPalette)
+                            .testTag("command-palette-open-home"),
+                    )
                     Box {
                         Text("+", fontSize = 31.sp, color = GrokMobileInk, modifier = Modifier.padding(horizontal = 8.dp).clickable { addOpen = true }.testTag("grok-mobile-add"))
                         DropdownMenu(expanded = addOpen, onDismissRequest = { addOpen = false }) {
