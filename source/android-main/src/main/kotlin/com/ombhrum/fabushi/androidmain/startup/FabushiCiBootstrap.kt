@@ -32,21 +32,51 @@ internal object FabushiCiBootstrap {
 
     fun prepare(context: Context): Boolean {
         if (!BuildConfig.CI_ACCOUNT_SESSION_IMPORT_ENABLED) return false
-        val externalDirectory = context.getExternalFilesDir(null) ?: return false
-        val staged = File(externalDirectory, SessionFileName)
-        if (!staged.isFile || staged.length() !in 1..MaxSessionBytes) return false
-
-        val document = runCatching { JSONObject(staged.readText(Charsets.UTF_8)) }.getOrNull() ?: return false
-        if (!isValidSession(document, System.currentTimeMillis() / 1000L)) return false
-
+        val nowEpochSeconds = System.currentTimeMillis() / 1000L
         val privateFile = File(context.filesDir, SessionFileName)
-        runCatching {
-            staged.inputStream().use { input ->
-                privateFile.outputStream().use { output -> input.copyTo(output) }
+        val externalDirectory = context.getExternalFilesDir(null)
+        val staged = externalDirectory?.let { File(it, SessionFileName) }
+
+        val stagedDocument = staged
+            ?.takeIf { it.isFile && it.length() in 1..MaxSessionBytes }
+            ?.let { runCatching { JSONObject(it.readText(Charsets.UTF_8)) }.getOrNull() }
+            ?.takeIf { isValidSession(it, nowEpochSeconds) }
+
+        val privateDocument = privateFile
+            .takeIf { it.isFile && it.length() in 1..MaxSessionBytes }
+            ?.let { runCatching { JSONObject(it.readText(Charsets.UTF_8)) }.getOrNull() }
+            ?.takeIf { isValidSession(it, nowEpochSeconds) }
+
+        if (stagedDocument != null && staged != null) {
+            runCatching {
+                staged.inputStream().use { input ->
+                    privateFile.outputStream().use { output -> input.copyTo(output) }
+                }
+                check(privateFile.length() in 1..MaxSessionBytes)
+                Os.chmod(privateFile.absolutePath, 0x180) // 0600
+                check(staged.delete() || !staged.exists())
+            }.getOrElse {
+                privateFile.delete()
+                return false
             }
-            check(privateFile.length() in 1..MaxSessionBytes)
-            Os.chmod(privateFile.absolutePath, 0x180) // 0600
-            check(staged.delete() || !staged.exists())
+        } else if (privateDocument != null) {
+            runCatching { Os.chmod(privateFile.absolutePath, 0x180) }.getOrElse {
+                privateFile.delete()
+                return false
+            }
+        } else {
+            if (privateFile.exists()) privateFile.delete()
+            return false
+        }
+
+        val activeDocument = runCatching {
+            JSONObject(privateFile.readText(Charsets.UTF_8))
+        }.getOrNull()?.takeIf { isValidSession(it, nowEpochSeconds) } ?: run {
+            privateFile.delete()
+            return false
+        }
+
+        return runCatching {
             Os.setenv("GITHUB_ACTIONS", "true", true)
             Os.setenv("FABUSHI_CI_ACCOUNT_SESSION_FILE", privateFile.absolutePath, true)
             check(
@@ -55,11 +85,11 @@ internal object FabushiCiBootstrap {
                     .putBoolean("onboarding-complete", true)
                     .commit(),
             )
+            activeDocument.optString("sessionId").isNotBlank()
         }.getOrElse {
             privateFile.delete()
-            return false
+            false
         }
-        return true
     }
 
     fun gatewayMetadata(intent: Intent?, ciBootstrapActive: Boolean): Map<String, String> {
