@@ -11,6 +11,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import com.ombhrum.fabushi.androidmain.deeplink.AndroidDeepLinkController
 import com.ombhrum.fabushi.androidpreload.deeplink.AndroidDeepLink
+import com.ombhrum.fabushi.androidpreload.runtime.AndroidPresentationRuntimePort
 import kotlinx.coroutines.flow.MutableSharedFlow
 
 /**
@@ -21,21 +22,21 @@ import kotlinx.coroutines.flow.MutableSharedFlow
  */
 class MainActivity : ComponentActivity() {
     private val deepLinks = MutableSharedFlow<AndroidDeepLink>(replay = 1, extraBufferCapacity = 31)
-    private lateinit var processRuntime: FabushiProcessRuntime
+    private lateinit var runtimePort: AndroidPresentationRuntimePort
     private val deepLinkController = AndroidDeepLinkController(
         dispatch = ::dispatchDeepLink,
     )
     private val updateModel: AndroidUpdateViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        processRuntime = (application as FabushiApplication).ensureProcessRuntime(intent)
+        runtimePort = (application as FabushiApplication).ensurePresentationRuntime(intent)
         enableEdgeToEdge()
         setContent {
             FabushiApplicationRoot(
                 activity = this,
                 deepLinks = deepLinks,
                 updateModel = updateModel,
-                runtimePort = processRuntime,
+                runtimePort = runtimePort,
             )
         }
         deepLinkController.markReady()
@@ -44,7 +45,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        (application as FabushiApplication).requireProcessRuntime().apply {
+        (application as FabushiApplication).requirePresentationRuntime().apply {
             attachInteractiveActivity(this@MainActivity)
             setForeground(true)
         }
@@ -53,7 +54,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
-        (application as FabushiApplication).requireProcessRuntime().apply {
+        (application as FabushiApplication).requirePresentationRuntime().apply {
             setForeground(false)
             detachInteractiveActivity(this@MainActivity)
         }
@@ -73,10 +74,10 @@ class MainActivity : ComponentActivity() {
     }
 
     internal fun appAgentSurfaceForTesting(): FabushiAppAgentSurface =
-        (application as FabushiApplication).requireProcessRuntime().appAgentSurface
+        (application as FabushiApplication).requirePresentationRuntime().appAgentSurface
 
     private fun dispatchDeepLink(link: AndroidDeepLink) {
-        if (!processRuntime.handlePlatformDeepLink(link)) {
+        if (!runtimePort.handlePlatformDeepLink(link)) {
             deepLinks.tryEmit(link)
         }
     }
