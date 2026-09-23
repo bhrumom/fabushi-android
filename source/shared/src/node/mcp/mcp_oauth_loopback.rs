@@ -152,34 +152,41 @@ impl McpOAuthLoopbackState {
             .query_pairs()
             .find_map(|(key, value)| (key == "state").then(|| value.into_owned()))
             .ok_or(McpOAuthCallbackFailureReason::CompletionRejected)?;
-        let auth = self
-            .pending
-            .get_mut(&state)
-            .ok_or(McpOAuthCallbackFailureReason::CompletionRejected)?;
+        if !self.pending.contains_key(&state) {
+            return Err(McpOAuthCallbackFailureReason::CompletionRejected);
+        }
 
         if request.query_pairs().any(|(key, _)| key == "error") {
             self.pending.remove(&state);
             return Err(McpOAuthCallbackFailureReason::ProviderError);
         }
 
-        let code = request
+        let code = match request
             .query_pairs()
             .find_map(|(key, value)| (key == "code").then(|| value.into_owned()))
             .filter(|value| !value.is_empty())
-            .ok_or_else(|| {
+        {
+            Some(code) => code,
+            None => {
                 self.pending.remove(&state);
-                McpOAuthCallbackFailureReason::MissingCode
-            })?;
+                return Err(McpOAuthCallbackFailureReason::MissingCode);
+            }
+        };
 
+        let auth = self
+            .pending
+            .get_mut(&state)
+            .ok_or(McpOAuthCallbackFailureReason::CompletionRejected)?;
         if auth.completing {
             return Err(McpOAuthCallbackFailureReason::CompletionRejected);
         }
         auth.completing = true;
+        let server_name = auth.server_name.clone();
 
         Ok(McpOAuthPendingCallback {
             state,
             code,
-            server_name: auth.server_name.clone(),
+            server_name,
         })
     }
 
