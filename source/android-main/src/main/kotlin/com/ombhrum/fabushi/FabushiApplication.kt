@@ -2,6 +2,8 @@ package com.ombhrum.fabushi
 
 import android.app.Application
 import android.content.Intent
+import androidx.activity.ComponentActivity
+import java.lang.ref.WeakReference
 import com.ombhrum.fabushi.androidmain.coordinator.AndroidCoordinatorPorts
 import com.ombhrum.fabushi.androidmain.notifications.AndroidNotificationRuntime
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidCoordinatorBridge
@@ -46,6 +48,8 @@ internal class FabushiProcessRuntime(
 ) : AndroidPresentationRuntimePort, AutoCloseable {
     @Volatile
     private var appForeground = false
+    @Volatile
+    private var interactiveActivityRef: WeakReference<ComponentActivity>? = null
     private val coordinator = AndroidCoordinatorPorts.presentation(application).also {
         AndroidCoordinatorBridge.installTrustedRuntime(it)
     }
@@ -73,7 +77,21 @@ internal class FabushiProcessRuntime(
         appForeground = foreground
     }
 
+    override fun attachInteractiveActivity(activity: ComponentActivity) {
+        interactiveActivityRef = WeakReference(activity)
+    }
+
+    override fun detachInteractiveActivity(activity: ComponentActivity) {
+        if (interactiveActivityRef?.get() === activity) {
+            interactiveActivityRef = null
+        }
+    }
+
+    internal fun interactiveActivityOrNull(): ComponentActivity? =
+        interactiveActivityRef?.get()
+
     override fun close() {
+        interactiveActivityRef = null
         notificationEventSubscription.close()
         notificationRuntime.reset()
         remoteDeviceGateway.close()
