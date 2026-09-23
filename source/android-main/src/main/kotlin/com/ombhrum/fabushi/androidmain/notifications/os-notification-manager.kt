@@ -65,7 +65,7 @@ internal class AndroidOsNotificationManager(
     }
 
     fun handleAgents(agents: List<AndroidNotificationAgent>) {
-        val snapshots = agents.map(AndroidNotificationAgent::snapshot)
+        val snapshots = agents.map(AndroidNotificationAgent::toSnapshot)
         val transitions = diff(previous, snapshots)
         previous.clear()
         snapshots.associateByTo(previous) { it.id }
@@ -85,7 +85,7 @@ internal class AndroidOsNotificationManager(
     }
 
     fun seedBaseline(agents: List<AndroidNotificationAgent>) {
-        agents.map(AndroidNotificationAgent::snapshot).forEach { snapshot ->
+        agents.map(AndroidNotificationAgent::toSnapshot).forEach { snapshot ->
             previous.putIfAbsent(snapshot.id, snapshot)
             accountedMessageId.putIfAbsent(snapshot.id, snapshot.lastMessageId)
         }
@@ -109,7 +109,7 @@ internal class AndroidOsNotificationManager(
     }
 
     private fun processDelta(agent: AndroidNotificationAgent) {
-        val snapshot = agent.snapshot()
+        val snapshot = agent.toSnapshot()
         val before = previous[snapshot.id]
         val transitions = if (before == null) emptyList() else diff(
             mapOf(snapshot.id to before),
@@ -247,7 +247,7 @@ internal class AndroidOsNotificationManager(
         )
     }
 
-    private fun AndroidNotificationAgent.snapshot() = NotificationSnapshot(
+    private fun AndroidNotificationAgent.toSnapshot() = NotificationSnapshot(
         id = id,
         name = name,
         isRunning = isRunning,
