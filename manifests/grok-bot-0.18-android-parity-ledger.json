@@ -18693,9 +18693,10 @@
       "android_target_path": "source/packages/constants/src/agent_store_ids.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust counterpart under source/packages/constants/src preserves the pinned baseline contract/constants and includes focused inline unit tests; cargo test --workspace --all-targets is the exact-HEAD verification gate.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation audited against exported behavior/constants from the pinned Grok baseline; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/constants/ask-question.ts",
@@ -18706,9 +18707,10 @@
       "android_target_path": "source/packages/constants/src/ask_question.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust counterpart under source/packages/constants/src preserves the pinned baseline contract/constants and includes focused inline unit tests; cargo test --workspace --all-targets is the exact-HEAD verification gate.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation audited against exported behavior/constants from the pinned Grok baseline; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/constants/auto-spillover-ui.ts",
@@ -18719,9 +18721,10 @@
       "android_target_path": "source/packages/constants/src/auto_spillover_ui.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust counterpart under source/packages/constants/src preserves the pinned baseline contract/constants and includes focused inline unit tests; cargo test --workspace --all-targets is the exact-HEAD verification gate.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation audited against exported behavior/constants from the pinned Grok baseline; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/constants/cloud-agent.ts",
@@ -18732,9 +18735,10 @@
       "android_target_path": "source/packages/constants/src/cloud_agent.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust counterpart under source/packages/constants/src preserves the pinned baseline contract/constants and includes focused inline unit tests; cargo test --workspace --all-targets is the exact-HEAD verification gate.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation audited against exported behavior/constants from the pinned Grok baseline; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/constants/composer.ts",
@@ -18745,9 +18749,10 @@
       "android_target_path": "source/packages/constants/src/composer.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust counterpart under source/packages/constants/src preserves the pinned baseline contract/constants and includes focused inline unit tests; cargo test --workspace --all-targets is the exact-HEAD verification gate.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation audited against exported behavior/constants from the pinned Grok baseline; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/constants/environment-setup.ts",
@@ -18758,9 +18763,10 @@
       "android_target_path": "source/packages/constants/src/environment_setup.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust counterpart under source/packages/constants/src preserves the pinned baseline contract/constants and includes focused inline unit tests; cargo test --workspace --all-targets is the exact-HEAD verification gate.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation audited against exported behavior/constants from the pinned Grok baseline; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/constants/git-diff.ts",
@@ -18771,9 +18777,10 @@
       "android_target_path": "source/packages/constants/src/git_diff.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust counterpart under source/packages/constants/src preserves the pinned baseline contract/constants and includes focused inline unit tests; cargo test --workspace --all-targets is the exact-HEAD verification gate.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation audited against exported behavior/constants from the pinned Grok baseline; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/constants/mcp.ts",
@@ -18784,9 +18791,10 @@
       "android_target_path": "source/packages/constants/src/mcp.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust counterpart under source/packages/constants/src preserves the pinned baseline contract/constants and includes focused inline unit tests; cargo test --workspace --all-targets is the exact-HEAD verification gate.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation audited against exported behavior/constants from the pinned Grok baseline; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/constants/permissions.ts",
@@ -18797,9 +18805,10 @@
       "android_target_path": "source/packages/constants/src/permissions.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust counterpart under source/packages/constants/src preserves the pinned baseline contract/constants and includes focused inline unit tests; cargo test --workspace --all-targets is the exact-HEAD verification gate.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation audited against exported behavior/constants from the pinned Grok baseline; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/constants/project-conversation.ts",
@@ -18810,9 +18819,10 @@
       "android_target_path": "source/packages/constants/src/project_conversation.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust counterpart under source/packages/constants/src preserves the pinned baseline contract/constants and includes focused inline unit tests; cargo test --workspace --all-targets is the exact-HEAD verification gate.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation audited against exported behavior/constants from the pinned Grok baseline; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/constants/project-send-message.ts",
@@ -18823,9 +18833,10 @@
       "android_target_path": "source/packages/constants/src/project_send_message.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust counterpart under source/packages/constants/src preserves the pinned baseline contract/constants and includes focused inline unit tests; cargo test --workspace --all-targets is the exact-HEAD verification gate.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation audited against exported behavior/constants from the pinned Grok baseline; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/constants/repo-label.ts",
@@ -18836,9 +18847,10 @@
       "android_target_path": "source/packages/constants/src/repo_label.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust counterpart under source/packages/constants/src preserves the pinned baseline contract/constants and includes focused inline unit tests; cargo test --workspace --all-targets is the exact-HEAD verification gate.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation audited against exported behavior/constants from the pinned Grok baseline; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/constants/sand-box-archive.ts",
@@ -18849,9 +18861,10 @@
       "android_target_path": "source/packages/constants/src/sand_box_archive.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust counterpart under source/packages/constants/src preserves the pinned baseline contract/constants and includes focused inline unit tests; cargo test --workspace --all-targets is the exact-HEAD verification gate.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation audited against exported behavior/constants from the pinned Grok baseline; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/constants/sand-box.ts",
@@ -18862,9 +18875,10 @@
       "android_target_path": "source/packages/constants/src/sand_box.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust counterpart under source/packages/constants/src preserves the pinned baseline contract/constants and includes focused inline unit tests; cargo test --workspace --all-targets is the exact-HEAD verification gate.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation audited against exported behavior/constants from the pinned Grok baseline; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/constants/sand-supervisor.ts",
@@ -18875,9 +18889,10 @@
       "android_target_path": "source/packages/constants/src/sand_supervisor.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust counterpart under source/packages/constants/src preserves the pinned baseline contract/constants and includes focused inline unit tests; cargo test --workspace --all-targets is the exact-HEAD verification gate.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation audited against exported behavior/constants from the pinned Grok baseline; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/constants/smart-mode-classifier.ts",
@@ -18888,9 +18903,10 @@
       "android_target_path": "source/packages/constants/src/smart_mode_classifier.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust counterpart under source/packages/constants/src preserves the pinned baseline contract/constants and includes focused inline unit tests; cargo test --workspace --all-targets is the exact-HEAD verification gate.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation audited against exported behavior/constants from the pinned Grok baseline; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/constants/structured-log.ts",
@@ -18901,9 +18917,10 @@
       "android_target_path": "source/packages/constants/src/structured_log.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust counterpart under source/packages/constants/src preserves the pinned baseline contract/constants and includes focused inline unit tests; cargo test --workspace --all-targets is the exact-HEAD verification gate.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation audited against exported behavior/constants from the pinned Grok baseline; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/constants/system-notification.ts",
@@ -18914,9 +18931,10 @@
       "android_target_path": "source/packages/constants/src/system_notification.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust counterpart under source/packages/constants/src preserves the pinned baseline contract/constants and includes focused inline unit tests; cargo test --workspace --all-targets is the exact-HEAD verification gate.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation audited against exported behavior/constants from the pinned Grok baseline; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/context-rpc/index.ts",
@@ -26780,7 +26798,7 @@
     }
   ],
   "status_summary": {
-    "mapped": 1837,
-    "implemented": 209
+    "mapped": 1819,
+    "implemented": 227
   }
 }
