@@ -1,5 +1,6 @@
 package com.ombhrum.fabushi.androidpreload.runtime
 
+import org.json.JSONArray
 import org.json.JSONObject
 
 /**
@@ -23,7 +24,15 @@ interface AndroidCoordinatorPort {
 
     fun featureExecute(params: JSONObject): JSONObject
     fun featureInterrupt(params: JSONObject): JSONObject
-    fun botList(requestId: String): JSONObject
+
+    fun agentList(): JSONArray
+    fun agentCreate(name: String, description: String): JSONObject
+    fun agentUpdate(id: String, name: String, description: String): JSONObject
+    fun agentSetHidden(id: String, isHidden: Boolean): JSONObject
+    fun agentSetUnread(id: String, isUnread: Boolean): JSONObject
+    fun agentDuplicate(id: String): JSONObject
+    fun agentDelete(id: String): JSONObject
+    fun agentSetPinned(ids: List<String>): List<String>
 
     fun marketplaceBrowse(params: JSONObject): JSONObject
     fun marketplaceRelease(params: JSONObject): JSONObject
