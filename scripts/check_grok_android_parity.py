@@ -238,6 +238,7 @@ def run_checks(strict: bool) -> CheckResult:
                     warnings.append(message)
 
     frontend_android_main_dependencies = 0
+    presentation_feature_receive_bypasses = 0
     frontend_root = ROOT / "frontend"
     if frontend_root.exists():
         for path in frontend_root.rglob("*.kt"):
@@ -246,6 +247,12 @@ def run_checks(strict: bool) -> CheckResult:
                 frontend_android_main_dependencies += 1
                 errors.append(
                     "frontend must depend on android-preload contracts, not android-main: "
+                    f"{path.relative_to(ROOT)}"
+                )
+            if "featureReceive" in text:
+                presentation_feature_receive_bypasses += 1
+                errors.append(
+                    "frontend must consume Coordinator events through listeners, not poll featureReceive: "
                     f"{path.relative_to(ROOT)}"
                 )
 
@@ -297,6 +304,7 @@ def run_checks(strict: bool) -> CheckResult:
         "presentation_host_bypasses": bypass_count,
         "presentation_runtime_bypasses": presentation_runtime_bypasses,
         "frontend_android_main_dependencies": frontend_android_main_dependencies,
+        "presentation_feature_receive_bypasses": presentation_feature_receive_bypasses,
         "native_host_bridge_missing": len(native_host_bridge_missing),
         "native_host_ci_wired": native_ci_wired,
         "architecture_scope_markers": len(architecture_scope_markers),
