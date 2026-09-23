@@ -7,7 +7,6 @@ import com.ombhrum.fabushi.androidpreload.deeplink.AndroidDeepLink
 import com.ombhrum.fabushi.androidpreload.deeplink.AuthCompletionStatus
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidCoordinatorPort
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -83,8 +82,12 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
     private val miniApps = MiniAppPlatformBridge(coordinator)
     private val mutableState = MutableStateFlow(MarketplaceUiState())
     val state: StateFlow<MarketplaceUiState> = mutableState.asStateFlow()
+    private var featureEventSubscription: AutoCloseable? = null
 
     init {
+        featureEventSubscription = coordinator.addFeatureEventListener { event ->
+            viewModelScope.launch { handleChatEvent(event) }
+        }
         val onboardingComplete = application.getSharedPreferences("fabushi.mobile", 0).getBoolean("onboarding-complete", false)
         mutableState.value = mutableState.value.copy(onboardingStep = if (onboardingComplete) 3 else 0)
         initializeAuth()
@@ -298,7 +301,6 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
                     activeOperationId = operationId,
                     chatMessages = mutableState.value.chatMessages + MobileChatMessage("thinking:$operationId", MobileChatRole.ASSISTANT, "", MobileChatEntryKind.THINKING, operationId, "正在思考", null, "running"),
                 )
-                pumpChatEvents(operationId)
             }.onFailure { error -> mutableState.value = mutableState.value.copy(chatBusy = false, activeOperationId = null, message = "发送失败：${error.message ?: error::class.java.simpleName}") }
         }
     }
@@ -308,50 +310,39 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch { runCatching { withContext(Dispatchers.IO) { coordinator.featureInterrupt( JSONObject().put("operationId", operationId)) } } }
     }
 
-    private suspend fun pumpChatEvents(operationId: String) {
-        repeat(1800) {
-            if (!mutableState.value.chatBusy) return
-            val event = runCatching { withContext(Dispatchers.IO) { coordinator.featureReceive() } }.getOrElse {
-                mutableState.value = mutableState.value.copy(chatBusy = false, activeOperationId = null, message = "消息流中断：${it.message ?: it::class.java.simpleName}")
-                return
+    private fun handleChatEvent(event: JSONObject) {
+        val operationId = mutableState.value.activeOperationId ?: return
+        if (!mutableState.value.chatBusy) return
+        val eventOperationId = event.optString("operationId").ifBlank { operationId }
+        when (event.optString("type")) {
+            "operation.started" -> if (eventOperationId == operationId && mutableState.value.chatMessages.none { it.kind == MobileChatEntryKind.THINKING && it.operationId == operationId }) {
+                appendChatMessage(MobileChatMessage("thinking:$operationId", MobileChatRole.ASSISTANT, "", MobileChatEntryKind.THINKING, operationId, event.optString("label").ifBlank { "正在思考" }, null, "running"))
             }
-            val eventOperationId = event.optString("operationId").ifBlank { operationId }
-            when (event.optString("type")) {
-                "operation.started" -> if (eventOperationId == operationId && mutableState.value.chatMessages.none { it.kind == MobileChatEntryKind.THINKING && it.operationId == operationId }) {
-                    appendChatMessage(MobileChatMessage("thinking:$operationId", MobileChatRole.ASSISTANT, "", MobileChatEntryKind.THINKING, operationId, event.optString("label").ifBlank { "正在思考" }, null, "running"))
-                }
-                "model.routed" -> if (eventOperationId == operationId) {
-                    appendChatAction(operationId, "model-route", if (event.optString("model") == "auto") "选择模型" else "模型：${event.optString("model")}", listOf(event.optString("provider"), event.optString("mode")).filter { it.isNotBlank() }.joinToString(" · "), "completed")
-                }
-                "agent.step" -> if (eventOperationId == operationId) {
-                    appendChatAction(operationId, event.optString("stepId").ifBlank { UUID.randomUUID().toString() }, event.optString("title").ifBlank { "助手动作" }, event.optString("detail").takeIf { it.isNotBlank() }, event.optString("status").ifBlank { "completed" })
-                }
-                "chat.message" -> if (eventOperationId == operationId) {
-                    if (event.optString("role") == "assistant") {
-                        removeChatThinking(operationId)
-                        upsertAssistantMessage(operationId, event.optString("text"), append = false)
-                    }
-                }
-                "chat.delta" -> if (event.optString("operationId") == operationId) {
-                    removeChatThinking(operationId)
-                    upsertAssistantMessage(operationId, event.optString("delta"), append = true)
-                }
-                "operation.completed", "operation.interrupted" -> if (eventOperationId == operationId) {
-                    removeChatThinking(operationId)
-                    settleChatActions(operationId, if (event.optString("type") == "operation.completed") "completed" else "failed")
-                    mutableState.value = mutableState.value.copy(chatBusy = false, activeOperationId = null)
-                    return
-                }
-                "operation.failed" -> if (eventOperationId == operationId) {
-                    removeChatThinking(operationId)
-                    settleChatActions(operationId, "failed")
-                    mutableState.value = mutableState.value.copy(chatBusy = false, activeOperationId = null, message = event.optString("message").ifBlank { "本次任务失败" })
-                    return
-                }
+            "model.routed" -> if (eventOperationId == operationId) {
+                appendChatAction(operationId, "model-route", if (event.optString("model") == "auto") "选择模型" else "模型：" + event.optString("model"), listOf(event.optString("provider"), event.optString("mode")).filter { it.isNotBlank() }.joinToString(" · "), "completed")
             }
-            delay(80)
+            "agent.step" -> if (eventOperationId == operationId) {
+                appendChatAction(operationId, event.optString("stepId").ifBlank { UUID.randomUUID().toString() }, event.optString("title").ifBlank { "助手动作" }, event.optString("detail").takeIf { it.isNotBlank() }, event.optString("status").ifBlank { "completed" })
+            }
+            "chat.message" -> if (eventOperationId == operationId && event.optString("role") == "assistant") {
+                removeChatThinking(operationId)
+                upsertAssistantMessage(operationId, event.optString("text"), append = false)
+            }
+            "chat.delta" -> if (eventOperationId == operationId) {
+                removeChatThinking(operationId)
+                upsertAssistantMessage(operationId, event.optString("delta"), append = true)
+            }
+            "operation.completed", "operation.interrupted" -> if (eventOperationId == operationId) {
+                removeChatThinking(operationId)
+                settleChatActions(operationId, if (event.optString("type") == "operation.completed") "completed" else "failed")
+                mutableState.value = mutableState.value.copy(chatBusy = false, activeOperationId = null)
+            }
+            "operation.failed" -> if (eventOperationId == operationId) {
+                removeChatThinking(operationId)
+                settleChatActions(operationId, "failed")
+                mutableState.value = mutableState.value.copy(chatBusy = false, activeOperationId = null, message = event.optString("message").ifBlank { "本次任务失败" })
+            }
         }
-        if (mutableState.value.chatBusy) mutableState.value = mutableState.value.copy(message = "任务仍在后台运行，稍后会继续同步事件")
     }
 
     private fun appendChatMessage(entry: MobileChatMessage) {
@@ -591,6 +582,8 @@ class MarketplaceViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     override fun onCleared() {
+        featureEventSubscription?.close()
+        featureEventSubscription = null
         super.onCleared()
     }
 }
