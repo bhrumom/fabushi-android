@@ -69,6 +69,26 @@ pub trait TurnStreamProvider {
         attempt: usize,
     ) -> Result<StreamGeneration, ProviderFailure>;
 
+    fn start_stream_with_sink(
+        &mut self,
+        input: &StreamAttemptInput,
+        attempt: usize,
+        on_chunk: &mut dyn FnMut(&str) -> Result<(), String>,
+    ) -> Result<StreamGeneration, ProviderFailure> {
+        let generation = self.start_stream(input, attempt)?;
+        let mut emitted = false;
+        for chunk in &generation.chunks {
+            on_chunk(chunk).map_err(|message| ProviderFailure {
+                message,
+                retry_after_ms: None,
+                first_token_stall: false,
+                stream_output_produced: emitted,
+            })?;
+            emitted = emitted || !chunk.is_empty();
+        }
+        Ok(generation)
+    }
+
     fn cancel(&mut self, operation_id: &str) -> Result<(), String>;
 }
 
@@ -118,13 +138,25 @@ impl<P: TurnStreamProvider> StreamAttemptHost<P> {
     }
 
     pub fn run(&mut self, input: &StreamAttemptInput) -> Result<StreamAttemptResult, ProviderFailure> {
+        self.run_with_observers(input, &mut |_| {}, &mut |_| Ok(()))
+    }
+
+    pub fn run_with_observers(
+        &mut self,
+        input: &StreamAttemptInput,
+        on_retry: &mut dyn FnMut(&RetryObservation),
+        on_chunk: &mut dyn FnMut(&str) -> Result<(), String>,
+    ) -> Result<StreamAttemptResult, ProviderFailure> {
         input
             .validate()
             .map_err(|message| ProviderFailure::new(message))?;
 
         let mut retries = Vec::new();
         for attempt in 1..=self.retry_policy.max_attempts.max(1) {
-            match self.provider.start_stream(input, attempt) {
+            match self
+                .provider
+                .start_stream_with_sink(input, attempt, on_chunk)
+            {
                 Ok(generation) => {
                     if generation.first_token_delay_ms > self.first_token_deadline_ms
                         && !generation.output_produced()
@@ -139,7 +171,9 @@ impl<P: TurnStreamProvider> StreamAttemptHost<P> {
                             stream_output_produced: false,
                         };
                         if self.should_retry(input, attempt, &failure) {
-                            retries.push(self.retry_observation(attempt, &failure));
+                            let observation = self.retry_observation(attempt, &failure);
+                            on_retry(&observation);
+                            retries.push(observation);
                             continue;
                         }
                         return Err(failure);
@@ -153,7 +187,9 @@ impl<P: TurnStreamProvider> StreamAttemptHost<P> {
                 }
                 Err(failure) => {
                     if self.should_retry(input, attempt, &failure) {
-                        retries.push(self.retry_observation(attempt, &failure));
+                        let observation = self.retry_observation(attempt, &failure);
+                        on_retry(&observation);
+                        retries.push(observation);
                         continue;
                     }
                     return Err(failure);
