@@ -1,3 +1,4 @@
+pub mod android_host_inference;
 pub mod production_turn_agent_owner;
 pub mod stream_attempt;
 pub mod transient_stream_error;
@@ -16,3 +17,5 @@ pub use transient_stream_error::{
     DEFAULT_AUTOMATION_STREAM_RETRY_MAX_ATTEMPTS, DEFAULT_AUTOMATION_STREAM_RETRY_MAX_DELAY_MS,
     DEFAULT_FIRST_TOKEN_STALL_DEADLINE_MS,
 };
+
+pub use android_host_inference::{AndroidHostInferenceProvider, AndroidInferenceMode};
