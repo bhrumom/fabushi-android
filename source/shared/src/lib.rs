@@ -24,3 +24,5 @@ pub mod os_notification;
 pub mod mcp;
 pub mod mcp_oauth_callback_page;
 pub mod webauthn_proxy_availability;
+
+pub mod node;
