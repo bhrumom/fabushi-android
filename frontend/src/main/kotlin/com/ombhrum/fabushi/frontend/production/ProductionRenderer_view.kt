@@ -172,6 +172,12 @@ internal fun ProductionRenderer(
                                 activate = { rendererRoute = RendererRoute.MESSAGING },
                             ),
                         )
+                        commandPaletteUpdateCommand(
+                            state = updateState,
+                            check = { updateModel.checkForUpdates(force = true) },
+                            install = updateModel::downloadAndInstall,
+                            openUpdates = { rendererRoute = RendererRoute.MESSAGING },
+                        )?.let(::add)
                         addAll(
                             commandPaletteRootCommands(
                                 activeAgentIsGroup = botState.activeBot?.isGroup,
