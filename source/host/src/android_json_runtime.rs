@@ -1027,4 +1027,89 @@ mod tests {
         let _ = std::fs::remove_dir_all(root);
     }
 
+    #[test]
+    fn transcript_survives_host_reopen_and_dedupes_settled_send() {
+        let root = std::env::temp_dir().join(format!(
+            "fabushi-json-host-transcript-{}-{}",
+            std::process::id(),
+            now_ms()
+        ));
+
+        {
+            let mut host = AndroidJsonHost::new(&root, AndroidHostMode::Test);
+            let accepted = host
+                .dispatch(
+                    "feature.execute",
+                    &json!({"command":{
+                        "type":"chat.send",
+                        "requestId":"recover-request-1",
+                        "text":"hello after restart",
+                        "agentId":"mahayana-assistant"
+                    }}),
+                )
+                .unwrap();
+            assert_eq!(accepted["operationId"], "recover-request-1");
+
+            let mut saw_delta = false;
+            let mut completed = false;
+            for _ in 0..16 {
+                let event = host.dispatch("feature.receive", &json!({})).unwrap();
+                if event["type"] == "chat.delta" {
+                    saw_delta = true;
+                }
+                if event["type"] == "operation.completed" {
+                    completed = true;
+                    break;
+                }
+            }
+            assert!(saw_delta);
+            assert!(completed);
+            let snapshot = host
+                .dispatch("feature.transcript.snapshot", &json!({}))
+                .unwrap();
+            assert_eq!(snapshot.as_array().unwrap().len(), 2);
+        }
+
+        {
+            let mut reopened = AndroidJsonHost::new(&root, AndroidHostMode::Test);
+            let snapshot = reopened
+                .dispatch("feature.transcript.snapshot", &json!({}))
+                .unwrap();
+            assert_eq!(snapshot.as_array().unwrap().len(), 2);
+
+            reopened
+                .dispatch(
+                    "feature.execute",
+                    &json!({"command":{
+                        "type":"chat.send",
+                        "requestId":"recover-request-1",
+                        "text":"hello after restart",
+                        "agentId":"mahayana-assistant"
+                    }}),
+                )
+                .unwrap();
+
+            let mut recovered = false;
+            let mut deduped = false;
+            for _ in 0..16 {
+                let event = reopened.dispatch("feature.receive", &json!({})).unwrap();
+                if event["type"] == "chat.message" && event["recovered"] == true {
+                    recovered = true;
+                }
+                if event["type"] == "operation.completed" && event["deduped"] == true {
+                    deduped = true;
+                    break;
+                }
+            }
+            assert!(recovered);
+            assert!(deduped);
+            let snapshot = reopened
+                .dispatch("feature.transcript.snapshot", &json!({}))
+                .unwrap();
+            assert_eq!(snapshot.as_array().unwrap().len(), 2);
+        }
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
 }
