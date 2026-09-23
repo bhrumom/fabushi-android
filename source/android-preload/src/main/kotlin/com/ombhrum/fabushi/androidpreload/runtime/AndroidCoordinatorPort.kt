@@ -22,7 +22,6 @@ interface AndroidCoordinatorPort {
     fun authLogout(): JSONObject
 
     fun featureExecute(params: JSONObject): JSONObject
-    fun featureReceive(params: JSONObject = JSONObject()): JSONObject
     fun featureInterrupt(params: JSONObject): JSONObject
 
     fun marketplaceBrowse(params: JSONObject): JSONObject
