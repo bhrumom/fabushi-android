@@ -5,14 +5,21 @@ internal data class FindInChatMatch(
     val occurrence: Int,
 )
 
+/**
+ * Projects one user-visible searchable payload per transcript row.
+ *
+ * This mirrors Grok's find-in-chat contract: structured rows expose their primary visible payload
+ * (for example a widget prompt) rather than concatenating every rendered metadata field. That
+ * prevents one semantic value from becoming multiple matches merely because it is repeated in
+ * auxiliary UI such as poll options or forwarding labels.
+ */
 internal fun findInChatSearchText(message: ChatMessage): String =
-    buildString {
-        append(message.text)
-        message.contactName?.let { append(' ').append(it) }
-        message.pollQuestion?.let { append(' ').append(it) }
-        message.pollOptions.forEach { append(' ').append(it.text) }
-        message.mediaFileName?.let { append(' ').append(it) }
-        message.forwardOrigin?.let { append(' ').append(it) }
+    when (message.contentType) {
+        "contact" -> message.contactName ?: message.text
+        "poll" -> message.pollQuestion ?: message.text
+        "voice", "audio", "photo", "video", "document" ->
+            message.mediaFileName ?: message.text
+        else -> message.text
     }.replace(Regex("\\s+"), " ").trim()
 
 internal fun findInChatMatches(
