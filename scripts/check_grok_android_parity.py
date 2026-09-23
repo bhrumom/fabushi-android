@@ -249,6 +249,33 @@ def run_checks(strict: bool) -> CheckResult:
                     f"{path.relative_to(ROOT)}"
                 )
 
+    native_host_bridge_paths = [
+        ROOT / "source/android-host-jni/Cargo.toml",
+        ROOT / "source/android-host-jni/src/lib.rs",
+        ROOT / "source/host/src/android_json_runtime.rs",
+    ]
+    native_host_bridge_missing = [
+        path.relative_to(ROOT).as_posix()
+        for path in native_host_bridge_paths
+        if not path.is_file()
+    ]
+    native_ci = ROOT / ".github/workflows/android-parity-full-ci.yml"
+    native_ci_text = native_ci.read_text(encoding="utf-8") if native_ci.is_file() else ""
+    native_ci_wired = (
+        "cargo ndk" in native_ci_text
+        and "fabushi-android-host-jni" in native_ci_text
+        and "libmahayana_app_host.so" in native_ci_text
+    )
+    if native_host_bridge_missing:
+        errors.append(
+            "native Android Host bridge is incomplete: "
+            + ", ".join(native_host_bridge_missing)
+        )
+    if not native_ci_wired:
+        errors.append(
+            "Android full CI must build and verify libmahayana_app_host.so from the exact HEAD"
+        )
+
     architecture_scope_markers = sorted(
         path for base in (ROOT / "frontend", ROOT / "source")
         if base.exists()
@@ -270,6 +297,8 @@ def run_checks(strict: bool) -> CheckResult:
         "presentation_host_bypasses": bypass_count,
         "presentation_runtime_bypasses": presentation_runtime_bypasses,
         "frontend_android_main_dependencies": frontend_android_main_dependencies,
+        "native_host_bridge_missing": len(native_host_bridge_missing),
+        "native_host_ci_wired": native_ci_wired,
         "architecture_scope_markers": len(architecture_scope_markers),
         "mode": "strict" if strict else "phase0",
     }
