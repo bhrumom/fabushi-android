@@ -4484,9 +4484,11 @@
       "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/adapters/account-oauth.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
+      "implementation_status": "implemented",
+      "test_evidence": "AndroidAccountOAuthAdapter is production-owned by FabushiProcessRuntime, launches only validated HTTPS Custom Tabs from the interactive Activity, and is exercised by AndroidAccountOAuthAdapterTest for scheme/credentials/fragment rejection. Exact-HEAD Android unit/build CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters",
+      "android_adaptation_rationale": "Desktop external-auth window ownership is adapted to Android Custom Tabs with Activity attachment supplied through the typed presentation runtime port.",
+      "provenance_review": "clean-room Kotlin platform adaptation plus Fabushi-authored Rust Coordinator/shared contracts; no reconstructed source copied"
     },
     {
       "grok_path": "source/electron-main/adapters/attachment-gateway.ts",
@@ -4614,9 +4616,11 @@
       "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/adapters/mcp-oauth.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
+      "implementation_status": "implemented",
+      "test_evidence": "AndroidMcpOAuthAdapter is production-owned by FabushiProcessRuntime, receives Host mcp.authorization.required events, registers state through Coordinator, launches validated external auth, fails the registration if no browser is available, and completes via typed MCP OAuth deep link. AndroidMcpOAuthAdapterTest plus Coordinator OAuth tests cover fail-closed URL/state and single-use completion; exact-HEAD Android CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters",
+      "android_adaptation_rationale": "Desktop MCP OAuth adapter is adapted to Android Custom Tabs + app-link callback while Coordinator retains single-use state ownership.",
+      "provenance_review": "clean-room Kotlin platform adaptation plus Fabushi-authored Rust Coordinator/shared contracts; no reconstructed source copied"
     },
     {
       "grok_path": "source/electron-main/adapters/production-experiments-binding.ts",
@@ -5473,9 +5477,11 @@
       "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/mcp/mcp-oauth-loopback-provider.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
+      "implementation_status": "implemented",
+      "test_evidence": "AndroidMcpOAuthLoopbackProvider is production-wired through AndroidMcpOAuthAdapter and AndroidPresentationRuntimePort; it requires HTTPS authorization, the exact fabushi://mcp-oauth/callback redirect, bounded opaque state, duplicate-param rejection, and Coordinator registration/completion. AndroidMcpOAuthAdapterTest covers parsing/fail-closed behavior; exact-HEAD Android CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters",
+      "android_adaptation_rationale": "Android does not bind a localhost HTTP listener; the equivalent provider uses an app-link callback and the Rust Coordinator/shared pending-state lifecycle.",
+      "provenance_review": "clean-room Kotlin platform adaptation plus Fabushi-authored Rust Coordinator/shared contracts; no reconstructed source copied"
     },
     {
       "grok_path": "source/electron-main/mcp/mcp-runtime.ts",
@@ -26764,7 +26770,7 @@
     }
   ],
   "status_summary": {
-    "mapped": 1845,
-    "implemented": 201
+    "mapped": 1842,
+    "implemented": 204
   }
 }
