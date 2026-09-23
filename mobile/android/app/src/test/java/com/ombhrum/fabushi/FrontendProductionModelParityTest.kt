@@ -145,6 +145,51 @@ class FrontendProductionModelParityTest {
     }
 
     @Test
+    fun commandPaletteUpdateCommandUsesAndroidUpdaterStateMachine() {
+        var checks = 0
+        var installs = 0
+        var opens = 0
+        assertNull(
+            commandPaletteUpdateCommand(
+                state = AndroidUpdateUiState(
+                    phase = AndroidUpdatePhase.DISABLED,
+                    currentVersion = "1.0.0",
+                ),
+                check = { checks += 1 },
+                install = { installs += 1 },
+                openUpdates = { opens += 1 },
+            ),
+        )
+
+        val available = commandPaletteUpdateCommand(
+            state = AndroidUpdateUiState(
+                phase = AndroidUpdatePhase.AVAILABLE,
+                currentVersion = "1.0.0",
+                availableVersion = "1.1.0",
+            ),
+            check = { checks += 1 },
+            install = { installs += 1 },
+            openUpdates = { opens += 1 },
+        )
+        assertEquals("Download Update…", available?.label)
+        available?.activate?.invoke()
+        assertEquals(1, installs)
+
+        val error = commandPaletteUpdateCommand(
+            state = AndroidUpdateUiState(
+                phase = AndroidUpdatePhase.ERROR,
+                currentVersion = "1.0.0",
+            ),
+            check = { checks += 1 },
+            install = { installs += 1 },
+            openUpdates = { opens += 1 },
+        )
+        error?.activate?.invoke()
+        assertEquals(1, checks)
+        assertEquals(1, opens)
+    }
+
+    @Test
     fun permissionScopeRequiresStrictlyNewRevisionAfterAccountReentry() {
         val gate = LocalToolPermissionScopeGate()
         gate.enter("account-a")
