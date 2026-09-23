@@ -3,6 +3,8 @@
 //! No Compose/Activity/ViewModel dependency is permitted here.
 #![allow(special_module_name)]
 
+pub mod android_json_runtime;
+
 pub mod attachment_paths;
 pub mod durable_file_policy;
 pub mod extensions;
