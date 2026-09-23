@@ -952,6 +952,16 @@ Capture tests/evidence for:
 
 Use an exact-HEAD packaged artifact. Validate fresh install, upgrade, launch, login, normal chat, streaming, stop, tool/MCP, background/recovery, process recreation, remote-device registration where applicable, logout, and relaunch.
 
+For GitHub Actions device acceptance, the repository may define a dedicated `ciAcceptance` Android build type only when all of the following remain true:
+
+- it runs the same production Compose → Typed Bridge → Mahayana Coordinator → Mahayana Host → Runner implementation as the shipping application;
+- it is installable with CI/debug signing only for emulator or App-owned device evidence; signing mode must not change runtime ownership or behavior;
+- it may enable only the bounded CI account-session import already specified by the security design: GitHub Actions provenance, run/attempt-bound device and session identities, short expiry, no refresh token, private-file import, and no transcript/UI logging of credentials;
+- it must never enable `featureHostTest`, synthesize a logged-in state, mint a fake access token, bypass OAuth/WebAuthn/MCP, or replace the production Host/Coordinator with a deterministic test Host;
+- authenticated packaged acceptance is mandatory evidence. If no valid short-lived account session is available, the authenticated cases are `blocked` and the workflow must not report those cases as passed merely because signed-out or unit/instrumentation tests passed.
+
+The packaged acceptance workflow must preserve the exact source SHA, APK checksum, native JNI checksums, install/upgrade evidence, logs, screenshots/video where applicable, and per-scenario results.
+
 ## 13. Acceptance criteria / Definition of Done
 
 - **AC-1**: 100% of pinned Grok `source/**` and `frontend/**` files exist in the parity ledger.
