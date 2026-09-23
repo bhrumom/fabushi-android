@@ -2879,9 +2879,10 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/recovered/features/deep-links/overlay/model.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Kotlin model at exact target maps typed AndroidDeepLink.Info to a stable Fabushi route/source label; covered by FrontendProductionModelParityTest and wired through ProductionRenderer.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "provenance_review": "clean-room Android/Compose behavior implementation from pinned renderer contract; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/recovered/features/deep-links/overlay/view.tsx",
@@ -2892,9 +2893,10 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/recovered/features/deep-links/overlay/view_view.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Compose DeepLinkInfoDialog at exact target is production-wired in ProductionRenderer; typed activation is parsed by AndroidDeepLinkController and covered by AndroidDeepLinkRouterTest plus frontend model tests. Exact-HEAD Android CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "provenance_review": "clean-room Android/Compose behavior implementation from pinned renderer contract; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/recovered/features/error-boundary/view.tsx",
@@ -26798,7 +26800,7 @@
     }
   ],
   "status_summary": {
-    "mapped": 1819,
-    "implemented": 227
+    "mapped": 1817,
+    "implemented": 229
   }
 }
