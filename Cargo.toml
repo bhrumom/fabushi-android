@@ -13,6 +13,7 @@ members = [
   "source/packages/agent-transcript",
   "source/packages/chat-inference-proto",
   "source/packages/context",
+  "source/packages/constants",
   "source/packages/mcp-core",
   "source/packages/redaction",
 ]
