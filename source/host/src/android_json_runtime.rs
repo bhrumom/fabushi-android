@@ -501,8 +501,8 @@ impl AndroidJsonHost {
             } else {
                 "mcp.auth.failed"
             },
-            "provider": provider,
-            "state": state,
+            "provider": provider.clone(),
+            "state": state.clone(),
             "outcome": outcome,
         }));
         Ok(json!({
