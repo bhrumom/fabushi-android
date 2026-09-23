@@ -23,6 +23,7 @@ interface AndroidCoordinatorPort {
 
     fun featureExecute(params: JSONObject): JSONObject
     fun featureInterrupt(params: JSONObject): JSONObject
+    fun botList(requestId: String): JSONObject
 
     fun marketplaceBrowse(params: JSONObject): JSONObject
     fun marketplaceRelease(params: JSONObject): JSONObject
