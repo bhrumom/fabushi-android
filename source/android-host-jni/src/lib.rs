@@ -87,6 +87,9 @@ impl AndroidNativeRuntime {
             "coordinator.resync" => {
                 self.coordinator_resync(envelope.get("id").cloned(), &params)
             }
+            "coordinator.publishEvent" => {
+                self.coordinator_publish_event(envelope.get("id").cloned(), &params)
+            }
             "feature.interrupt" => {
                 self.coordinator_interrupt(envelope.get("id").cloned(), &params)
             }
@@ -206,6 +209,42 @@ impl AndroidNativeRuntime {
                 }),
             );
         }
+    }
+
+    fn coordinator_publish_event(&mut self, id: Option<Value>, params: &Value) -> String {
+        let Some(event) = params.get("event") else {
+            return error_response(id, "event is required".into());
+        };
+        let Some(family) = event
+            .get("type")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+        else {
+            return error_response(id, "event.type is required".into());
+        };
+        let operation_id = event
+            .get("operationId")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty());
+        let terminal = matches!(
+            family,
+            "operation.completed" | "operation.interrupted" | "operation.failed"
+        );
+        let recorded = self.coordinator.record_operation_event(
+            "android-process",
+            family,
+            event.to_string(),
+            operation_id,
+            terminal,
+        );
+        success_response(
+            id,
+            json!({
+                "generation": self.coordinator.generation(),
+                "sequence": recorded.sequence,
+                "eventId": recorded.event_id,
+            }),
+        )
     }
 
     fn coordinator_interrupt(&mut self, id: Option<Value>, params: &Value) -> String {
@@ -504,6 +543,39 @@ mod tests {
         );
         assert_eq!(stale["ok"], false);
         assert_eq!(stale["errorCode"], "stale-generation");
+    }
+
+    #[test]
+    fn android_adapter_events_share_native_replay_sequence() {
+        let mut runtime =
+            AndroidNativeRuntime::new("/tmp/fabushi-jni-adapter", AndroidHostMode::Test, 4);
+        let published = call(
+            &mut runtime,
+            json!({
+                "method":"coordinator.publishEvent",
+                "params":{"event":{
+                    "type":"mcp.result",
+                    "operationId":"external-1",
+                    "tool":"files.read"
+                }}
+            }),
+        );
+        assert_eq!(published["ok"], true);
+        assert_eq!(published["result"]["generation"], 4);
+        assert_eq!(published["result"]["sequence"], 1);
+
+        let replay = call(
+            &mut runtime,
+            json!({
+                "method":"coordinator.resync",
+                "params":{"generation":4,"afterSequence":0}
+            }),
+        );
+        assert_eq!(replay["result"]["events"][0]["family"], "mcp.result");
+        assert_eq!(
+            replay["result"]["events"][0]["payload"]["tool"],
+            "files.read"
+        );
     }
 
     #[test]
