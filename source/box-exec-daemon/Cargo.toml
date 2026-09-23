@@ -6,6 +6,7 @@ license.workspace = true
 
 [dependencies]
 fabushi-android-shared = { path = "../shared" }
+fabushi-constants = { path = "../packages/constants" }
 
 [lib]
 path = "src/lib.rs"
