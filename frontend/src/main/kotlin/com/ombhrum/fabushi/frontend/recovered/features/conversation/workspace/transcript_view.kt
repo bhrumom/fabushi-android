@@ -2,6 +2,7 @@ package com.ombhrum.fabushi
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -13,12 +14,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -43,6 +46,7 @@ internal fun ConversationTranscript(
     conversationTitle: String,
     messages: List<ChatMessage>,
     searchQuery: String,
+    currentFindMessageId: String? = null,
     playingVoiceMessageId: String?,
     onPlayVoice: (ChatMessage) -> Unit,
     onOpenMedia: (ChatMessage) -> Unit,
@@ -52,11 +56,18 @@ internal fun ConversationTranscript(
     modifier: Modifier = Modifier,
 ) {
     val haptics = LocalHapticFeedback.current
-    val visibleMessages = messages.filter {
-        searchQuery.isBlank() || it.text.contains(searchQuery, ignoreCase = true)
+    val listState = rememberLazyListState()
+    val visibleMessages = messages
+
+    LaunchedEffect(currentFindMessageId, messages) {
+        val index = currentFindMessageId?.let { id ->
+            messages.indexOfFirst { it.id == id }
+        } ?: -1
+        if (index >= 0) listState.animateScrollToItem(index)
     }
 
     LazyColumn(
+        state = listState,
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp),
@@ -84,6 +95,13 @@ internal fun ConversationTranscript(
                         .background(
                             if (message.outgoing) homeAccent.copy(alpha = 0.18f) else homeSurface,
                             RoundedCornerShape(16.dp),
+                        )
+                        .then(
+                            if (currentFindMessageId == message.id && searchQuery.isNotBlank()) {
+                                Modifier.border(1.dp, homeAccent, RoundedCornerShape(16.dp))
+                            } else {
+                                Modifier
+                            },
                         )
                         .pointerInput(message.id) {
                             var horizontalDrag = 0f
