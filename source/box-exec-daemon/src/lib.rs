@@ -1,8 +1,9 @@
+//! Remote/Box Runner boundary for work that should not execute in the Android app process.
+
 pub mod cli;
+#[allow(special_module_name)]
 pub mod main;
 pub mod server;
-
-//! Remote/Box Runner boundary for work that should not execute in the Android app process.
 
 use fabushi_android_shared::{ExecutionError, ExecutionRequest, ExecutionResult};
 
