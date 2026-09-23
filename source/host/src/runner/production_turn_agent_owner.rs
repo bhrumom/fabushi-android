@@ -1,8 +1,8 @@
 use super::{
     stream_attempt::{ProviderFailure, StreamAttemptHost, StreamAttemptInput, TurnStreamProvider},
+    turn_run_shell::{TurnCancellation, TurnRunShell},
     turn_settle::{prepare_checkpoint, persist_checkpoint, settle_completed_turn, TurnSettlement},
 };
-use std::collections::BTreeSet;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ProductionTurnInput {
@@ -40,14 +40,14 @@ pub struct ProductionTurnResult {
 
 pub struct ProductionTurnAgentOwner<P: TurnStreamProvider> {
     stream: StreamAttemptHost<P>,
-    active: BTreeSet<String>,
+    shell: TurnRunShell,
 }
 
 impl<P: TurnStreamProvider> ProductionTurnAgentOwner<P> {
     pub fn new(provider: P) -> Self {
         Self {
             stream: StreamAttemptHost::new(provider),
-            active: BTreeSet::new(),
+            shell: TurnRunShell::default(),
         }
     }
 
@@ -63,9 +63,9 @@ impl<P: TurnStreamProvider> ProductionTurnAgentOwner<P> {
         input: ProductionTurnInput,
         sink: &mut dyn FnMut(ProductionTurnEvent) -> Result<(), String>,
     ) -> Result<ProductionTurnResult, ProviderFailure> {
-        if !self.active.insert(input.operation_id.clone()) {
-            return Err(ProviderFailure::new("operation is already active"));
-        }
+        self.shell
+            .begin(&input.operation_id, &input.request_id, &input.prompt)
+            .map_err(|error| ProviderFailure::new(format!("turn run rejected: {error:?}")))?;
 
         let stream_input = StreamAttemptInput {
             operation_id: input.operation_id.clone(),
@@ -87,7 +87,7 @@ impl<P: TurnStreamProvider> ProductionTurnAgentOwner<P> {
                 sink(ProductionTurnEvent::Delta(chunk.to_string()))
             },
         );
-        self.active.remove(&input.operation_id);
+        let _ = self.shell.finish(&input.operation_id);
 
         for retry in &emitted_retries {
             sink(ProductionTurnEvent::Retrying {
@@ -154,13 +154,29 @@ impl<P: TurnStreamProvider> ProductionTurnAgentOwner<P> {
     }
 
     pub fn cancel(&mut self, operation_id: &str) -> Result<ProductionTurnEvent, String> {
-        self.active.remove(operation_id);
+        self.shell
+            .cancel(
+                operation_id,
+                TurnCancellation {
+                    intentional: true,
+                    reason: "user".into(),
+                },
+            )
+            .map_err(|error| format!("turn cancel rejected: {error:?}"))?;
         self.stream.cancel(operation_id)?;
         Ok(ProductionTurnEvent::Cancelled)
     }
 
     pub fn is_active(&self, operation_id: &str) -> bool {
-        self.active.contains(operation_id)
+        self.shell.is_active(operation_id)
+    }
+
+    pub fn request_quiesce_for_upgrade(&mut self) {
+        self.shell.request_quiesce_for_upgrade();
+    }
+
+    pub fn cancel_quiesce_for_upgrade(&mut self) {
+        self.shell.cancel_quiesce_for_upgrade();
     }
 }
 
