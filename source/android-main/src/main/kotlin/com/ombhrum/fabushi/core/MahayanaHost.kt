@@ -15,7 +15,11 @@ import java.util.UUID
  * queue fans that event out to every other caller, preventing competing ViewModels from stealing
  * operation events from one another. Deterministic feature-host tests stay isolated by design.
  */
-class MahayanaHost(context: Context, private val featureHostTest: Boolean = false) : Closeable {
+class MahayanaHost(
+    context: Context,
+    private val featureHostTest: Boolean = false,
+    processGeneration: Long = 1L,
+) : Closeable {
     private val appDataDir = context.filesDir.absolutePath
     private val consumerId = UUID.randomUUID().toString()
     private val ownedListenerIds = mutableSetOf<String>()
@@ -34,13 +38,17 @@ class MahayanaHost(context: Context, private val featureHostTest: Boolean = fals
             shared = synchronized(registryLock) {
                 val existing = sharedHosts[appDataDir]
                 if (existing != null) {
+                    check(existing.generation == processGeneration) {
+                        "Mahayana native runtime generation mismatch"
+                    }
                     existing.refCount += 1
                     existing.eventQueues.putIfAbsent(consumerId, ArrayDeque())
                     existing
                 } else {
-                    val value = nativeCreate(appDataDir)
+                    require(processGeneration > 0L) { "processGeneration must be positive" }
+                    val value = nativeCreate(appDataDir, processGeneration)
                     check(value != 0L) { "Failed to initialize Mahayana Rust host" }
-                    SharedHost(handle = value).also { created ->
+                    SharedHost(handle = value, generation = processGeneration).also { created ->
                         created.refCount = 1
                         created.eventQueues[consumerId] = ArrayDeque()
                         sharedHosts[appDataDir] = created
@@ -59,6 +67,16 @@ class MahayanaHost(context: Context, private val featureHostTest: Boolean = fals
         return response.optJSONObject("result") ?: JSONObject().put("value", response.opt("result"))
     }
 
+    fun coordinatorStatus(): JSONObject = request("coordinator.status")
+
+    fun coordinatorResync(generation: Long, afterSequence: Long): JSONObject =
+        request(
+            "coordinator.resync",
+            JSONObject()
+                .put("generation", generation)
+                .put("afterSequence", afterSequence),
+        )
+
     fun requestValue(method: String, params: JSONObject = JSONObject()): Any? {
         check(!closed) { "Mahayana host is closed" }
         if (!featureHostTest && method == "feature.receive") return receiveShared(params)
@@ -75,9 +93,21 @@ class MahayanaHost(context: Context, private val featureHostTest: Boolean = fals
         if (featureHostTest || event.optString("type").isBlank()) return
         val state = checkNotNull(shared)
         val listeners: List<(JSONObject) -> Unit>
-        val serialized = event.toString()
+        val serialized: String
         synchronized(state.lock) {
             check(state.handle != 0L) { "Mahayana host is closed" }
+            val request = JSONObject()
+                .put("method", "coordinator.publishEvent")
+                .put("params", JSONObject().put("event", event))
+            val response = JSONObject(nativeDispatch(state.handle, request.toString()))
+            check(response.optBoolean("ok", false)) {
+                response.optString("error", "Coordinator rejected Android adapter event")
+            }
+            val projected = JSONObject(event.toString())
+            response.optJSONObject("result")?.let { metadata ->
+                projected.put("_coordinator", JSONObject(metadata.toString()))
+            }
+            serialized = projected.toString()
             state.eventQueues.values.forEach { target ->
                 if (target.size >= MAX_REPLAY_EVENTS) target.pollFirst()
                 target.addLast(JSONObject(serialized))
@@ -200,13 +230,14 @@ class MahayanaHost(context: Context, private val featureHostTest: Boolean = fals
 
     private class SharedHost(
         @Volatile var handle: Long,
+        val generation: Long,
         var refCount: Int = 0,
         val lock: Any = Any(),
         val eventQueues: MutableMap<String, ArrayDeque<JSONObject>> = linkedMapOf(),
         val listeners: MutableMap<String, (JSONObject) -> Unit> = linkedMapOf(),
     )
 
-    private external fun nativeCreate(appDataDir: String): Long
+    private external fun nativeCreate(appDataDir: String, processGeneration: Long): Long
     private external fun nativeCreateTest(appDataDir: String): Long
     private external fun nativeDispatch(handle: Long, requestJson: String): String
     private external fun nativeDestroy(handle: Long)
