@@ -1,7 +1,8 @@
 use std::collections::BTreeMap;
 use url::Url;
 
-pub const MCP_OAUTH_LOOPBACK_CALLBACK_URL: &str = "http://localhost:8787/callback";
+pub const MCP_OAUTH_LOOPBACK_CALLBACK_URL: &str =
+    fabushi_constants::mcp::MCP_OAUTH_LOOPBACK_CALLBACK_URL;
 pub const BACKEND_MCP_OAUTH_PENDING_STATE_TTL_MS: u64 = 15 * 60 * 1_000;
 pub const MCP_OAUTH_PENDING_TTL_MS: u64 = BACKEND_MCP_OAUTH_PENDING_STATE_TTL_MS + 60_000;
 
