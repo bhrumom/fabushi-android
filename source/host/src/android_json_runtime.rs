@@ -286,9 +286,6 @@ impl AndroidJsonHost {
         self.turn_event_queues.remove(operation_id);
         self.turn_delivery_order
             .retain(|queued| queued != operation_id);
-        self.events.retain(|event| {
-            event.get("operationId").and_then(Value::as_str) != Some(operation_id)
-        });
         self.events.push_back(json!({
             "type":"operation.interrupted",
             "operationId":operation_id,
