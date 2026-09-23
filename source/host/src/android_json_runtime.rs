@@ -1,3 +1,4 @@
+use crate::android_agent_roster::AndroidAgentRoster;
 use crate::extensions::webauthn_proxy::{
     WebAuthnBridgeError, WebAuthnProxyExtension, WebAuthnProxyExtensionConfig,
 };
@@ -18,8 +19,7 @@ pub enum AndroidHostMode {
 
 pub struct AndroidJsonHost {
     mode: AndroidHostMode,
-    #[allow(dead_code)]
-    app_data_dir: PathBuf,
+    agents: AndroidAgentRoster,
     logged_in: bool,
     next_attempt: u64,
     next_operation: u64,
@@ -34,9 +34,12 @@ pub struct AndroidJsonHost {
 
 impl AndroidJsonHost {
     pub fn new(app_data_dir: impl Into<PathBuf>, mode: AndroidHostMode) -> Self {
+        let app_data_dir = app_data_dir.into();
+        let agents = AndroidAgentRoster::open(app_data_dir.join("agents.json"))
+            .unwrap_or_else(|error| panic!("failed to open canonical Android agent roster: {error}"));
         Self {
             mode,
-            app_data_dir: app_data_dir.into(),
+            agents,
             logged_in: false,
             next_attempt: 0,
             next_operation: 0,
@@ -79,6 +82,55 @@ impl AndroidJsonHost {
             "feature.auth.logout" => {
                 self.logged_in = false;
                 Ok(self.auth_status())
+            }
+            "listAgents" => Ok(Value::Array(
+                self.agents.list().into_iter().map(|agent| agent.as_json()).collect()
+            )),
+            "countAgents" => Ok(json!(self.agents.count())),
+            "createAgent" => {
+                let name = required_string(params, "name")?;
+                let description = params.get("description").and_then(Value::as_str).unwrap_or("");
+                let agent = self.agents.create(name, description).map_err(|error| error.to_string())?;
+                Ok(json!({"agent": agent.as_json()}))
+            }
+            "updateAgent" => {
+                let id = required_string(params, "id")?;
+                let current = self.agents.get(id).ok_or_else(|| "agent not found".to_string())?;
+                let profile = params.get("profile").and_then(Value::as_object).ok_or("profile is required")?;
+                let name = profile.get("name").and_then(Value::as_str).unwrap_or(&current.name);
+                let description = profile.get("description").and_then(Value::as_str).unwrap_or(&current.description);
+                let agent = self.agents.update_profile(id, name, description).map_err(|error| error.to_string())?;
+                Ok(agent.as_json())
+            }
+            "setAgentHiddenFromSidebar" => {
+                let id = required_string(params, "id")?;
+                let is_hidden = params.get("isHidden").and_then(Value::as_bool).ok_or("isHidden is required")?;
+                let agent = self.agents.set_hidden(id, is_hidden).map_err(|error| error.to_string())?;
+                Ok(agent.as_json())
+            }
+            "setAgentUnread" => {
+                let id = required_string(params, "id")?;
+                let is_unread = params.get("isUnread").and_then(Value::as_bool).ok_or("isUnread is required")?;
+                let agent = self.agents.set_unread(id, is_unread).map_err(|error| error.to_string())?;
+                Ok(agent.as_json())
+            }
+            "duplicateAgent" => {
+                let id = required_string(params, "id")?;
+                let agent = self.agents.duplicate(id).map_err(|error| error.to_string())?;
+                Ok(json!({"agent": agent.as_json()}))
+            }
+            "deleteAgents" => {
+                let ids = params.get("ids").and_then(Value::as_array).ok_or("ids array is required")?
+                    .iter().filter_map(Value::as_str).map(str::to_string).collect::<Vec<_>>();
+                let deleted = self.agents.delete(&ids).map_err(|error| error.to_string())?;
+                Ok(json!({"deletedIds": deleted}))
+            }
+            "getPinnedAgents" => Ok(json!(self.agents.pinned_agent_ids())),
+            "setPinnedAgents" => {
+                let ids = params.get("ids").and_then(Value::as_array).ok_or("ids array is required")?
+                    .iter().filter_map(Value::as_str).map(str::to_string).collect::<Vec<_>>();
+                let ids = self.agents.set_pinned_agents(&ids).map_err(|error| error.to_string())?;
+                Ok(json!(ids))
             }
             "feature.execute" => self.feature_execute(params),
             "feature.receive" => Ok(self.events.pop_front().unwrap_or_else(|| json!({}))),
@@ -325,6 +377,28 @@ impl AndroidJsonHost {
         }));
 
         match kind {
+            "bot.list" => {
+                let bots = self.agents.list().into_iter().map(|agent| agent.as_json()).collect::<Vec<_>>();
+                self.events.push_back(json!({
+                    "type":"bot.listed",
+                    "operationId":operation_id,
+                    "requestId":request_id,
+                    "bots":bots,
+                }));
+                self.finish_operation(&operation_id);
+            }
+            "bot.create" => {
+                let name = required_string(&command, "name")?;
+                let description = command.get("description").and_then(Value::as_str).unwrap_or("");
+                let agent = self.agents.create(name, description).map_err(|error| error.to_string())?;
+                self.events.push_back(json!({
+                    "type":"bot.created",
+                    "operationId":operation_id,
+                    "requestId":request_id,
+                    "bot":agent.as_json(),
+                }));
+                self.finish_operation(&operation_id);
+            }
             "chat.send" => {
                 let text = command.get("text").and_then(Value::as_str).unwrap_or("");
                 self.events.push_back(json!({
