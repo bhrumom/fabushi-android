@@ -12663,9 +12663,10 @@
       "android_target_path": "source/host/src/runner/turn_run_shell.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "native-equivalent",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust TurnRunShell at exact target owns active run/request generation, duplicate rejection, interrupt/cancellation records, awaiting-user settlement, interrupt-all and quiesce-for-upgrade; focused unit tests cover lifecycle/quiesce/awaiting-user/fail-closed cases. ProductionTurnAgentOwner delegates begin/finish/cancel/quiesce to TurnRunShell and remains the AndroidJsonHost production chat owner. Exact-HEAD cargo/Android CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "core/MahayanaHost.kt plus feature-domain logic currently distributed across ViewModels",
+      "provenance_review": "clean-room Rust lifecycle implementation; no reconstructed source copied"
     },
     {
       "grok_path": "source/host/runner/turn-settle.ts",
@@ -26763,7 +26764,7 @@
     }
   ],
   "status_summary": {
-    "mapped": 1846,
-    "implemented": 200
+    "mapped": 1845,
+    "implemented": 201
   }
 }
