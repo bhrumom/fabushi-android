@@ -280,9 +280,10 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/production/AgentDeleteConfirmation_view.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Shipping Bot roster uses AgentDeleteConfirmation_view.kt with pending/failure behavior and an awaitable Coordinator-backed delete path; FrontendProductionModelParityTest covers single-agent/group destructive semantics. Exact-HEAD Android compile/UI CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "provenance_review": "clean-room Compose implementation from documented production behavior; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/production/AgentNameEditor.tsx",
@@ -293,9 +294,10 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/production/AgentNameEditor_view.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Shipping Bot roster uses the exact AgentNameEditor_view.kt target for inline rename; committed-name behavior is covered by FrontendProductionModelParityTest. Exact-HEAD Android compile/UI CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "provenance_review": "clean-room Compose implementation from documented production behavior; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/production/AgentRowActions.tsx",
@@ -306,9 +308,10 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/production/AgentRowActions_view.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Shipping Bot roster uses AgentRowActions_view.kt overflow actions wired to Coordinator-backed rename/hide/unread/duplicate/pin/delete mutations; action availability semantics are covered by FrontendProductionModelParityTest. Exact-HEAD Android compile/UI CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "provenance_review": "clean-room Compose implementation from documented production behavior; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/production/bootstrap.tsx",
@@ -26747,7 +26750,7 @@
     }
   ],
   "status_summary": {
-    "mapped": 1861,
-    "implemented": 185
+    "mapped": 1858,
+    "implemented": 188
   }
 }
