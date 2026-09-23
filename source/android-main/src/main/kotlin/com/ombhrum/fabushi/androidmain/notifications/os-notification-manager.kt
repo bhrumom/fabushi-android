@@ -65,7 +65,7 @@ internal class AndroidOsNotificationManager(
     }
 
     fun handleAgents(agents: List<AndroidNotificationAgent>) {
-        val snapshots = agents.map(AndroidNotificationAgent::toSnapshot)
+        val snapshots = agents.map { snapshotOf(it) }
         val transitions = diff(previous, snapshots)
         previous.clear()
         snapshots.associateByTo(previous) { it.id }
@@ -85,7 +85,7 @@ internal class AndroidOsNotificationManager(
     }
 
     fun seedBaseline(agents: List<AndroidNotificationAgent>) {
-        agents.map(AndroidNotificationAgent::toSnapshot).forEach { snapshot ->
+        agents.map { snapshotOf(it) }.forEach { snapshot ->
             previous.putIfAbsent(snapshot.id, snapshot)
             accountedMessageId.putIfAbsent(snapshot.id, snapshot.lastMessageId)
         }
@@ -109,7 +109,7 @@ internal class AndroidOsNotificationManager(
     }
 
     private fun processDelta(agent: AndroidNotificationAgent) {
-        val snapshot = agent.toSnapshot()
+        val snapshot = snapshotOf(agent)
         val before = previous[snapshot.id]
         val transitions = if (before == null) emptyList() else diff(
             mapOf(snapshot.id to before),
@@ -247,15 +247,15 @@ internal class AndroidOsNotificationManager(
         )
     }
 
-    private fun AndroidNotificationAgent.toSnapshot() = NotificationSnapshot(
-        id = id,
-        name = name,
-        isRunning = isRunning,
-        awaitingReason = awaitingReason,
-        notifyEnabled = notifyEnabled,
-        isHiddenFromSidebar = isHiddenFromSidebar,
-        lastMessageId = lastMessageId,
-        lastMessagePreview = lastMessagePreview,
+    private fun snapshotOf(agent: AndroidNotificationAgent) = NotificationSnapshot(
+        id = agent.id,
+        name = agent.name,
+        isRunning = agent.isRunning,
+        awaitingReason = agent.awaitingReason,
+        notifyEnabled = agent.notifyEnabled,
+        isHiddenFromSidebar = agent.isHiddenFromSidebar,
+        lastMessageId = agent.lastMessageId,
+        lastMessagePreview = agent.lastMessagePreview,
     )
 
     companion object {
