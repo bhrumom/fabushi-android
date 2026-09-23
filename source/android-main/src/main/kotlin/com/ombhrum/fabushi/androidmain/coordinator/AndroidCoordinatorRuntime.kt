@@ -4,6 +4,9 @@ import android.app.Application
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidCoordinatorPort
 import com.ombhrum.fabushi.core.MahayanaHost
 import org.json.JSONObject
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Process-scoped Android owner of the native Mahayana Host.
@@ -21,6 +24,11 @@ class AndroidCoordinatorRuntime private constructor(application: Application) : 
     private val processRuntime = CoordinatorProcessRuntime(epochStore)
     val processGeneration: Long = processRuntime.start()
     private val host = MahayanaHost(application)
+    private val featureEventListeners = CopyOnWriteArrayList<(JSONObject) -> Unit>()
+    private val eventPumpRunning = AtomicBoolean(false)
+    private val eventPumpExecutor = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "fabushi-coordinator-feature-events").apply { isDaemon = true }
+    }
 
     override fun coordinatorStatus() = host.request("coordinator.status")
 
@@ -41,7 +49,6 @@ class AndroidCoordinatorRuntime private constructor(application: Application) : 
     override fun authLogout() = host.request("feature.auth.logout")
 
     override fun featureExecute(params: JSONObject) = host.request("feature.execute", params)
-    override fun featureReceive(params: JSONObject) = host.request("feature.receive", params)
     override fun featureInterrupt(params: JSONObject) = host.request("feature.interrupt", params)
 
     override fun marketplaceBrowse(params: JSONObject) = host.request("feature.marketplace.browse", params)
@@ -63,8 +70,57 @@ class AndroidCoordinatorRuntime private constructor(application: Application) : 
     override fun webAuthnUnregisterProvider(params: JSONObject) = host.request("feature.webauthn.unregisterProvider", params)
     override fun webAuthnPollRequest(params: JSONObject) = host.request("feature.webauthn.pollRequest", params)
     override fun webAuthnSubmitResponses(params: JSONObject) = host.request("feature.webauthn.submitResponses", params)
-    override fun publishFeatureEvent(event: JSONObject) = host.publishFeatureEvent(event)
-    override fun addFeatureEventListener(listener: (JSONObject) -> Unit): AutoCloseable = host.addFeatureEventListener(listener)
+
+    override fun publishFeatureEvent(event: JSONObject) {
+        runCatching {
+            host.request(
+                "coordinator.publishEvent",
+                JSONObject().put("event", JSONObject(event.toString())),
+            )
+        }
+        dispatchFeatureEvent(event)
+    }
+
+    override fun addFeatureEventListener(listener: (JSONObject) -> Unit): AutoCloseable {
+        featureEventListeners += listener
+        ensureFeatureEventPump()
+        return AutoCloseable { featureEventListeners.remove(listener) }
+    }
+
+    private fun ensureFeatureEventPump() {
+        if (featureEventListeners.isEmpty()) return
+        if (!eventPumpRunning.compareAndSet(false, true)) return
+        eventPumpExecutor.execute {
+            try {
+                while (featureEventListeners.isNotEmpty()) {
+                    val event = try {
+                        host.request(
+                            "feature.receive",
+                            JSONObject().put("timeoutMs", 250),
+                        )
+                    } catch (_: Throwable) {
+                        Thread.sleep(100)
+                        continue
+                    }
+                    if (event.optString("type").isBlank()) {
+                        Thread.sleep(20)
+                        continue
+                    }
+                    dispatchFeatureEvent(event)
+                }
+            } finally {
+                eventPumpRunning.set(false)
+                if (featureEventListeners.isNotEmpty()) ensureFeatureEventPump()
+            }
+        }
+    }
+
+    private fun dispatchFeatureEvent(event: JSONObject) {
+        val serialized = event.toString()
+        featureEventListeners.forEach { listener ->
+            runCatching { listener(JSONObject(serialized)) }
+        }
+    }
 
     companion object {
         @Volatile private var instance: AndroidCoordinatorRuntime? = null
