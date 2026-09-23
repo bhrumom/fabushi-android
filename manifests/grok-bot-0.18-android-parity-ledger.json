@@ -252,9 +252,10 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/production/agent-name-editor-model.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Kotlin production model at the exact ledger target with focused FrontendProductionModelParityTest coverage; exact-HEAD Android unit/compile CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "provenance_review": "clean-room Kotlin behavior implementation from frozen baseline responsibility; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/production/agent-row-actions-model.ts",
@@ -265,9 +266,10 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/production/agent-row-actions-model.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Kotlin production model at the exact ledger target with focused FrontendProductionModelParityTest coverage; exact-HEAD Android unit/compile CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "provenance_review": "clean-room Kotlin behavior implementation from frozen baseline responsibility; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/production/AgentDeleteConfirmation.tsx",
@@ -473,9 +475,10 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/production/local-tool-permission-scope.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Kotlin production model at the exact ledger target with focused FrontendProductionModelParityTest coverage; exact-HEAD Android unit/compile CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "provenance_review": "clean-room Kotlin behavior implementation from frozen baseline responsibility; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/production/model.ts",
@@ -564,9 +567,10 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/production/sidebar-model.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Kotlin production model at the exact ledger target with focused FrontendProductionModelParityTest coverage; exact-HEAD Android unit/compile CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "provenance_review": "clean-room Kotlin behavior implementation from frozen baseline responsibility; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/production/strict-mode-disposal.ts",
@@ -577,9 +581,10 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/production/strict-mode-disposal.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Kotlin production model at the exact ledger target with focused FrontendProductionModelParityTest coverage; exact-HEAD Android unit/compile CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "provenance_review": "clean-room Kotlin behavior implementation from frozen baseline responsibility; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/recovered/catalog.ts",
@@ -26739,7 +26744,7 @@
     }
   ],
   "status_summary": {
-    "mapped": 1869,
-    "implemented": 177
+    "mapped": 1864,
+    "implemented": 182
   }
 }
