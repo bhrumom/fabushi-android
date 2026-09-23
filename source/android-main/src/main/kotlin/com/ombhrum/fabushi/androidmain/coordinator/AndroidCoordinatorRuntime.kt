@@ -49,6 +49,10 @@ class AndroidCoordinatorRuntime private constructor(application: Application) : 
     override fun messagingExecute(params: JSONObject) = host.request("feature.messaging.execute", params)
 
     override fun platformRequest(params: JSONObject) = host.request("platform.request", params)
+    override fun webAuthnRegisterProvider() = host.request("feature.webauthn.registerProvider")
+    override fun webAuthnUnregisterProvider(params: JSONObject) = host.request("feature.webauthn.unregisterProvider", params)
+    override fun webAuthnPollRequest(params: JSONObject) = host.request("feature.webauthn.pollRequest", params)
+    override fun webAuthnSubmitResponses(params: JSONObject) = host.request("feature.webauthn.submitResponses", params)
     override fun publishFeatureEvent(event: JSONObject) = host.publishFeatureEvent(event)
     override fun addFeatureEventListener(listener: (JSONObject) -> Unit): AutoCloseable = host.addFeatureEventListener(listener)
 
