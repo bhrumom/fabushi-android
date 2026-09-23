@@ -410,7 +410,6 @@ internal fun ConversationDetail(
     var showConversationInfo by remember { mutableStateOf(false) }
     var showChatSearch by remember { mutableStateOf(false) }
     var chatSearchQuery by remember { mutableStateOf("") }
-    var showAttachmentMenu by remember { mutableStateOf(false) }
     var showSendModes by remember { mutableStateOf(false) }
     var showContactShare by remember { mutableStateOf(false) }
     var showPollComposer by remember { mutableStateOf(false) }
@@ -418,9 +417,7 @@ internal fun ConversationDetail(
     var pollOption1 by remember { mutableStateOf("") }
     var pollOption2 by remember { mutableStateOf("") }
     var pollOption3 by remember { mutableStateOf("") }
-    var attachmentMime by remember { mutableStateOf("*/*") }
     val context = LocalContext.current
-    val haptics = LocalHapticFeedback.current
     val voiceRecorder = remember { NativeVoiceRecorder(context) }
     val voicePlayer = remember { NativeVoicePlayer(context) }
     var playingVoiceMessageId by remember { mutableStateOf<String?>(null) }
@@ -649,64 +646,97 @@ internal fun ConversationDetail(
                 },
                 modifier = Modifier.weight(1f),
             )
-            if (editingMessage != null || replyTarget != null) {
-                Row(Modifier.fillMaxWidth().background(homeSurface).padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (editingMessage != null) "✎" else "↩", color = homeAccent, fontSize = 20.sp)
-                    Column(Modifier.weight(1f).padding(start = 10.dp)) {
-                        Text(if (editingMessage != null) "编辑消息" else "回复", color = homeAccent, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
-                        Text((editingMessage ?: replyTarget)?.text.orEmpty(), color = homeSecondaryText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            ConversationComposer(
+                draft = draft,
+                editingMessage = editingMessage,
+                replyTarget = replyTarget,
+                isRecordingVoice = isRecordingVoice,
+                recordingSeconds = recordingSeconds,
+                voiceError = voiceError,
+                onDraftChange = { draft = it },
+                onTypingChanged = onTypingChanged,
+                onClearContext = {
+                    editingMessage = null
+                    replyTarget = null
+                },
+                onPickAttachment = { mime ->
+                    attachmentLauncher.launch(mime)
+                },
+                onRequestLocation = {
+                    showLocationShare = true
+                    currentLocation = null
+                    locationError = null
+                    val fine = ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                    ) == PackageManager.PERMISSION_GRANTED
+                    val coarse = ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_COARSE_LOCATION,
+                    ) == PackageManager.PERMISSION_GRANTED
+                    if (fine || coarse) {
+                        resolveLocation()
+                    } else {
+                        locationPermissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION,
+                            ),
+                        )
                     }
-                    Text("×", color = homeSecondaryText, fontSize = 24.sp, modifier = Modifier.clickable { editingMessage = null; replyTarget = null; if (draft.isNotEmpty()) draft = "" }.padding(6.dp))
-                }
-            }
-            if (isRecordingVoice) {
-                Row(Modifier.fillMaxWidth().background(homeSurface).padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("●", color = Color.Red, fontSize = 14.sp)
-                    Text("正在录音 ${recordingSeconds / 60}:${"%02d".format(recordingSeconds % 60)}", color = homePrimaryText, modifier = Modifier.weight(1f).padding(start = 8.dp))
-                    Text("取消", color = Color(0xFFFF6B6B), modifier = Modifier.clickable { voiceRecorder.cancel(); isRecordingVoice = false }.padding(6.dp))
-                }
-            } else if (voiceError != null) {
-                Text(voiceError.orEmpty(), color = Color(0xFFFF6B6B), style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp))
-            }
-            Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.Bottom) {
-                Box {
-                    Text("＋", color = homeSecondaryText, fontSize = 26.sp, modifier = Modifier.clickable { showAttachmentMenu = true }.padding(8.dp))
-                    DropdownMenu(expanded = showAttachmentMenu, onDismissRequest = { showAttachmentMenu = false }, containerColor = homeSurface) {
-                        DropdownMenuItem(text = { Text("照片", color = homePrimaryText) }, onClick = { showAttachmentMenu = false; attachmentMime = "image/*"; attachmentLauncher.launch(attachmentMime) })
-                        DropdownMenuItem(text = { Text("视频", color = homePrimaryText) }, onClick = { showAttachmentMenu = false; attachmentMime = "video/*"; attachmentLauncher.launch(attachmentMime) })
-                        DropdownMenuItem(text = { Text("文件", color = homePrimaryText) }, onClick = { showAttachmentMenu = false; attachmentMime = "*/*"; attachmentLauncher.launch(attachmentMime) })
-                        DropdownMenuItem(text = { Text("位置", color = homePrimaryText) }, onClick = {
-                            showAttachmentMenu = false; showLocationShare = true; currentLocation = null; locationError = null
-                            val fine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                            val coarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                            if (fine || coarse) resolveLocation() else locationPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
-                        })
-                        DropdownMenuItem(text = { Text("联系人", color = homePrimaryText) }, onClick = { showAttachmentMenu = false; showContactShare = true })
-                        DropdownMenuItem(text = { Text("投票", color = homePrimaryText) }, onClick = { showAttachmentMenu = false; pollQuestion = ""; pollOption1 = ""; pollOption2 = ""; pollOption3 = ""; showPollComposer = true })
-                    }
-                }
-                OutlinedTextField(
-                    value = draft, onValueChange = { draft = it; onTypingChanged(it.isNotBlank()) }, modifier = Modifier.weight(1f), placeholder = { Text("消息", color = homeSecondaryText) }, maxLines = 5,
-                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = homePrimaryText, unfocusedTextColor = homePrimaryText, focusedContainerColor = homeSurface, unfocusedContainerColor = homeSurface), shape = RoundedCornerShape(22.dp),
-                )
-                Text(if (draft.isBlank()) (if (isRecordingVoice) "■" else "●") else "➤", color = if (isRecordingVoice) Color.Red else if (draft.isBlank()) homeSecondaryText else homeAccent, fontSize = 22.sp,
-                    modifier = Modifier.combinedClickable(
-                        onClick = {
-                            val text = draft.trim()
-                            if (text.isNotEmpty()) {
-                                val edit = editingMessage
-                                if (edit != null) onEdit(edit.id, text) else { onSend(text, replyTarget?.id, false, null); onDraftChanged("", null) }
-                                draft = ""; onTypingChanged(false); editingMessage = null; replyTarget = null
-                            } else if (isRecordingVoice) {
-                                voiceRecorder.stop().onSuccess { recording -> onSendVoice(recording.file.name, "audio/mp4", recording.bytes, emptyList()); isRecordingVoice = false; voiceError = null }.onFailure { voiceError = it.message; isRecordingVoice = false }
-                            } else {
-                                val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-                                if (granted) voiceRecorder.start().onSuccess { isRecordingVoice = true; voiceError = null }.onFailure { voiceError = it.message } else microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                },
+                onRequestContact = { showContactShare = true },
+                onRequestPoll = {
+                    pollQuestion = ""
+                    pollOption1 = ""
+                    pollOption2 = ""
+                    pollOption3 = ""
+                    showPollComposer = true
+                },
+                onCancelRecording = {
+                    voiceRecorder.cancel()
+                    isRecordingVoice = false
+                },
+                onFinishRecording = {
+                    voiceRecorder.stop()
+                        .onSuccess { recording ->
+                            onSendVoice(
+                                recording.file.name,
+                                "audio/mp4",
+                                recording.bytes,
+                                emptyList(),
+                            )
+                            isRecordingVoice = false
+                            voiceError = null
+                        }
+                        .onFailure {
+                            voiceError = it.message
+                            isRecordingVoice = false
+                        }
+                },
+                onStartRecording = {
+                    val granted = ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.RECORD_AUDIO,
+                    ) == PackageManager.PERMISSION_GRANTED
+                    if (granted) {
+                        voiceRecorder.start()
+                            .onSuccess {
+                                isRecordingVoice = true
+                                voiceError = null
                             }
-                        },
-                        onLongClick = { if (draft.isNotBlank()) showSendModes = true },
-                    ).padding(10.dp))
-            }
+                            .onFailure { voiceError = it.message }
+                    } else {
+                        microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                },
+                onEdit = onEdit,
+                onSend = { text, replyTo ->
+                    onSend(text, replyTo, false, null)
+                    onDraftChanged("", null)
+                },
+                onRequestSendModes = { showSendModes = true },
+            )
         }
     }
 }
