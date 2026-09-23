@@ -25941,9 +25941,11 @@
       "android_target_path": "source/shared/src/node/mcp/mcp_oauth_loopback.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored shared Rust OAuth pending/callback lifecycle at source/shared/src/node/mcp/mcp_oauth_loopback.rs covers redirect validation, TTL refresh/expiry, provider errors, missing code, transient retry, dispose, single-use state/provider registry; production Mahayana Coordinator OAuthLoopbackRegistry delegates state registration/consume to this shared contract. Android transport is app-link based and tested separately. Exact-HEAD cargo/Android CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "android_adaptation_rationale": "Android replaces the desktop localhost HTTP listener with fabushi://mcp-oauth/callback app-link handling, while retaining the shared pending-state, TTL, single-use callback and completion semantics inside the Rust shared/Coordinator layers.",
+      "provenance_review": "clean-room Rust behavior/contract implementation; no reconstructed source copied"
     },
     {
       "grok_path": "source/shared/node/mcp/mcp-plugin-variables.ts",
@@ -26757,7 +26759,7 @@
     }
   ],
   "status_summary": {
-    "mapped": 1851,
-    "implemented": 195
+    "mapped": 1850,
+    "implemented": 196
   }
 }
