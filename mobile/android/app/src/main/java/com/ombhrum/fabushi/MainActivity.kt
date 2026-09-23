@@ -11,6 +11,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import com.ombhrum.fabushi.androidmain.deeplink.AndroidDeepLinkController
 import com.ombhrum.fabushi.androidpreload.deeplink.AndroidDeepLink
+import com.ombhrum.fabushi.androidpreload.deeplink.AndroidPresentationDeepLink
 import com.ombhrum.fabushi.androidpreload.runtime.AndroidPresentationRuntimePort
 import kotlinx.coroutines.flow.MutableSharedFlow
 
@@ -21,7 +22,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
  * out of the Activity so process recreation and renderer replacement can be tested independently.
  */
 class MainActivity : ComponentActivity() {
-    private val deepLinks = MutableSharedFlow<AndroidDeepLink>(replay = 1, extraBufferCapacity = 31)
+    private val deepLinks = MutableSharedFlow<AndroidPresentationDeepLink>(replay = 1, extraBufferCapacity = 31)
     private lateinit var runtimePort: AndroidPresentationRuntimePort
     private val deepLinkController = AndroidDeepLinkController(
         dispatch = ::dispatchDeepLink,
@@ -77,7 +78,8 @@ class MainActivity : ComponentActivity() {
         (application as FabushiApplication).requirePresentationRuntime().appAgentSurface
 
     private fun dispatchDeepLink(link: AndroidDeepLink) {
-        if (!runtimePort.handlePlatformDeepLink(link)) {
+        if (runtimePort.handlePlatformDeepLink(link)) return
+        if (link is AndroidPresentationDeepLink) {
             deepLinks.tryEmit(link)
         }
     }
