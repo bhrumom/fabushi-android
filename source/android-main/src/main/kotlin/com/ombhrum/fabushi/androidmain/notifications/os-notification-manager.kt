@@ -67,10 +67,13 @@ internal class AndroidOsNotificationManager(
     fun handleAgents(agents: List<AndroidNotificationAgent>) {
         val snapshots = agents.map(AndroidNotificationAgent::snapshot)
         val transitions = diff(previous, snapshots)
-        flushPreSeedDeltas()
-        transitions.forEach(::showIfAllowed)
         previous.clear()
         snapshots.associateByTo(previous) { it.id }
+        snapshots.forEach { snapshot ->
+            accountedMessageId.putIfAbsent(snapshot.id, snapshot.lastMessageId)
+        }
+        flushPreSeedDeltas()
+        transitions.forEach(::showIfAllowed)
     }
 
     fun handleAgentUpserted(agent: AndroidNotificationAgent) {
