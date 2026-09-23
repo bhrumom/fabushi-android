@@ -61,20 +61,57 @@ internal fun SectionLabelAndroid(text: String) {
 }
 
 @Composable
-internal fun GrokBotRowAndroid(bot: MobileBotSummaryAndroid, badge: String, onClick: (MobileBotSummaryAndroid) -> Unit) {
+internal fun GrokBotRowAndroid(
+    bot: MobileBotSummaryAndroid,
+    badge: String,
+    onClick: (MobileBotSummaryAndroid) -> Unit,
+    editingName: Boolean = false,
+    onNameCommit: ((String) -> Unit)? = null,
+    onNameExit: (() -> Unit)? = null,
+    trailing: (@Composable () -> Unit)? = null,
+) {
     Row(
-        Modifier.fillMaxWidth().clickable { onClick(bot) }.padding(horizontal = 18.dp, vertical = 9.dp),
+        Modifier
+            .fillMaxWidth()
+            .clickable(enabled = !editingName) { onClick(bot) }
+            .padding(horizontal = 18.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ClothGhostAvatarAndroid(bot.id, 47.dp, badge = Color(0xFF20B967))
         Column(Modifier.weight(1f).padding(start = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(bot.name, color = GrokMobileInk, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                Text(badge, color = GrokMobileMuted, fontSize = 11.sp, modifier = Modifier.padding(start = 7.dp).background(Color.Black.copy(alpha = 0.045f), RoundedCornerShape(20.dp)).padding(horizontal = 7.dp, vertical = 3.dp))
+                if (editingName && onNameCommit != null && onNameExit != null) {
+                    AgentNameEditor(
+                        initialValue = bot.name,
+                        onCommit = onNameCommit,
+                        onExit = onNameExit,
+                        modifier = Modifier.weight(1f),
+                    )
+                } else {
+                    Text(
+                        bot.name,
+                        color = GrokMobileInk,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                Text(
+                    badge,
+                    color = GrokMobileMuted,
+                    fontSize = 11.sp,
+                    modifier = Modifier
+                        .padding(start = 7.dp)
+                        .background(Color.Black.copy(alpha = 0.045f), RoundedCornerShape(20.dp))
+                        .padding(horizontal = 7.dp, vertical = 3.dp),
+                )
             }
             Text(bot.description.ifBlank { "Ready" }, color = GrokMobileMuted, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Text("now", color = GrokMobileMuted, fontSize = 11.sp)
+        if (trailing != null) {
+            trailing()
+        } else {
+            Text("now", color = GrokMobileMuted, fontSize = 11.sp)
+        }
     }
 }
 
