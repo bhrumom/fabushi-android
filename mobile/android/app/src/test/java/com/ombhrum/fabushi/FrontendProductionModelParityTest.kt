@@ -71,6 +71,20 @@ class FrontendProductionModelParityTest {
     }
 
     @Test
+    fun agentDeleteCopyDistinguishesSingleAgentAndGroupSemantics() {
+        val single = agentDeleteDescription(
+            AgentDeleteTarget(id = "agent-1", name = "Agent"),
+        )
+        val group = agentDeleteDescription(
+            AgentDeleteTarget(id = "group-1", name = "Group", isGroup = true),
+        )
+        assertTrue(single.contains("agent and its chat history"))
+        assertTrue(single.contains("can't be undone"))
+        assertTrue(group.contains("group and its chat history"))
+        assertTrue(group.contains("Bots in it are not deleted"))
+    }
+
+    @Test
     fun permissionScopeRequiresStrictlyNewRevisionAfterAccountReentry() {
         val gate = LocalToolPermissionScopeGate()
         gate.enter("account-a")
