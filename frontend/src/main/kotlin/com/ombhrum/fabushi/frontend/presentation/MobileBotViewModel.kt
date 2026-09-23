@@ -204,12 +204,30 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun deleteBot(botId: String) {
-        mutateAgent(botId, "Agent deletion failed") {
+        viewModelScope.launch {
+            runCatching { deleteBotAndAwait(botId) }
+                .onFailure { error ->
+                    mutableState.value = mutableState.value.copy(
+                        error = error.message ?: "Agent deletion failed",
+                    )
+                }
+        }
+    }
+
+    suspend fun deleteBotAndAwait(botId: String) {
+        withContext(Dispatchers.IO) {
             coordinator.agentDelete(botId)
         }
         if (mutableState.value.activeBot?.id == botId) {
-            commitState(mutableState.value.copy(activeBot = null, busy = false, operationId = null))
+            commitState(
+                mutableState.value.copy(
+                    activeBot = null,
+                    busy = false,
+                    operationId = null,
+                ),
+            )
         }
+        refreshBots()
     }
 
     fun setBotPinned(botId: String, isPinned: Boolean) {
