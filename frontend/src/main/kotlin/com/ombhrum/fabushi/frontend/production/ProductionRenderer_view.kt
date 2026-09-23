@@ -51,6 +51,7 @@ internal fun ProductionRenderer(
                 val updateState by updateModel.state.collectAsState()
                 var openedMiniApp by remember { mutableStateOf<MarketplacePlugin?>(null) }
                 var rendererRoute by remember { mutableStateOf(RendererRoute.GROK_HOME) }
+                var commandPaletteOpen by remember { mutableStateOf(false) }
 
                 BackHandler(enabled = rendererRoute == RendererRoute.MESSAGING && state.loggedIn) {
                     rendererRoute = RendererRoute.GROK_HOME
@@ -144,6 +145,47 @@ internal fun ProductionRenderer(
                             appAgentSurface.clearOverlay("miniapp-bot-menu")
                         }
                     }
+                    val paletteEntries = buildList {
+                        botState.bots.forEach { bot ->
+                            add(
+                                CommandPaletteEntry(
+                                    id = "agent:${bot.id}",
+                                    kind = CommandPaletteEntryKind.AGENT,
+                                    label = bot.name,
+                                    detail = bot.description.takeIf(String::isNotBlank),
+                                    searchText = listOf(bot.name, bot.description, "agent bot")
+                                        .joinToString(" "),
+                                    activate = {
+                                        rendererRoute = RendererRoute.GROK_HOME
+                                        botModel.openBot(bot)
+                                    },
+                                ),
+                            )
+                        }
+                        add(
+                            CommandPaletteEntry(
+                                id = "android:messages",
+                                kind = CommandPaletteEntryKind.COMMAND,
+                                label = "Messages",
+                                detail = "Open conversations",
+                                searchText = "Messages conversations chats channels",
+                                activate = { rendererRoute = RendererRoute.MESSAGING },
+                            ),
+                        )
+                        addAll(
+                            commandPaletteRootCommands(
+                                activeAgentIsGroup = botState.activeBot?.isGroup,
+                                activeAgentIsSharedRoom = false,
+                                hasChannels = messagingState.conversations.any {
+                                    it.kind == ConversationKind.CHANNEL
+                                },
+                                openInfoSection = {
+                                    rendererRoute = RendererRoute.MESSAGING
+                                },
+                            ),
+                        )
+                    }
+
                     Box {
                         GrokHomeSurface(
                             accountName = state.accountName,
@@ -151,6 +193,7 @@ internal fun ProductionRenderer(
                             botState = botState,
                             appAgentSurface = appAgentSurface,
                             onOpenMessaging = { rendererRoute = RendererRoute.MESSAGING },
+                            onOpenCommandPalette = { commandPaletteOpen = true },
                             onRefreshBots = botModel::refreshBots,
                             onCreateBot = botModel::createBot,
                             onOpenBot = botModel::openBot,
@@ -177,6 +220,11 @@ internal fun ProductionRenderer(
                                 Text(miniAppBot.menuButtonText ?: "打开应用")
                             }
                         }
+                        CommandPalette(
+                            open = commandPaletteOpen,
+                            entries = paletteEntries,
+                            onDismiss = { commandPaletteOpen = false },
+                        )
                     }
                 } else {
                     FabushiMessagingSurface(
