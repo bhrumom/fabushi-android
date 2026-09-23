@@ -3,6 +3,7 @@ package com.ombhrum.fabushi
 import com.ombhrum.fabushi.androidmain.deeplink.AndroidDeepLinkController
 import com.ombhrum.fabushi.androidmain.deeplink.AndroidDeepLinkRouter
 import com.ombhrum.fabushi.androidpreload.deeplink.AndroidDeepLink
+import com.ombhrum.fabushi.androidpreload.deeplink.AndroidDeepLinkSource
 import com.ombhrum.fabushi.androidpreload.deeplink.AuthCompletionStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -155,6 +156,25 @@ class AndroidDeepLinkRouterTest {
         assertNull(
             AndroidDeepLinkRouter.parse(
                 "fabushi://mcp-oauth/callback?state=0123456789abcdef&state=other-state-12345&code=a",
+            ),
+        )
+    }
+
+    @Test
+    fun deepLinkInfoActivationIsTypedAndAllowlisted() {
+        assertEquals(
+            AndroidDeepLink.Info(
+                source = AndroidDeepLinkSource.PROTOCOL,
+                topic = "deep-links",
+            ),
+            AndroidDeepLinkRouter.parse(
+                "fabushi://app/v1/info?topic=deep-links",
+            ),
+        )
+        assertNull(AndroidDeepLinkRouter.parse("fabushi://app/v1/info?topic=other"))
+        assertNull(
+            AndroidDeepLinkRouter.parse(
+                "fabushi://app/v1/info?topic=deep-links&extra=1",
             ),
         )
     }
