@@ -67,7 +67,7 @@ internal class AndroidMcpOAuthLoopbackProvider(
 
             val redirect = runCatching { URI(redirects.single()) }.getOrNull() ?: return null
             if (!redirect.scheme.equals("fabushi", ignoreCase = true)) return null
-            if (!redirect.host.equals("mcp-oauth", ignoreCase = true)) return null
+            if (redirect.host?.equals("mcp-oauth", ignoreCase = true) != true) return null
             if (redirect.path != "/callback") return null
             if (redirect.userInfo != null || redirect.port != -1 || redirect.fragment != null) return null
             if (!redirect.rawQuery.isNullOrEmpty()) return null
