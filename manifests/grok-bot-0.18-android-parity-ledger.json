@@ -3427,9 +3427,10 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/recovered/features/roster/access-readiness.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Kotlin readiness projection at exact target plus RosterAccessReadinessTest covers account/load/connect/selection/restored-roster/failure behavior; Gradle unit CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "provenance_review": "clean-room Android/Compose implementation from observed behavior; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/recovered/features/roster/privacy-blocked.tsx",
@@ -3453,9 +3454,10 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/recovered/features/roster/reconnect-notice_view.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Compose reconnect notice at exact target is wired into shipping GrokHomeSurface for degraded loaded rosters; Android compile/UI CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "provenance_review": "clean-room Android/Compose implementation from observed behavior; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/recovered/features/roster/selection-state.ts",
@@ -3479,9 +3481,10 @@
       "android_target_path": "frontend/src/main/kotlin/com/ombhrum/fabushi/frontend/recovered/features/roster/status_view.kt",
       "target_language_runtime": "Kotlin / Jetpack Compose",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt"
+      "implementation_status": "implemented",
+      "test_evidence": "Compose loading/empty/all-hidden/error roster states at exact target are wired into shipping GrokHomeSurface, with retry and Show Hidden Bots behavior; Android compile/UI CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/FabushiScreen.kt; GrokMobileShellAndroid.kt; feature UI embedded in MainActivity.kt",
+      "provenance_review": "clean-room Android/Compose implementation from observed behavior; no reconstructed source copied"
     },
     {
       "grok_path": "frontend/src/recovered/features/runtime-theme-token-installer.ts",
@@ -26855,8 +26858,8 @@
     }
   ],
   "status_summary": {
-    "mapped": 1783,
-    "implemented": 253,
+    "mapped": 1780,
+    "implemented": 256,
     "verified": 10
   }
 }
