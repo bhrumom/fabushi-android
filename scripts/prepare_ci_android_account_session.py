@@ -32,10 +32,19 @@ def normalize_base_url(value: str) -> str:
     value = value.strip().rstrip("/")
     parsed = urllib.parse.urlsplit(value)
     if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
-        raise ValueError("FABUSHI_API_BASE_URL must be a clean HTTPS origin")
+        raise ValueError("Fabushi auth base URL must be a clean HTTPS origin")
     if parsed.query or parsed.fragment or parsed.path not in ("", "/"):
-        raise ValueError("FABUSHI_API_BASE_URL must not contain path/query/fragment")
+        raise ValueError("Fabushi auth base URL must not contain path/query/fragment")
     return value
+
+
+def ci_auth_base_url(env: dict[str, str] | os._Environ[str] | None = None) -> str:
+    values = os.environ if env is None else env
+    return normalize_base_url(
+        values.get("FABUSHI_CI_AUTH_BASE_URL")
+        or values.get("FABUSHI_API_BASE_URL")
+        or "https://mahayana-platform.bhrumom.workers.dev"
+    )
 
 
 def login(
@@ -196,7 +205,7 @@ def main() -> int:
         raise RuntimeError("FABUSHI_CI_TEST_PASSWORD is required")
 
     source = login(
-        base_url=os.environ.get("FABUSHI_API_BASE_URL", "https://api.ombhrum.com"),
+        base_url=ci_auth_base_url(),
         username=username,
         password=password,
         device_id=device_id,
