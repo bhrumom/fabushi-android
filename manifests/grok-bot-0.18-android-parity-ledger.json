@@ -4721,9 +4721,11 @@
       "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/auth/auth-callback-registration.kt",
       "target_language_runtime": "Kotlin / Android",
       "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
+      "implementation_status": "implemented",
+      "test_evidence": "Exact-target Android auth-callback-registration.kt defines the manifest-owned protocol contract, is consumed by AndroidDeepLinkRouter, and has JVM tests for scheme registration/validation and fail-closed routing. Exact-HEAD Gradle/architecture CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters",
+      "android_adaptation_rationale": "Electron dynamically registers a desktop URL protocol; Android declares the callback scheme in AndroidManifest and uses android-main to enforce the same scheme at runtime.",
+      "provenance_review": "clean-room Kotlin platform adaptation from frozen behavior responsibilities; no reconstructed source copied"
     },
     {
       "grok_path": "source/electron-main/box/box-client-pause.ts",
@@ -26800,7 +26802,7 @@
     }
   ],
   "status_summary": {
-    "mapped": 1817,
-    "implemented": 229
+    "mapped": 1816,
+    "implemented": 230
   }
 }
