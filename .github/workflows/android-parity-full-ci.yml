@@ -134,6 +134,7 @@ jobs:
           FABUSHI_CI_TEST_USERNAME: ${{ secrets.FABUSHI_CI_TEST_USERNAME }}
           FABUSHI_CI_TEST_PASSWORD: ${{ secrets.FABUSHI_CI_TEST_PASSWORD }}
           FABUSHI_API_BASE_URL: ${{ vars.FABUSHI_API_BASE_URL || 'https://api.ombhrum.com' }}
+          FABUSHI_CI_AUTH_BASE_URL: ${{ vars.FABUSHI_CI_AUTH_BASE_URL || 'https://mahayana-platform.bhrumom.workers.dev' }}
           DEVICE_ID: gha-${{ github.run_id }}-${{ github.run_attempt }}-interactive
           FABUSHI_CI_ACCOUNT_SESSION_FILE: ${{ runner.temp }}/fabushi-android-ci/session.json
         run: |
