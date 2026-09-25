@@ -59,7 +59,34 @@ def login(
         with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
             body = response.read(MAX_SESSION_BYTES + 1)
     except urllib.error.HTTPError as error:
-        raise RuntimeError(f"Fabushi CI login failed with HTTP {error.code}") from None
+        detail = "request rejected"
+        try:
+            raw = error.read(4097)
+            if len(raw) <= 4096:
+                parsed = json.loads(raw.decode("utf-8"))
+                if isinstance(parsed, dict):
+                    candidate = parsed.get("message")
+                    if not isinstance(candidate, str):
+                        value = parsed.get("error")
+                        candidate = value if isinstance(value, str) else (
+                            value.get("message") if isinstance(value, dict) else None
+                        )
+                    code = parsed.get("code")
+                    if not isinstance(code, str):
+                        value = parsed.get("error")
+                        code = value.get("code") if isinstance(value, dict) else None
+                    safe = " ".join(
+                        str(part).strip()
+                        for part in (code, candidate)
+                        if isinstance(part, str) and part.strip()
+                    )
+                    if safe:
+                        detail = safe[:240]
+        except Exception:
+            pass
+        raise RuntimeError(
+            f"Fabushi CI login failed with HTTP {error.code}: {detail}"
+        ) from None
     except urllib.error.URLError as error:
         raise RuntimeError("Fabushi CI login transport failed") from error
     if len(body) > MAX_SESSION_BYTES:
