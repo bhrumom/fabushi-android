@@ -103,6 +103,7 @@ fun GrokHomeSurface(
     var botDescription by remember { mutableStateOf("") }
     var editingBotId by remember { mutableStateOf<String?>(null) }
     var deleteTarget by remember { mutableStateOf<AgentDeleteTarget?>(null) }
+    var showHiddenBots by remember { mutableStateOf(false) }
 
     LaunchedEffect(
         query,
@@ -113,6 +114,8 @@ fun GrokHomeSurface(
         botState.creating,
         botState.error,
         botState.bots,
+        botState.rosterLoading,
+        showHiddenBots,
         messagingState.conversations,
         appAgentSurface,
     ) {
@@ -231,6 +234,7 @@ fun GrokHomeSurface(
                     action = FabushiAppAgentSurface.Action(setOf("invoke")) { onOpenBot(mahayana) },
                 )
                 botState.bots
+                    .filter { showHiddenBots || !it.isHidden }
                     .filter { query.isBlank() || it.name.contains(query.trim(), true) || it.description.contains(query.trim(), true) }
                     .take(100)
                     .forEach { bot ->
@@ -347,7 +351,56 @@ fun GrokHomeSurface(
                     onClick = onOpenBot,
                 )
             }
-            val visibleBots = botState.bots.filter { query.isBlank() || it.name.contains(query.trim(), true) || it.description.contains(query.trim(), true) }
+            val matchingBots = botState.bots.filter {
+                query.isBlank() ||
+                    it.name.contains(query.trim(), true) ||
+                    it.description.contains(query.trim(), true)
+            }
+            val visibleBots = matchingBots.filter { showHiddenBots || !it.isHidden }
+            val allMatchingBotsHidden =
+                matchingBots.isNotEmpty() &&
+                    visibleBots.isEmpty() &&
+                    matchingBots.all { it.isHidden }
+
+            when {
+                botState.rosterLoading && botState.bots.isEmpty() -> {
+                    item {
+                        RosterStatus(
+                            kind = RosterStatusKind.LOADING,
+                            isRetrying = true,
+                            modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
+                        )
+                    }
+                }
+                botState.error != null && botState.bots.isEmpty() -> {
+                    item {
+                        RosterStatus(
+                            kind = RosterStatusKind.ERROR,
+                            isRetrying = botState.rosterLoading,
+                            onRetry = onRefreshBots,
+                            modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
+                        )
+                    }
+                }
+                allMatchingBotsHidden -> {
+                    item {
+                        RosterStatus(
+                            kind = RosterStatusKind.ALL_HIDDEN,
+                            onShowHiddenBots = { showHiddenBots = true },
+                            modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
+                        )
+                    }
+                }
+                botState.bots.isEmpty() -> {
+                    item {
+                        RosterStatus(
+                            kind = RosterStatusKind.EMPTY,
+                            modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
+                        )
+                    }
+                }
+            }
+
             if (visibleBots.isNotEmpty()) {
                 item { SectionLabelAndroid("Bots  ${visibleBots.size}") }
                 items(visibleBots, key = { it.id }) { bot ->
@@ -381,14 +434,15 @@ fun GrokHomeSurface(
                     )
                 }
             }
-            botState.error?.takeIf { it.isNotBlank() }?.let { diagnostic ->
-                item {
-                    Text(
-                        "Bot 刷新异常：$diagnostic",
-                        color = Color(0xFFD14343),
-                        fontSize = 12.sp,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 6.dp),
-                    )
+            botState.error?.takeIf { it.isNotBlank() }?.let {
+                if (botState.bots.isNotEmpty()) {
+                    item {
+                        RosterReconnectNotice(
+                            isRetrying = botState.rosterLoading,
+                            onRetry = onRefreshBots,
+                            modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
+                        )
+                    }
                 }
             }
             val rows = messagingState.conversations.filter { !it.isArchived && (query.isBlank() || it.title.contains(query.trim(), true) || it.preview.contains(query.trim(), true)) }
