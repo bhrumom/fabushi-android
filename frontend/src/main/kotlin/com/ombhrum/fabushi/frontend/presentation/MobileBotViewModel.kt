@@ -34,6 +34,7 @@ data class MobileBotUiState(
     val operationId: String? = null,
     val error: String? = null,
     val creating: Boolean = false,
+    val rosterLoading: Boolean = false,
 )
 
 class MobileBotViewModel(application: Application) : AndroidViewModel(application) {
@@ -56,7 +57,8 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun refreshBots() {
-        if (mutableState.value.busy) return
+        if (mutableState.value.busy || mutableState.value.rosterLoading) return
+        mutableState.value = mutableState.value.copy(rosterLoading = true)
         viewModelScope.launch {
             val previous = mutableState.value.bots
             val installedResult = withContext(Dispatchers.IO) { runCatching { loadInstalledMiniAppBots() } }
@@ -89,6 +91,7 @@ class MobileBotViewModel(application: Application) : AndroidViewModel(applicatio
             mutableState.value = mutableState.value.copy(
                 bots = bots,
                 error = diagnostics.takeIf { it.isNotEmpty() }?.joinToString(" | "),
+                rosterLoading = false,
             )
         }
     }
