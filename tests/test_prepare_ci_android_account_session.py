@@ -98,6 +98,25 @@ class PrepareCiAndroidAccountSessionTest(unittest.TestCase):
         self.assertNotIn("secret-user", message)
         self.assertNotIn("secret-password", message)
 
+    def test_ci_auth_origin_is_separate_and_https_only(self):
+        self.assertEqual(
+            "https://issuer.example",
+            MODULE.ci_auth_base_url({
+                "FABUSHI_CI_AUTH_BASE_URL": "https://issuer.example/",
+                "FABUSHI_API_BASE_URL": "https://app.example",
+            }),
+        )
+        self.assertEqual(
+            "https://app.example",
+            MODULE.ci_auth_base_url({"FABUSHI_API_BASE_URL": "https://app.example"}),
+        )
+        self.assertEqual(
+            "https://mahayana-platform.bhrumom.workers.dev",
+            MODULE.ci_auth_base_url({}),
+        )
+        with self.assertRaises(ValueError):
+            MODULE.ci_auth_base_url({"FABUSHI_CI_AUTH_BASE_URL": "http://issuer.example"})
+
 
 if __name__ == "__main__":
     unittest.main()
