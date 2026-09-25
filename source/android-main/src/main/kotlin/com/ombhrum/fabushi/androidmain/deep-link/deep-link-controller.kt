@@ -1,5 +1,6 @@
 package com.ombhrum.fabushi.androidmain.deeplink
 
+import com.ombhrum.fabushi.androidmain.auth.AndroidAuthCallbackRegistration
 import com.ombhrum.fabushi.androidpreload.deeplink.AndroidDeepLink
 import com.ombhrum.fabushi.androidpreload.deeplink.AuthCompletionStatus
 import com.ombhrum.fabushi.androidpreload.deeplink.AndroidDeepLinkSource
@@ -19,7 +20,7 @@ internal object AndroidDeepLinkRouter {
         if ('#' in raw || '\\' in raw || !hasValidPercentEncoding(raw)) return null
 
         val uri = runCatching { URI(raw) }.getOrNull() ?: return null
-        if (!uri.scheme.equals("fabushi", ignoreCase = true)) return null
+        if (!uri.scheme.equals(AndroidAuthCallbackRegistration.PROTOCOL_SCHEME, ignoreCase = true)) return null
         if (uri.userInfo != null || uri.port != -1 || uri.fragment != null) return null
         val host = uri.host?.lowercase().orEmpty()
         if (host.isBlank()) return null
