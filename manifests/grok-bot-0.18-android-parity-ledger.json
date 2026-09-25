@@ -24864,9 +24864,10 @@
       "android_target_path": "source/shared/src/box_runtime.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust implementation at exact ledger target with focused inline unit tests, exported by source/shared and exercised by cargo test --workspace --all-targets. Exact-HEAD CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation from externally observable behavior; no reconstructed source copied"
     },
     {
       "grok_path": "source/shared/box-secrets.ts",
@@ -24969,9 +24970,10 @@
       "android_target_path": "source/shared/src/env_file.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust implementation at exact ledger target with focused inline unit tests, exported by source/shared and exercised by cargo test --workspace --all-targets. Exact-HEAD CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation from externally observable behavior; no reconstructed source copied"
     },
     {
       "grok_path": "source/shared/errors.ts",
@@ -25034,9 +25036,10 @@
       "android_target_path": "source/shared/src/feedback.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust implementation at exact ledger target with focused inline unit tests, exported by source/shared and exercised by cargo test --workspace --all-targets. Exact-HEAD CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation from externally observable behavior; no reconstructed source copied"
     },
     {
       "grok_path": "source/shared/forever-box.ts",
@@ -25101,9 +25104,10 @@
       "android_target_path": "source/shared/src/host_settings.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust implementation at exact ledger target with focused inline unit tests, exported by source/shared and exercised by cargo test --workspace --all-targets. Exact-HEAD CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation from externally observable behavior; no reconstructed source copied"
     },
     {
       "grok_path": "source/shared/inference-router.ts",
@@ -25433,9 +25437,10 @@
       "android_target_path": "source/shared/src/message_reference.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust implementation at exact ledger target with focused inline unit tests, exported by source/shared and exercised by cargo test --workspace --all-targets. Exact-HEAD CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation from externally observable behavior; no reconstructed source copied"
     },
     {
       "grok_path": "source/shared/node/analytics/product-analytics.ts",
@@ -26306,9 +26311,10 @@
       "android_target_path": "source/shared/src/ordering.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust implementation at exact ledger target with focused inline unit tests, exported by source/shared and exercised by cargo test --workspace --all-targets. Exact-HEAD CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation from externally observable behavior; no reconstructed source copied"
     },
     {
       "grok_path": "source/shared/os-notification.ts",
@@ -26333,9 +26339,10 @@
       "android_target_path": "source/shared/src/persistence.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust implementation at exact ledger target with focused inline unit tests, exported by source/shared and exercised by cargo test --workspace --all-targets. Exact-HEAD CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation from externally observable behavior; no reconstructed source copied"
     },
     {
       "grok_path": "source/shared/pr-review.ts",
@@ -26359,9 +26366,10 @@
       "android_target_path": "source/shared/src/product_name.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust implementation at exact ledger target with focused inline unit tests, exported by source/shared and exercised by cargo test --workspace --all-targets. Exact-HEAD CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation from externally observable behavior; no reconstructed source copied"
     },
     {
       "grok_path": "source/shared/retry-after.ts",
@@ -26372,9 +26380,10 @@
       "android_target_path": "source/shared/src/retry_after.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust implementation at exact ledger target with focused inline unit tests, exported by source/shared and exercised by cargo test --workspace --all-targets. Exact-HEAD CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation from externally observable behavior; no reconstructed source copied"
     },
     {
       "grok_path": "source/shared/rpc/client-side-tool-v2-transport.ts",
@@ -26567,9 +26576,10 @@
       "android_target_path": "source/shared/src/send_acceptance.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust implementation at exact ledger target with focused inline unit tests, exported by source/shared and exercised by cargo test --workspace --all-targets. Exact-HEAD CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation from externally observable behavior; no reconstructed source copied"
     },
     {
       "grok_path": "source/shared/send-message-preview.ts",
@@ -26671,9 +26681,10 @@
       "android_target_path": "source/shared/src/transport_types.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust implementation at exact ledger target with focused inline unit tests, exported by source/shared and exercised by cargo test --workspace --all-targets. Exact-HEAD CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation from externally observable behavior; no reconstructed source copied"
     },
     {
       "grok_path": "source/shared/update-track.ts",
@@ -26697,9 +26708,10 @@
       "android_target_path": "source/shared/src/update.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust implementation at exact ledger target with focused inline unit tests, exported by source/shared and exercised by cargo test --workspace --all-targets. Exact-HEAD CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation from externally observable behavior; no reconstructed source copied"
     },
     {
       "grok_path": "source/shared/usage.ts",
@@ -26736,9 +26748,10 @@
       "android_target_path": "source/shared/src/vnc_viewer_visibility.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust implementation at exact ledger target with focused inline unit tests, exported by source/shared and exercised by cargo test --workspace --all-targets. Exact-HEAD CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust contract implementation from externally observable behavior; no reconstructed source copied"
     },
     {
       "grok_path": "source/shared/webauthn-gateway.ts",
@@ -26836,8 +26849,8 @@
     }
   ],
   "status_summary": {
-    "mapped": 1802,
-    "implemented": 234,
+    "mapped": 1789,
+    "implemented": 247,
     "verified": 10
   }
 }
