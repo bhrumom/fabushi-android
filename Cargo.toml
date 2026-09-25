@@ -16,6 +16,7 @@ members = [
   "source/packages/constants",
   "source/packages/mcp-core",
   "source/packages/redaction",
+  "source/packages/utils",
 ]
 
 [workspace.package]
