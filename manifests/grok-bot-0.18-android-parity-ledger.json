@@ -5966,10 +5966,13 @@
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/startup/move-to-applications-folder.ts#blob=51ccb7d28f6bcc1b84940cf581996eec62ab5ac6",
       "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/startup/move-to-applications-folder.kt",
       "target_language_runtime": "Kotlin / Android",
-      "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
+      "parity_class": "not-applicable",
+      "implementation_status": "verified",
+      "test_evidence": "Reviewed against frozen Grok blob 51ccb7d28f6bcc1b84940cf581996eec62ab5ac6; responsibility is exclusively desktop OS packaging/update mechanism. Android substitute behavior is validated by Android build/package/install/upgrade gates rather than a source counterpart.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters",
+      "not_applicable_reason": "macOS-only packaged-app relocation via Electron app.isInApplicationsFolder/moveToApplicationsFolder has no Android runtime equivalent. Android installation location is owned by PackageManager; Android acceptance covers APK install/upgrade instead.",
+      "not_applicable_reviewed": true,
+      "provenance_review": "reviewed as platform-specific mechanism; no reconstructed source copied"
     },
     {
       "grok_path": "source/electron-main/startup/startup-data-root-migration.ts",
@@ -6005,10 +6008,13 @@
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/startup/windows-user-data-migration.ts#blob=48493d6f77dbb0116320af3ea089941877a10e1d",
       "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/startup/windows-user-data-migration.kt",
       "target_language_runtime": "Kotlin / Android",
-      "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
+      "parity_class": "not-applicable",
+      "implementation_status": "verified",
+      "test_evidence": "Reviewed against frozen Grok blob 48493d6f77dbb0116320af3ea089941877a10e1d; responsibility is exclusively desktop OS packaging/update mechanism. Android substitute behavior is validated by Android build/package/install/upgrade gates rather than a source counterpart.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters",
+      "not_applicable_reason": "Windows-only migration between Sand/Grok Bot appData roots and --updated launch semantics do not exist on Android. Android uses package-scoped filesDir plus versioned app data migrations and process-recreation tests.",
+      "not_applicable_reviewed": true,
+      "provenance_review": "reviewed as platform-specific mechanism; no reconstructed source copied"
     },
     {
       "grok_path": "source/electron-main/telemetry/access-blocked-telemetry.ts",
@@ -6512,10 +6518,13 @@
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/update/squirrel-feed-server.ts#blob=985ab7076a9f9dd788952a0f82957145ce20326d",
       "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/update/squirrel-feed-server.kt",
       "target_language_runtime": "Kotlin / Android",
-      "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
+      "parity_class": "not-applicable",
+      "implementation_status": "verified",
+      "test_evidence": "Reviewed against frozen Grok blob 985ab7076a9f9dd788952a0f82957145ce20326d; responsibility is exclusively desktop OS packaging/update mechanism. Android substitute behavior is validated by Android build/package/install/upgrade gates rather than a source counterpart.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters",
+      "not_applicable_reason": "Squirrel desktop updater loopback HTTP feed serving update.zip is not used on Android. Android update/download/install behavior is covered by the Android update adapter and packaged APK acceptance.",
+      "not_applicable_reviewed": true,
+      "provenance_review": "reviewed as platform-specific mechanism; no reconstructed source copied"
     },
     {
       "grok_path": "source/electron-main/update/update-download.ts",
@@ -6603,10 +6612,13 @@
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/update/win32-installer.ts#blob=b337cd7ab8e9ca7d112dd9c18a309912b2de30d7",
       "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/update/win32-installer.kt",
       "target_language_runtime": "Kotlin / Android",
-      "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
+      "parity_class": "not-applicable",
+      "implementation_status": "verified",
+      "test_evidence": "Reviewed against frozen Grok blob b337cd7ab8e9ca7d112dd9c18a309912b2de30d7; responsibility is exclusively desktop OS packaging/update mechanism. Android substitute behavior is validated by Android build/package/install/upgrade gates rather than a source counterpart.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters",
+      "not_applicable_reason": "Windows-only PowerShell Authenticode verification and detached .exe installer execution are not applicable to Android. Android update provenance is verified on APK artifacts/signing/checksums and installation is PackageManager-owned.",
+      "not_applicable_reviewed": true,
+      "provenance_review": "reviewed as platform-specific mechanism; no reconstructed source copied"
     },
     {
       "grok_path": "source/electron-main/vnc/vnc-edge.ts",
@@ -26802,7 +26814,8 @@
     }
   ],
   "status_summary": {
-    "mapped": 1816,
-    "implemented": 230
+    "mapped": 1812,
+    "implemented": 230,
+    "verified": 4
   }
 }
