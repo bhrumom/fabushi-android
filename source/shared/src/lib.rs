@@ -26,3 +26,17 @@ pub mod mcp_oauth_callback_page;
 pub mod webauthn_proxy_availability;
 
 pub mod node;
+
+pub mod env_file;
+pub mod vnc_viewer_visibility;
+pub mod product_name;
+pub mod host_settings;
+pub mod message_reference;
+pub mod send_acceptance;
+pub mod ordering;
+pub mod transport_types;
+pub mod box_runtime;
+pub mod persistence;
+pub mod update;
+pub mod feedback;
+pub mod retry_after;
