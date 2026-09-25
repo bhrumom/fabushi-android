@@ -70,6 +70,34 @@ class PrepareCiAndroidAccountSessionTest(unittest.TestCase):
             MODULE.atomic_private_write(path, {"accessToken": "a" * 40})
             self.assertEqual(0, path.stat().st_mode & 0o077)
 
+    def test_login_http_error_reports_only_server_reason(self):
+        import io
+        import urllib.error
+        from unittest import mock
+
+        body = b'{"error":{"code":"policy_blocked","message":"CI login denied"}}'
+        error = urllib.error.HTTPError(
+            "https://example.invalid/api/auth/login",
+            403,
+            "Forbidden",
+            {},
+            io.BytesIO(body),
+        )
+        with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=error):
+            with self.assertRaisesRegex(
+                RuntimeError,
+                r"HTTP 403: policy_blocked CI login denied",
+            ) as raised:
+                MODULE.login(
+                    base_url="https://example.invalid",
+                    username="secret-user",
+                    password="secret-password",
+                    device_id="gha-12345-2-interactive",
+                )
+        message = str(raised.exception)
+        self.assertNotIn("secret-user", message)
+        self.assertNotIn("secret-password", message)
+
 
 if __name__ == "__main__":
     unittest.main()
