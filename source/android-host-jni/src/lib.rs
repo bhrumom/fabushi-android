@@ -1,0 +1,804 @@
+use fabushi_android_shared::{
+    CoordinatorFailure, CoordinatorFailureCode, CoordinatorRequest, ResyncRequest,
+    COORDINATOR_PROTOCOL_VERSION,
+};
+use fabushi_mahayana_agent_coordinator::{
+    oauth::{
+        mcp_oauth_callback_listener::OAuthCallback,
+        mcp_oauth_forwarder::OAuthForwarder,
+    },
+    HostPort, MahayanaCoordinator,
+};
+use fabushi_mahayana_host::android_json_runtime::{AndroidHostMode, AndroidJsonHost};
+use serde_json::{json, Value};
+use std::path::PathBuf;
+
+struct CoordinatorHost {
+    runtime: AndroidJsonHost,
+}
+
+impl HostPort for CoordinatorHost {
+    fn execute(&mut self, request: &CoordinatorRequest) -> Result<String, CoordinatorFailure> {
+        let params: Value = serde_json::from_str(&request.params_json).map_err(|error| {
+            CoordinatorFailure::new(
+                CoordinatorFailureCode::MalformedRequest,
+                format!("invalid Host params JSON: {error}"),
+            )
+        })?;
+        self.runtime
+            .dispatch(&request.method, &params)
+            .map(|value| value.to_string())
+            .map_err(|message| {
+                CoordinatorFailure::new(CoordinatorFailureCode::HostUnavailable, message)
+            })
+    }
+
+    fn cancel(
+        &mut self,
+        operation_id: &str,
+        reason: Option<&str>,
+    ) -> Result<(), CoordinatorFailure> {
+        self.runtime
+            .cancel_operation(operation_id, reason)
+            .map_err(|message| CoordinatorFailure::new(CoordinatorFailureCode::Internal, message))
+    }
+}
+
+pub struct AndroidNativeRuntime {
+    coordinator: MahayanaCoordinator<CoordinatorHost>,
+    mcp_oauth: OAuthForwarder,
+    next_request_id: u64,
+}
+
+impl AndroidNativeRuntime {
+    pub fn new(
+        app_data_dir: impl Into<PathBuf>,
+        mode: AndroidHostMode,
+        generation: u64,
+    ) -> Self {
+        Self {
+            coordinator: MahayanaCoordinator::with_generation(
+                CoordinatorHost {
+                    runtime: AndroidJsonHost::new(app_data_dir, mode),
+                },
+                generation,
+                512,
+            ),
+            mcp_oauth: OAuthForwarder::default(),
+            next_request_id: 0,
+        }
+    }
+
+    pub fn dispatch_legacy_json(&mut self, input: &str) -> String {
+        let envelope: Value = match serde_json::from_str(input) {
+            Ok(value) => value,
+            Err(error) => {
+                return error_response(None, format!("invalid request JSON: {error}"));
+            }
+        };
+        let method = match envelope.get("method").and_then(Value::as_str) {
+            Some(method) if !method.trim().is_empty() => method,
+            _ => {
+                return error_response(
+                    envelope.get("id").cloned(),
+                    "method is required".into(),
+                );
+            }
+        };
+        let params = envelope
+            .get("params")
+            .cloned()
+            .unwrap_or_else(|| json!({}));
+
+        match method {
+            "coordinator.status" => self.coordinator_status(envelope.get("id").cloned()),
+            "coordinator.resync" => {
+                self.coordinator_resync(envelope.get("id").cloned(), &params)
+            }
+            "coordinator.publishEvent" => {
+                self.coordinator_publish_event(envelope.get("id").cloned(), &params)
+            }
+            "coordinator.mcpOAuth.register" => {
+                self.coordinator_mcp_oauth_register(envelope.get("id").cloned(), &params)
+            }
+            "coordinator.mcpOAuth.complete" => {
+                self.coordinator_mcp_oauth_complete(envelope.get("id").cloned(), &params)
+            }
+            "coordinator.mcpOAuth.status" => {
+                success_response(
+                    envelope.get("id").cloned(),
+                    json!({"pendingCount": self.mcp_oauth.pending_count()}),
+                )
+            }
+            "feature.interrupt" => {
+                self.coordinator_interrupt(envelope.get("id").cloned(), &params)
+            }
+            _ => self.dispatch_host_request(&envelope, method, params),
+        }
+    }
+
+    fn dispatch_host_request(&mut self, envelope: &Value, method: &str, params: Value) -> String {
+        self.next_request_id = self.next_request_id.saturating_add(1);
+        let request_id = envelope
+            .get("id")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+            .map(str::to_string)
+            .or_else(|| {
+                (method == "feature.execute")
+                    .then(|| {
+                        params
+                            .get("command")
+                            .and_then(|command| command.get("requestId"))
+                            .and_then(Value::as_str)
+                            .filter(|value| !value.trim().is_empty())
+                            .map(str::to_string)
+                    })
+                    .flatten()
+            })
+            .unwrap_or_else(|| format!("jni-{:016}", self.next_request_id));
+
+        let request = CoordinatorRequest {
+            protocol_version: COORDINATOR_PROTOCOL_VERSION,
+            request_id: request_id.clone(),
+            session_id: "android-process".into(),
+            method: method.to_string(),
+            params_json: params.to_string(),
+            deadline_ms: None,
+        };
+
+        let reply = if method == "feature.execute" {
+            self.coordinator.request_deferred(request)
+        } else {
+            self.coordinator.request(request)
+        };
+
+        let mut result = match reply.result_json {
+            Ok(result_json) => serde_json::from_str::<Value>(&result_json)
+                .unwrap_or_else(|_| Value::String(result_json)),
+            Err(failure) => {
+                return failure_response(envelope.get("id").cloned(), failure);
+            }
+        };
+
+        if method == "feature.execute" {
+            if result.get("accepted").and_then(Value::as_bool) == Some(true) {
+                if let Some(operation_id) = result
+                    .get("operationId")
+                    .and_then(Value::as_str)
+                    .filter(|value| !value.trim().is_empty())
+                {
+                    if let Err(failure) =
+                        self.coordinator.bind_operation(&request_id, operation_id)
+                    {
+                        return failure_response(envelope.get("id").cloned(), failure);
+                    }
+                } else {
+                    let failure = CoordinatorFailure::new(
+                        CoordinatorFailureCode::ProtocolBreach,
+                        "accepted feature.execute response is missing operationId",
+                    );
+                    return failure_response(envelope.get("id").cloned(), failure);
+                }
+            } else {
+                let _ = self
+                    .coordinator
+                    .complete_request(&request_id, Ok(result.to_string()));
+            }
+        }
+
+        if method == "feature.receive" {
+            self.record_received_event(&mut result);
+        }
+
+        success_response(envelope.get("id").cloned(), result)
+    }
+
+    fn record_received_event(&mut self, result: &mut Value) {
+        let Some(family) = result
+            .get("type")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+            .map(str::to_string)
+        else {
+            return;
+        };
+        let operation_id = result
+            .get("operationId")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+            .map(str::to_string);
+        let terminal = matches!(
+            family.as_str(),
+            "operation.completed" | "operation.interrupted" | "operation.failed"
+        );
+        let event = self.coordinator.record_operation_event(
+            "android-process",
+            family,
+            result.to_string(),
+            operation_id.as_deref(),
+            terminal,
+        );
+        if let Some(object) = result.as_object_mut() {
+            object.insert(
+                "_coordinator".into(),
+                json!({
+                    "generation": self.coordinator.generation(),
+                    "sequence": event.sequence,
+                    "eventId": event.event_id,
+                }),
+            );
+        }
+    }
+
+    fn coordinator_publish_event(&mut self, id: Option<Value>, params: &Value) -> String {
+        let Some(event) = params.get("event") else {
+            return error_response(id, "event is required".into());
+        };
+        let Some(family) = event
+            .get("type")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+        else {
+            return error_response(id, "event.type is required".into());
+        };
+        let operation_id = event
+            .get("operationId")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty());
+        let terminal = matches!(
+            family,
+            "operation.completed" | "operation.interrupted" | "operation.failed"
+        );
+        let recorded = self.coordinator.record_operation_event(
+            "android-process",
+            family,
+            event.to_string(),
+            operation_id,
+            terminal,
+        );
+        success_response(
+            id,
+            json!({
+                "generation": self.coordinator.generation(),
+                "sequence": recorded.sequence,
+                "eventId": recorded.event_id,
+            }),
+        )
+    }
+
+    fn coordinator_mcp_oauth_register(&mut self, id: Option<Value>, params: &Value) -> String {
+        let Some(state) = params
+            .get("state")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+        else {
+            return error_response(id, "state is required".into());
+        };
+        let Some(provider) = params
+            .get("provider")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+        else {
+            return error_response(id, "provider is required".into());
+        };
+
+        match self.mcp_oauth.register(state, provider) {
+            Ok(()) => success_response(
+                id,
+                json!({
+                    "registered": true,
+                    "pendingCount": self.mcp_oauth.pending_count(),
+                }),
+            ),
+            Err(message) => error_response(id, message.into()),
+        }
+    }
+
+    fn coordinator_mcp_oauth_complete(&mut self, id: Option<Value>, params: &Value) -> String {
+        let Some(state) = params
+            .get("state")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+        else {
+            return error_response(id, "state is required".into());
+        };
+        let code = params
+            .get("code")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+            .map(str::to_string);
+        let error = params
+            .get("error")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+            .map(str::to_string);
+
+        let (provider, callback) = match self.mcp_oauth.forward(OAuthCallback {
+            state: state.to_string(),
+            code,
+            error,
+        }) {
+            Ok(value) => value,
+            Err(message) => return error_response(id, message.into()),
+        };
+
+        self.next_request_id = self.next_request_id.saturating_add(1);
+        let host_request_id = format!("mcp-oauth-{:016}", self.next_request_id);
+        let host_params = json!({
+            "provider": provider.clone(),
+            "state": callback.state,
+            "code": callback.code,
+            "error": callback.error,
+        });
+        let host_reply = self.coordinator.request(CoordinatorRequest {
+            protocol_version: COORDINATOR_PROTOCOL_VERSION,
+            request_id: host_request_id,
+            session_id: "android-process".into(),
+            method: "feature.mcp.oauthComplete".into(),
+            params_json: host_params.to_string(),
+            deadline_ms: None,
+        });
+        let host_result = match host_reply.result_json {
+            Ok(raw) => serde_json::from_str::<Value>(&raw)
+                .unwrap_or_else(|_| json!({"outcome":"completed"})),
+            Err(failure) => return failure_response(id, failure),
+        };
+
+        success_response(
+            id,
+            json!({
+                "provider": provider,
+                "state": state,
+                "outcome": host_result
+                    .get("outcome")
+                    .and_then(Value::as_str)
+                    .unwrap_or("completed"),
+                "pendingCount": self.mcp_oauth.pending_count(),
+            }),
+        )
+    }
+
+    fn coordinator_interrupt(&mut self, id: Option<Value>, params: &Value) -> String {
+        let Some(operation_id) = params
+            .get("operationId")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+        else {
+            return error_response(id, "operationId is required".into());
+        };
+        let reason = params
+            .get("reason")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+            .or(Some("user"));
+
+        let reply = self.coordinator.cancel_operation(operation_id, reason);
+        match reply.result_json {
+            Err(failure) if failure.code == CoordinatorFailureCode::Cancelled => {
+                success_response(
+                    id,
+                    json!({
+                        "operationId": operation_id,
+                        "status": "interrupted",
+                    }),
+                )
+            }
+            Err(failure) => failure_response(id, failure),
+            Ok(_) => success_response(
+                id,
+                json!({
+                    "operationId": operation_id,
+                    "status": "interrupted",
+                }),
+            ),
+        }
+    }
+
+    fn coordinator_status(&self, id: Option<Value>) -> String {
+        success_response(
+            id,
+            json!({
+                "generation": self.coordinator.generation(),
+                "latestSequence": self.coordinator.latest_sequence(),
+                "activeRequestCount": self.coordinator.active_request_count(),
+            }),
+        )
+    }
+
+    fn coordinator_resync(&self, id: Option<Value>, params: &Value) -> String {
+        let Some(generation) = params.get("generation").and_then(Value::as_u64) else {
+            return error_response(id, "generation is required".into());
+        };
+        let after_sequence = params
+            .get("afterSequence")
+            .and_then(Value::as_u64)
+            .unwrap_or(0);
+
+        match self.coordinator.resync(ResyncRequest {
+            generation,
+            after_sequence,
+        }) {
+            Ok(snapshot) => {
+                let events = snapshot
+                    .events
+                    .into_iter()
+                    .map(|event| {
+                        let payload = serde_json::from_str::<Value>(&event.payload_json)
+                            .unwrap_or_else(|_| Value::String(event.payload_json));
+                        json!({
+                            "eventId": event.event_id,
+                            "sessionId": event.session_id,
+                            "sequence": event.sequence,
+                            "family": event.family,
+                            "payload": payload,
+                        })
+                    })
+                    .collect::<Vec<_>>();
+                success_response(
+                    id,
+                    json!({
+                        "generation": snapshot.generation,
+                        "latestSequence": snapshot.latest_sequence,
+                        "events": events,
+                    }),
+                )
+            }
+            Err(failure) => failure_response(id, failure),
+        }
+    }
+
+    pub fn generation(&self) -> u64 {
+        self.coordinator.generation()
+    }
+}
+
+fn success_response(id: Option<Value>, result: Value) -> String {
+    json!({
+        "id": id.unwrap_or(Value::Null),
+        "ok": true,
+        "result": result,
+    })
+    .to_string()
+}
+
+fn failure_response(id: Option<Value>, failure: CoordinatorFailure) -> String {
+    json!({
+        "id": id.unwrap_or(Value::Null),
+        "ok": false,
+        "error": format!("{}: {}", failure.code, failure.message),
+        "errorCode": failure.code.to_string(),
+    })
+    .to_string()
+}
+
+fn error_response(id: Option<Value>, error: String) -> String {
+    json!({
+        "id": id.unwrap_or(Value::Null),
+        "ok": false,
+        "error": error,
+    })
+    .to_string()
+}
+
+#[cfg(target_os = "android")]
+mod android_jni {
+    use super::*;
+    use jni::objects::{JObject, JString};
+    use jni::sys::{jlong, jstring};
+    use jni::JNIEnv;
+
+    fn create(
+        mut env: JNIEnv,
+        app_data_dir: JString,
+        mode: AndroidHostMode,
+        generation: u64,
+    ) -> jlong {
+        let path = match env.get_string(&app_data_dir) {
+            Ok(value) => PathBuf::from(value.to_string_lossy().into_owned()),
+            Err(_) => return 0,
+        };
+        Box::into_raw(Box::new(AndroidNativeRuntime::new(path, mode, generation))) as jlong
+    }
+
+    #[no_mangle]
+    pub extern "system" fn Java_com_ombhrum_fabushi_core_MahayanaHost_nativeCreate(
+        env: JNIEnv,
+        _object: JObject,
+        app_data_dir: JString,
+        process_generation: jlong,
+    ) -> jlong {
+        let generation = u64::try_from(process_generation).unwrap_or(1).max(1);
+        create(
+            env,
+            app_data_dir,
+            AndroidHostMode::Production,
+            generation,
+        )
+    }
+
+    #[no_mangle]
+    pub extern "system" fn Java_com_ombhrum_fabushi_core_MahayanaHost_nativeCreateTest(
+        env: JNIEnv,
+        _object: JObject,
+        app_data_dir: JString,
+    ) -> jlong {
+        create(env, app_data_dir, AndroidHostMode::Test, 1)
+    }
+
+    #[no_mangle]
+    pub extern "system" fn Java_com_ombhrum_fabushi_core_MahayanaHost_nativeDispatch(
+        mut env: JNIEnv,
+        _object: JObject,
+        handle: jlong,
+        request_json: JString,
+    ) -> jstring {
+        if handle == 0 {
+            return env
+                .new_string("{\"ok\":false,\"error\":\"native runtime is not initialized\"}")
+                .map(|value| value.into_raw())
+                .unwrap_or(std::ptr::null_mut());
+        }
+        let input = match env.get_string(&request_json) {
+            Ok(value) => value.to_string_lossy().into_owned(),
+            Err(error) => {
+                return env
+                    .new_string(error_response(
+                        None,
+                        format!("invalid request string: {error}"),
+                    ))
+                    .map(|value| value.into_raw())
+                    .unwrap_or(std::ptr::null_mut())
+            }
+        };
+        let runtime = unsafe { &mut *(handle as *mut AndroidNativeRuntime) };
+        env.new_string(runtime.dispatch_legacy_json(&input))
+            .map(|value| value.into_raw())
+            .unwrap_or(std::ptr::null_mut())
+    }
+
+    #[no_mangle]
+    pub extern "system" fn Java_com_ombhrum_fabushi_core_MahayanaHost_nativeDestroy(
+        _env: JNIEnv,
+        _object: JObject,
+        handle: jlong,
+    ) {
+        if handle != 0 {
+            unsafe {
+                drop(Box::from_raw(handle as *mut AndroidNativeRuntime));
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn call(runtime: &mut AndroidNativeRuntime, request: Value) -> Value {
+        serde_json::from_str(&runtime.dispatch_legacy_json(&request.to_string())).unwrap()
+    }
+
+    #[test]
+    fn legacy_jni_envelope_routes_through_coordinator_into_test_host() {
+        let mut runtime =
+            AndroidNativeRuntime::new("/tmp/fabushi-jni-test", AndroidHostMode::Test, 5);
+        let response = call(
+            &mut runtime,
+            json!({"method":"feature.info","params":{}}),
+        );
+        assert_eq!(response["ok"], true);
+        assert_eq!(response["result"]["platform"], "android");
+        assert!(response["result"]["runtimeVersion"]
+            .as_str()
+            .unwrap()
+            .contains("test"));
+        assert_eq!(runtime.generation(), 5);
+    }
+
+    #[test]
+    fn streaming_operation_is_active_until_terminal_event_and_replayable() {
+        let mut runtime =
+            AndroidNativeRuntime::new("/tmp/fabushi-jni-stream", AndroidHostMode::Test, 9);
+
+        let accepted = call(
+            &mut runtime,
+            json!({
+                "method":"feature.execute",
+                "params":{"command":{
+                    "type":"chat.send",
+                    "requestId":"stream-1",
+                    "text":"hello"
+                }}
+            }),
+        );
+        assert_eq!(accepted["ok"], true);
+        assert_eq!(accepted["result"]["operationId"], "stream-1");
+
+        let status = call(&mut runtime, json!({"method":"coordinator.status","params":{}}));
+        assert_eq!(status["result"]["generation"], 9);
+        assert_eq!(status["result"]["activeRequestCount"], 1);
+
+        let mut terminal_sequence = 0;
+        for _ in 0..8 {
+            let event = call(
+                &mut runtime,
+                json!({"method":"feature.receive","params":{}}),
+            );
+            let result = &event["result"];
+            if result["type"] == "operation.completed" {
+                terminal_sequence = result["_coordinator"]["sequence"].as_u64().unwrap();
+                break;
+            }
+        }
+        assert!(terminal_sequence > 0);
+
+        let settled = call(&mut runtime, json!({"method":"coordinator.status","params":{}}));
+        assert_eq!(settled["result"]["activeRequestCount"], 0);
+
+        let replay = call(
+            &mut runtime,
+            json!({
+                "method":"coordinator.resync",
+                "params":{"generation":9,"afterSequence":0}
+            }),
+        );
+        assert_eq!(replay["ok"], true);
+        assert!(replay["result"]["events"].as_array().unwrap().len() >= 2);
+
+        let stale = call(
+            &mut runtime,
+            json!({
+                "method":"coordinator.resync",
+                "params":{"generation":8,"afterSequence":0}
+            }),
+        );
+        assert_eq!(stale["ok"], false);
+        assert_eq!(stale["errorCode"], "stale-generation");
+    }
+
+    #[test]
+    fn android_adapter_events_share_native_replay_sequence() {
+        let mut runtime =
+            AndroidNativeRuntime::new("/tmp/fabushi-jni-adapter", AndroidHostMode::Test, 4);
+        let published = call(
+            &mut runtime,
+            json!({
+                "method":"coordinator.publishEvent",
+                "params":{"event":{
+                    "type":"mcp.result",
+                    "operationId":"external-1",
+                    "tool":"files.read"
+                }}
+            }),
+        );
+        assert_eq!(published["ok"], true);
+        assert_eq!(published["result"]["generation"], 4);
+        assert_eq!(published["result"]["sequence"], 1);
+
+        let replay = call(
+            &mut runtime,
+            json!({
+                "method":"coordinator.resync",
+                "params":{"generation":4,"afterSequence":0}
+            }),
+        );
+        assert_eq!(replay["result"]["events"][0]["family"], "mcp.result");
+        assert_eq!(
+            replay["result"]["events"][0]["payload"]["tool"],
+            "files.read"
+        );
+    }
+
+    #[test]
+    fn interrupt_uses_coordinator_cancel_and_emits_terminal_event() {
+        let mut runtime =
+            AndroidNativeRuntime::new("/tmp/fabushi-jni-cancel", AndroidHostMode::Test, 3);
+        let accepted = call(
+            &mut runtime,
+            json!({
+                "method":"feature.execute",
+                "params":{"command":{
+                    "type":"runtime.longTask",
+                    "requestId":"long-1"
+                }}
+            }),
+        );
+        assert_eq!(accepted["result"]["operationId"], "long-1");
+
+        let interrupted = call(
+            &mut runtime,
+            json!({
+                "method":"feature.interrupt",
+                "params":{"operationId":"long-1"}
+            }),
+        );
+        assert_eq!(interrupted["ok"], true);
+        assert_eq!(interrupted["result"]["status"], "interrupted");
+
+        let event = call(
+            &mut runtime,
+            json!({"method":"feature.receive","params":{}}),
+        );
+        assert_eq!(event["result"]["type"], "operation.started");
+        let terminal = call(
+            &mut runtime,
+            json!({"method":"feature.receive","params":{}}),
+        );
+        assert_eq!(terminal["result"]["type"], "operation.interrupted");
+        assert!(terminal["result"]["_coordinator"]["sequence"]
+            .as_u64()
+            .unwrap()
+            > 0);
+    }
+
+    #[test]
+    fn unknown_renderer_method_fails_closed() {
+        let mut runtime =
+            AndroidNativeRuntime::new("/tmp/fabushi-jni-prod", AndroidHostMode::Production, 1);
+        let response = call(
+            &mut runtime,
+            json!({"method":"renderer.execAnything","params":{}}),
+        );
+        assert_eq!(response["ok"], false);
+        assert!(response["error"]
+            .as_str()
+            .unwrap()
+            .contains("unknown host method"));
+    }
+    #[test]
+    fn mcp_oauth_callback_is_single_use_and_host_event_does_not_echo_code() {
+        let mut runtime =
+            AndroidNativeRuntime::new("/tmp/fabushi-jni-mcp-oauth", AndroidHostMode::Test, 13);
+        let state = "0123456789abcdef0123456789abcdef";
+
+        let registered = call(
+            &mut runtime,
+            json!({
+                "method":"coordinator.mcpOAuth.register",
+                "params":{"state":state,"provider":"github"}
+            }),
+        );
+        assert_eq!(registered["ok"], true);
+        assert_eq!(registered["result"]["registered"], true);
+
+        let completed = call(
+            &mut runtime,
+            json!({
+                "method":"coordinator.mcpOAuth.complete",
+                "params":{"state":state,"code":"secret-oauth-code"}
+            }),
+        );
+        assert_eq!(completed["ok"], true);
+        assert_eq!(completed["result"]["provider"], "github");
+        assert_eq!(completed["result"]["outcome"], "completed");
+        assert!(completed["result"].get("code").is_none());
+
+        let duplicate = call(
+            &mut runtime,
+            json!({
+                "method":"coordinator.mcpOAuth.complete",
+                "params":{"state":state,"code":"second-code"}
+            }),
+        );
+        assert_eq!(duplicate["ok"], false);
+
+        let mut saw_completion = false;
+        for _ in 0..8 {
+            let event = call(
+                &mut runtime,
+                json!({"method":"feature.receive","params":{}}),
+            );
+            let result = &event["result"];
+            if result["type"] == "mcp.auth.completed" {
+                saw_completion = true;
+                assert_eq!(result["provider"], "github");
+                assert!(result.get("code").is_none());
+                assert!(!result.to_string().contains("secret-oauth-code"));
+                break;
+            }
+        }
+        assert!(saw_completion);
+    }
+
+}

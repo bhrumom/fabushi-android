@@ -1,0 +1,16 @@
+[package]
+name = "fabushi-mahayana-host"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+autobins = false
+
+[dependencies]
+fabushi-android-shared = { path = "../shared" }
+fabushi-constants = { path = "../packages/constants" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ureq = { version = "2.12", features = ["json"] }
+
+[lib]
+path = "src/lib.rs"

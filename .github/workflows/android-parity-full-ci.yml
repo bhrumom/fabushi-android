@@ -1,0 +1,175 @@
+name: Android Parity Full CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  architecture-and-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Validate frozen inventory and current ledger
+        run: python scripts/check_grok_android_parity.py
+      - name: Test architecture checker
+        run: python -m unittest discover -s tests -p 'test_*.py'
+      - name: Run strict architecture gate and expose migration debt
+        id: strict
+        continue-on-error: true
+        run: python scripts/check_grok_android_parity.py --strict
+      - name: Record strict gate outcome
+        run: |
+          mkdir -p evidence
+          printf 'head=%s\nstrict_outcome=%s\n' "$SOURCE_SHA" "${{ steps.strict.outcome }}" > evidence/architecture-gate.txt
+      - name: Rust contract/runtime tests
+        run: cargo test --workspace --all-targets
+      - uses: actions/upload-artifact@v4
+        with:
+          name: architecture-contract-evidence-${{ env.SOURCE_SHA }}
+          path: evidence/architecture-gate.txt
+          if-no-files-found: error
+
+  android-build-unit-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,x86_64-linux-android
+      - name: Install Android NDK for native Host
+        run: sdkmanager 'ndk;28.2.13676358'
+      - name: Install cargo-ndk
+        run: command -v cargo-ndk >/dev/null 2>&1 || cargo install cargo-ndk --locked
+      - name: Build exact-HEAD native Mahayana Coordinator Host
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/28.2.13676358
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/28.2.13676358
+        run: |
+          set -eu
+          rm -rf mobile/android/app/src/main/jniLibs
+          cargo ndk -t arm64-v8a -t x86_64 -o mobile/android/app/src/main/jniLibs build --release -p fabushi-android-host-jni
+          test -s mobile/android/app/src/main/jniLibs/arm64-v8a/libmahayana_app_host.so
+          test -s mobile/android/app/src/main/jniLibs/x86_64/libmahayana_app_host.so
+      - name: Compile, unit-test, lint, and assemble production-path acceptance APKs
+        working-directory: mobile/android
+        run: |
+          set -eu
+          ./gradlew --no-daemon clean             assembleDebug             assembleCiAcceptance             assembleCiAcceptanceAndroidTest             testCiAcceptanceUnitTest             lintDebug
+      - name: Record exact-HEAD APK identities
+        working-directory: mobile/android
+        run: |
+          set -eu
+          DEBUG_APK="app/build/outputs/apk/debug/app-debug.apk"
+          CI_APK="$(find app/build/outputs/apk/ciAcceptance -type f -name '*.apk' -print -quit)"
+          CI_TEST_APK="$(find app/build/outputs/apk/androidTest/ciAcceptance -type f -name '*.apk' -print -quit)"
+          test -s "$DEBUG_APK"
+          test -s "$CI_APK"
+          test -s "$CI_TEST_APK"
+          cp "$DEBUG_APK" "fabushi-android-${SOURCE_SHA}.apk"
+          cp "$CI_APK" "fabushi-android-ci-acceptance-${SOURCE_SHA}.apk"
+          cp "$CI_TEST_APK" "fabushi-android-ci-acceptance-test-${SOURCE_SHA}.apk"
+          sha256sum             "fabushi-android-${SOURCE_SHA}.apk"             "fabushi-android-ci-acceptance-${SOURCE_SHA}.apk"             "fabushi-android-ci-acceptance-test-${SOURCE_SHA}.apk"             > exact-head-apks.sha256
+          printf 'head=%s\n' "$SOURCE_SHA" > artifact-identity.txt
+          cat exact-head-apks.sha256 >> artifact-identity.txt
+          find app/src/main/jniLibs -type f -name 'libmahayana_app_host.so' -print0 | sort -z | xargs -0 sha256sum > native-jni.sha256
+          cat native-jni.sha256 >> artifact-identity.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-exact-head-apks-${{ env.SOURCE_SHA }}
+          path: |
+            mobile/android/fabushi-android-${{ env.SOURCE_SHA }}.apk
+            mobile/android/fabushi-android-ci-acceptance-${{ env.SOURCE_SHA }}.apk
+            mobile/android/fabushi-android-ci-acceptance-test-${{ env.SOURCE_SHA }}.apk
+            mobile/android/exact-head-apks.sha256
+            mobile/android/artifact-identity.txt
+            mobile/android/native-jni.sha256
+          if-no-files-found: error
+
+  android-emulator-instrumentation:
+    needs: android-build-unit-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-exact-head-apks-${{ env.SOURCE_SHA }}
+          path: exact-head-apk
+      - name: Verify downloaded exact-HEAD APK identities
+        run: |
+          set -eu
+          test -s "exact-head-apk/fabushi-android-ci-acceptance-${SOURCE_SHA}.apk"
+          test -s "exact-head-apk/fabushi-android-ci-acceptance-test-${SOURCE_SHA}.apk"
+          (cd exact-head-apk && sha256sum -c exact-head-apks.sha256)
+          grep -F "head=${SOURCE_SHA}" exact-head-apk/artifact-identity.txt
+      - name: Prepare bounded authenticated App session
+        env:
+          FABUSHI_CI_TEST_USERNAME: ${{ secrets.FABUSHI_CI_TEST_USERNAME }}
+          FABUSHI_CI_TEST_PASSWORD: ${{ secrets.FABUSHI_CI_TEST_PASSWORD }}
+          FABUSHI_API_BASE_URL: ${{ vars.FABUSHI_API_BASE_URL || 'https://api.ombhrum.com' }}
+          FABUSHI_CI_AUTH_BASE_URL: ${{ vars.FABUSHI_CI_AUTH_BASE_URL || 'https://mahayana-platform.bhrumom.workers.dev' }}
+          DEVICE_ID: gha-${{ github.run_id }}-${{ github.run_attempt }}-interactive
+          FABUSHI_CI_ACCOUNT_SESSION_FILE: ${{ runner.temp }}/fabushi-android-ci/session.json
+        run: |
+          set -euo pipefail
+          test -n "$FABUSHI_CI_TEST_USERNAME"
+          test -n "$FABUSHI_CI_TEST_PASSWORD"
+          python scripts/prepare_ci_android_account_session.py
+          test -s "$FABUSHI_CI_ACCOUNT_SESSION_FILE"
+          test "$(stat -c '%a' "$FABUSHI_CI_ACCOUNT_SESSION_FILE")" = 600
+          python - "$FABUSHI_CI_ACCOUNT_SESSION_FILE" <<'PY'
+          import json,sys
+          value=json.load(open(sys.argv[1],encoding="utf-8"))
+          assert "refreshToken" not in value
+          assert value.get("provider") == "github-actions"
+          assert value.get("ciRunner") is True
+          PY
+          echo "FABUSHI_CI_ACCOUNT_SESSION_FILE=$FABUSHI_CI_ACCOUNT_SESSION_FILE" >> "$GITHUB_ENV"
+          echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_7
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          working-directory: mobile/android
+          script: bash ../../scripts/android_emulator_acceptance.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-emulator-evidence-${{ env.SOURCE_SHA }}
+          path: evidence/emulator
+          if-no-files-found: warn
