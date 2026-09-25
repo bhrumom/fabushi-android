@@ -4681,10 +4681,13 @@
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/application-menu.ts#blob=f8c51e4ac01815849d1e6cc2f58108f50200a46d",
       "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/application-menu.kt",
       "target_language_runtime": "Kotlin / Android",
-      "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
+      "parity_class": "not-applicable",
+      "implementation_status": "verified",
+      "test_evidence": "Reviewed against frozen Grok blob f8c51e4ac01815849d1e6cc2f58108f50200a46d; Android-specific equivalent product behavior is owned by Activity/Compose/Coordinator lifecycle rather than Electron BrowserWindow APIs.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters",
+      "not_applicable_reason": "Electron/macOS/Windows application-menu construction and menu roles are desktop shell mechanics. Android exposes About/Feedback/help through Compose navigation; it has no process-wide Electron application menu.",
+      "not_applicable_reviewed": true,
+      "provenance_review": "reviewed as Electron-only shell/transport mechanism; no reconstructed source copied"
     },
     {
       "grok_path": "source/electron-main/attachments/attachment-manager.ts",
@@ -5373,10 +5376,13 @@
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/host-window-chords.ts#blob=e1569ddb25b5dd9e9529ca4fa4a721587ad3aa46",
       "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/host-window-chords.kt",
       "target_language_runtime": "Kotlin / Android",
-      "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
+      "parity_class": "not-applicable",
+      "implementation_status": "verified",
+      "test_evidence": "Reviewed against frozen Grok blob e1569ddb25b5dd9e9529ca4fa4a721587ad3aa46; Android-specific equivalent product behavior is owned by Activity/Compose/Coordinator lifecycle rather than Electron BrowserWindow APIs.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters",
+      "not_applicable_reason": "BrowserWindow/WebContents zoom, reload, fullscreen, DevTools and quit chord interception is an Electron desktop input mechanism. Android uses Activity/Compose input and lifecycle; these desktop chords are not a required Android runtime surface.",
+      "not_applicable_reviewed": true,
+      "provenance_review": "reviewed as Electron-only shell/transport mechanism; no reconstructed source copied"
     },
     {
       "grok_path": "source/electron-main/local-exec/local-exec-lifecycle-telemetry.ts",
@@ -6667,10 +6673,13 @@
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/window-broadcast.ts#blob=222ecc36bccdd419bb821050d9a7d4d96f7300f8",
       "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/window-broadcast.kt",
       "target_language_runtime": "Kotlin / Android",
-      "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
+      "parity_class": "not-applicable",
+      "implementation_status": "verified",
+      "test_evidence": "Reviewed against frozen Grok blob 222ecc36bccdd419bb821050d9a7d4d96f7300f8; Android-specific equivalent product behavior is owned by Activity/Compose/Coordinator lifecycle rather than Electron BrowserWindow APIs.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters",
+      "not_applicable_reason": "Broadcasting IPC to every Electron BrowserWindow is a multi-BrowserWindow transport mechanism. Android uses process-scoped typed Coordinator flows to the active renderer and does not instantiate Electron windows.",
+      "not_applicable_reviewed": true,
+      "provenance_review": "reviewed as Electron-only shell/transport mechanism; no reconstructed source copied"
     },
     {
       "grok_path": "source/electron-main/window-chrome.ts",
@@ -6693,10 +6702,13 @@
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/window-shortcuts.ts#blob=7d478de120af3a660441d7d16a7991f8f9bf646f",
       "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/window-shortcuts.kt",
       "target_language_runtime": "Kotlin / Android",
-      "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
+      "parity_class": "not-applicable",
+      "implementation_status": "verified",
+      "test_evidence": "Reviewed against frozen Grok blob 7d478de120af3a660441d7d16a7991f8f9bf646f; Android-specific equivalent product behavior is owned by Activity/Compose/Coordinator lifecycle rather than Electron BrowserWindow APIs.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters",
+      "not_applicable_reason": "Electron desktop accelerator classification for F11/F12/Cmd/Ctrl reload/fullscreen/devtools/quit has no Android shell equivalent. Android navigation and lifecycle controls are platform-owned.",
+      "not_applicable_reviewed": true,
+      "provenance_review": "reviewed as Electron-only shell/transport mechanism; no reconstructed source copied"
     },
     {
       "grok_path": "source/electron-main/window-state-persistence.ts",
@@ -6706,10 +6718,13 @@
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/window-state-persistence.ts#blob=b21e4b6fa1dff1b7630f71cacf7c21557ede5fae",
       "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/window-state-persistence.kt",
       "target_language_runtime": "Kotlin / Android",
-      "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
+      "parity_class": "not-applicable",
+      "implementation_status": "verified",
+      "test_evidence": "Reviewed against frozen Grok blob b21e4b6fa1dff1b7630f71cacf7c21557ede5fae; Android-specific equivalent product behavior is owned by Activity/Compose/Coordinator lifecycle rather than Electron BrowserWindow APIs.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters",
+      "not_applicable_reason": "Desktop BrowserWindow x/y/width/height/maximized persistence across monitor work areas is not meaningful for the phone/tablet Activity shell. Android process/state restoration is covered by saved/application state and process-recreation acceptance instead.",
+      "not_applicable_reviewed": true,
+      "provenance_review": "reviewed as Electron-only shell/transport mechanism; no reconstructed source copied"
     },
     {
       "grok_path": "source/electron-main/window-state-store.ts",
@@ -6719,10 +6734,13 @@
       "evidence_anchor": "b-nnett/grok-bot-0.18-reconstructed@a9f633e09d49a85829b8236331b9e21f7e612634:source/electron-main/window-state-store.ts#blob=391c139f7a53a466d0e9ff8bf9d6c63043cc9279",
       "android_target_path": "source/android-main/src/main/kotlin/com/ombhrum/fabushi/androidmain/window-state-store.kt",
       "target_language_runtime": "Kotlin / Android",
-      "parity_class": "platform-adapted",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters"
+      "parity_class": "not-applicable",
+      "implementation_status": "verified",
+      "test_evidence": "Reviewed against frozen Grok blob 391c139f7a53a466d0e9ff8bf9d6c63043cc9279; Android-specific equivalent product behavior is owned by Activity/Compose/Coordinator lifecycle rather than Electron BrowserWindow APIs.",
+      "legacy_android_path_replaced_or_removed": "mobile/android/app/src/main/java/com/ombhrum/fabushi/MainActivity.kt and Android platform ViewModels/adapters",
+      "not_applicable_reason": "The persisted desktop window geometry/maximized store is specific to resizable BrowserWindow placement. Android has no canonical x/y desktop window placement contract; process/state restoration is tested separately.",
+      "not_applicable_reviewed": true,
+      "provenance_review": "reviewed as Electron-only shell/transport mechanism; no reconstructed source copied"
     },
     {
       "grok_path": "source/electron-preload/box-vnc-clipboard-paste.ts",
@@ -26814,8 +26832,8 @@
     }
   ],
   "status_summary": {
-    "mapped": 1812,
+    "mapped": 1806,
     "implemented": 230,
-    "verified": 4
+    "verified": 10
   }
 }
