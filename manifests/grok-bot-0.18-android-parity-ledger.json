@@ -24339,9 +24339,10 @@
       "android_target_path": "source/packages/utils/src/attempt.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust utility implementation at exact ledger target with inline unit tests; source/packages/utils is a Cargo workspace member so cargo test --workspace --all-targets executes it. Exact-HEAD CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust behavior implementation; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/utils/canvas-path.ts",
@@ -24365,9 +24366,10 @@
       "android_target_path": "source/packages/utils/src/command_glob.rs",
       "target_language_runtime": "Rust (Android-owned runtime), with Kotlin adapter only at Android API edges",
       "parity_class": "shared-core",
-      "implementation_status": "mapped",
-      "test_evidence": "pending implementation; file coverage is mechanically checked against the frozen inventory",
-      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates"
+      "implementation_status": "implemented",
+      "test_evidence": "Fabushi-authored Rust utility implementation at exact ledger target with inline unit tests; source/packages/utils is a Cargo workspace member so cargo test --workspace --all-targets executes it. Exact-HEAD CI required before verified.",
+      "legacy_android_path_replaced_or_removed": "ad-hoc JSONObject/data contracts distributed across current Android app; consolidate then remove duplicates",
+      "provenance_review": "clean-room Rust behavior implementation; no reconstructed source copied"
     },
     {
       "grok_path": "source/packages/utils/disposable.ts",
@@ -26832,8 +26834,8 @@
     }
   ],
   "status_summary": {
-    "mapped": 1806,
-    "implemented": 230,
+    "mapped": 1804,
+    "implemented": 232,
     "verified": 10
   }
 }
